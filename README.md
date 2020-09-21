@@ -1,2 +1,2 @@
-# org-simple-util
-Simple utilities in modern standard C++ without using STL or Boost
+# org-simple
+Simple utility library in modern standard C++ with a minimum of STL
