@@ -182,7 +182,7 @@ public:
 
 
 
-BOOST_AUTO_TEST_SUITE(BoundsTestCases)
+BOOST_AUTO_TEST_SUITE(Bounds)
 
 BOOST_AUTO_TEST_CASE(testConstructorExactMaxSize) {
   FixedRange size(SIZE_LIMIT);
