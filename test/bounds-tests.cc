@@ -2,6 +2,7 @@
 // Created by michel on 21-09-20.
 //
 
+#include <cstddef>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
 #include <org-simple/core/size.h>
@@ -182,7 +183,7 @@ public:
 
 
 
-BOOST_AUTO_TEST_SUITE(Bounds)
+BOOST_AUTO_TEST_SUITE(org_simple_bounds)
 
 BOOST_AUTO_TEST_CASE(testConstructorExactMaxSize) {
   FixedRange size(SIZE_LIMIT);

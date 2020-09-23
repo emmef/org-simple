@@ -26,7 +26,7 @@ static void checkExpectedAndActual(const char *description, T expected,
 }
 } // namespace
 
-BOOST_AUTO_TEST_SUITE(Circular)
+BOOST_AUTO_TEST_SUITE(org_simple_circular)
 
 BOOST_AUTO_TEST_CASE(testProperSize) {
   checkExpectedAndActual("Proper circular size for 13", properSize,

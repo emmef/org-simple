@@ -6,7 +6,6 @@
 #include <boost/test/unit_test.hpp>
 #include <org-simple/core/attributes.h>
 #include <org-simple/core/power2.h>
-#include <org-simple/core/bounds.h>
 #include "test-helper.h"
 
 namespace {
@@ -264,91 +263,12 @@ private:
     return false;
   }
 } TEST_SET;
-
-struct MsbTestScenario {
-  size_t input;
-  int expected;
-  int (*function)(size_t);
-  const char *name;
-
-  static MsbTestScenario most_significant_bit(size_t value, int expected) {
-    return {value, expected, org::simple::Bits<size_t>::most_significant,
-            "Power2For::most_significant_bit"};
-  }
-
-  static MsbTestScenario most_significant_single_bit(size_t value,
-                                                     int expected) {
-    return {value, expected,
-            org::simple::Bits<size_t>::most_significant_single,
-            "Power2For::most_significant_single_bit"};
-  }
-
-  bool success() const { return expected == function(input); }
-
-  void print(std::ostream &out) const {
-    out << name << "(" << input << ")";
-    if (success()) {
-      out << " = " << expected;
-    } else {
-      out << " = " << function(input) << ", but expected " << expected;
-    }
-  }
-};
-
-std::ostream &operator<<(std::ostream &stream, const MsbTestScenario &s) {
-  s.print(stream);
-  return stream;
-}
-
-class MsbTestCases {
-  std::vector<MsbTestScenario> testCases;
-
-public:
-  MsbTestCases() {
-
-    testCases.push_back(MsbTestScenario::most_significant_bit(0, -1));
-    testCases.push_back(MsbTestScenario::most_significant_single_bit(0, -1));
-
-    testCases.push_back(MsbTestScenario::most_significant_bit(1, 0));
-    testCases.push_back(MsbTestScenario::most_significant_single_bit(1, 0));
-
-    testCases.push_back(MsbTestScenario::most_significant_bit(2, 1));
-    testCases.push_back(MsbTestScenario::most_significant_single_bit(2, 1));
-
-    testCases.push_back(MsbTestScenario::most_significant_bit(4, 2));
-    testCases.push_back(MsbTestScenario::most_significant_single_bit(4, 2));
-
-    int maxbit = sizeof(size_t) * 8 - 1;
-    size_t max = size_t(1) << maxbit;
-
-    testCases.push_back(MsbTestScenario::most_significant_bit(max, maxbit));
-    testCases.push_back(
-        MsbTestScenario::most_significant_single_bit(max, maxbit));
-
-    testCases.push_back(MsbTestScenario::most_significant_bit(0x10, 4));
-    testCases.push_back(MsbTestScenario::most_significant_single_bit(0x10, 4));
-
-    testCases.push_back(MsbTestScenario::most_significant_bit(0x11, 4));
-    testCases.push_back(MsbTestScenario::most_significant_single_bit(0x11, -1));
-
-    testCases.push_back(MsbTestScenario::most_significant_bit(0x12, 4));
-    testCases.push_back(MsbTestScenario::most_significant_single_bit(0x12, -2));
-  }
-
-  const std::vector<MsbTestScenario> getTestCases() { return testCases; }
-
-} MSB_TESTCASES;
-
 } // anonymous namespace
 
-BOOST_AUTO_TEST_SUITE(Power2)
+BOOST_AUTO_TEST_SUITE(org_simple_power2)
 
 BOOST_DATA_TEST_CASE(Power2Scenarios, TEST_SET.getTestCases()) {
   sample->test();
-}
-
-BOOST_DATA_TEST_CASE(msbScenarios, MSB_TESTCASES.getTestCases()) {
-  BOOST_CHECK(sample.success());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

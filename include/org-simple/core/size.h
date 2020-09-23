@@ -31,8 +31,8 @@
 
 namespace org::simple {
 struct MemoryModel {
-  static constexpr int size_t_bits = 8 * sizeof(size_t);
-  static constexpr int address_bits =
+  static constexpr unsigned size_t_bits = 8 * sizeof(size_t);
+  static constexpr unsigned address_bits =
 #if defined(SIMPLE_CORE_MEMORY_MODEL_ADDRESS_BITS)
       clamp(int(SIMPLE_CORE_MEMORY_MODEL_ADDRESS_BITS), 1, size_t_bits);
 #else
@@ -67,20 +67,22 @@ struct MemoryModel {
  * sizes.
  */
 template <typename SIZE = size_t, int size_bit_limit = 0> struct SizeType {
-  static_assert(
-      std::is_integral_v<SIZE>,
-      "org::simple::size::system::SizeType: size_type must be an integral type.");
+  static_assert(std::is_integral_v<SIZE>,
+                "org::simple::size::system::SizeType: size_type must be an "
+                "integral type.");
+
+  static_assert(!std::is_signed_v<SIZE>, "org::simple::size::system::SizeType: "
+                                         "size_type must be an unsigned type.");
 
   static_assert(
-      !std::is_signed_v<SIZE>,
-      "org::simple::size::system::SizeType: size_type must be an unsigned type.");
+      sizeof(SIZE) <= sizeof(size_t),
+      "org::simple::size::system::SizeType: size_type cannot be larger "
+      "than std::size_t.");
 
-  static_assert(sizeof(SIZE) <= sizeof(size_t),
-                "org::simple::size::system::SizeType: size_type cannot be larger "
-                "than std::size_t.");
-
-  static_assert(is_within(size_bit_limit, 1 - MemoryModel::size_t_bits,
-                          MemoryModel::size_t_bits),
+  static_assert(int(MemoryModel::size_t_bits) + size_bit_limit > 0,
+                "SizeType::number of unused bits for size cannot equal or "
+                "exceed number of bits in size_type");
+  static_assert(size_bit_limit <= MemoryModel::size_t_bits,
                 "SizeType: explicit size_bit_limit cannot exceed number of "
                 "bits in size_type.");
 
@@ -89,20 +91,18 @@ template <typename SIZE = size_t, int size_bit_limit = 0> struct SizeType {
   /**
    * The number of bits in the underlying size_type.
    */
-  static constexpr unsigned short type_bits = 8 * sizeof(size_type);
+  static constexpr unsigned type_bits = 8 * sizeof(size_type);
 
   /**
    * The maximum value that can be represented by the underlying size_type.
    */
-  static constexpr unsigned short type_max = std::numeric_limits<size_type>::max();
+  static constexpr size_type type_max = std::numeric_limits<size_type>::max();
 
   /**
    * The number of bits used to represent size values.
    */
-  static constexpr unsigned short size_bits =
-      clamped(size_bit_limit > 0 ? size_bit_limit
-                                 : size_bit_limit + MemoryModel::size_t_bits,
-              1, MemoryModel::address_bits);
+  static constexpr unsigned size_bits = size_bit_limit > 0 ? size_bit_limit
+                                 : MemoryModel::size_t_bits + size_bit_limit;
 
   /**
    * The maximum value of a size.
@@ -220,7 +220,7 @@ static constexpr size_t system_max_byte_index = SizeType<size_t>::max_index;
  * sizes.
  */
 template <size_t element_size, typename SIZE = std::size_t,
-    int max_size_bits = 0>
+          int max_size_bits = 0>
 struct Size {
   static_assert(element_size > 0, "Size: element_size cannot be zero.");
 
@@ -249,8 +249,8 @@ struct Size {
    */
   static constexpr size_type
       max_bit_mask = max_index == Type::type_max
-                     ? Type::max >> 1
-                     : Bits<size_type>::bit_mask_not_exceeding(max_index);
+                         ? Type::max >> 1
+                         : Bits<size_type>::bit_mask_not_exceeding(max_index);
 
   /**
    * Returns whether size is valid: non-zero and no greater than max.
@@ -266,8 +266,8 @@ struct Size {
    * @return true if size is valid, false otherwise.
    */
   template <typename source_size_type, source_size_type size_bits>
-  org_nodiscard static constexpr bool
-  is_valid(const Size<element_size, source_size_type, size_bits> &size) noexcept {
+  org_nodiscard static constexpr bool is_valid(
+      const Size<element_size, source_size_type, size_bits> &size) noexcept {
     return is_valid(size.get());
   }
 
@@ -276,8 +276,7 @@ struct Size {
    * @return true if element_index is valid, false otherwise.
    */
   template <typename T>
-  org_nodiscard static constexpr bool
-  is_valid_index(T element_index) noexcept {
+  org_nodiscard static constexpr bool is_valid_index(T element_index) noexcept {
     return Unsigned::is_not_greater(element_index, max_index);
   }
 
@@ -288,7 +287,7 @@ struct Size {
   template <typename source_size_type, source_size_type size_bits>
   org_nodiscard static constexpr bool
   is_valid_index(const Size<element_size, source_size_type, size_bits>
-                 &element_index) noexcept {
+                     &element_index) noexcept {
     return is_valid_index(element_index.get());
   }
 
@@ -298,7 +297,7 @@ struct Size {
    * @return true if the sum represents a valid size.
    */
   org_nodiscard static constexpr bool is_valid_sum(size_type v1,
-                                                    size_type v2) noexcept {
+                                                   size_type v2) noexcept {
     return Unsigned::is_sum_nonzero_not_greater(v1, v2, max);
   }
 
@@ -308,7 +307,7 @@ struct Size {
    * @return true if the product represents a valid size.
    */
   org_nodiscard static constexpr bool is_valid_product(size_type v1,
-                                                        size_type v2) noexcept {
+                                                       size_type v2) noexcept {
     return Unsigned::is_product_nonzero_not_greater(v1, v2, max);
   }
 
@@ -515,7 +514,7 @@ struct Size {
    * std::invalid_argument otherwise.
    */
   template <typename T> Size &operator=(T other_size) {
-    value = get_valid_size(other_size);
+    value = get_valid(other_size);
     return *this;
   }
 
@@ -525,7 +524,7 @@ struct Size {
    */
   template <typename ST, ST size_bits>
   void assign(const Size<element_size, ST, size_bits> other_size) {
-    return operator=(other_size.get());
+    operator=(other_size.get());
   }
 
 private:
@@ -533,7 +532,7 @@ private:
 };
 
 template <typename T, typename size_type = std::size_t,
-    size_type max_size_bits = 0>
+          size_type max_size_bits = 0>
 using SizeFor = Size<sizeof(T), size_type, max_size_bits>;
 
 } // namespace org::simple

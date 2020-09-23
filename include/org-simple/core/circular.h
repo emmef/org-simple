@@ -46,7 +46,7 @@ struct WrappedBase<WrappingType::BIT_MASK, element_size, size_type,
     return elements > 0 && elements <= max_element_count;
   }
 
-  WrappedBase(size_type elements) : mask_(valid_mask(elements)) {}
+  explicit WrappedBase(size_type elements) : mask_(valid_mask(elements)) {}
 
   size_type size() const noexcept { return mask_ + 1; }
 
@@ -107,7 +107,7 @@ struct WrappedBase<WrappingType::MODULO, element_size, size_type,
     return elements > 0 && elements <= max_element_count;
   }
 
-  WrappedBase(size_type elements) : size_(valid_element_count(elements)) {}
+  explicit WrappedBase(size_type elements) : size_(valid_element_count(elements)) {}
 
   size_type size() const noexcept { return size_; }
 
@@ -165,11 +165,11 @@ private:
 
 /**
  * Specifies a circular indexing model to address elements of size element_size
- * with indices of size_type and an optional llimited number of addressing bits
+ * with indices of size_type and an optional limited number of addressing bits
  * max_size_bits.
  *
  * The model can be applied in circular buffers and the like.
- * @see simpledsp::Size<element_size, size_type, max_size_bits>.
+ * @see core::simple::Size<element_size, size_type, max_size_bits>.
  */
 template <WrappingType wrappingType, size_t element_size = 1,
     typename size_type = size_t,
@@ -205,7 +205,7 @@ struct WrappedIndex : public base::WrappedBase<wrappingType, element_size,
    * elements; or throws std::invalid_argument if the element_count is less than
    * two or too big to be represented because of size constraints.
    * @param element_count the minimum number of elements that should be
-   * addressible.
+   * addressable.
    * @return a proper circular mask or zero if that is not possible.
    */
   explicit WrappedIndex(size_t element_count) : Super(element_count) {}
@@ -230,14 +230,15 @@ struct WrappedIndex : public base::WrappedBase<wrappingType, element_size,
                              Super::safe_parameter(delta));
   }
 
-  /**
-   * Sets a new element count if that is valid and throws std::invalif_argument
-   * otherwise. The actual possible number of elements can be bigger and is
-   * returned by size().
-   */
-  void set_element_count(size_type element_count) {
-    Super::set_element_count(element_count);
-  }
+// Clang problem
+//  /**
+//   * Sets a new element count if that is valid and throws std::invalid_argument
+//   * otherwise. The actual possible number of elements can be bigger and is
+//   * returned by size().
+//   */
+//  void set_element_count(size_type element_count) {
+//    Super::set_element_count(element_count);
+//  }
 };
 
 template <WrappingType wrappingType, typename Element,

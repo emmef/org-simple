@@ -23,8 +23,8 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <org-simple/core/attributes.h>
 #include <type_traits>
+#include <org-simple/core/attributes.h>
 
 namespace org::simple {
 
@@ -79,9 +79,9 @@ struct Unsigned {
     static_assert(is_unsigned_integral<source_type>());
     if constexpr (sizeof(destination_type) >= sizeof(source_type)) {
       return destination_type(source_value) <=
-             destination_type(destination_maximum);
+             destination_maximum;
     } else {
-      return source_type(source_value) <=
+      return source_value <=
              source_type(destination_maximum);
     }
   }

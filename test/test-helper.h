@@ -178,8 +178,9 @@ class ThreeArgumentFunctionTestCase : public SimpleTestCase<Result> {
 
 public:
   ThreeArgumentFunctionTestCase(const std::string &functionName,
-                                Result (*function)(V1, V2, V3), Result expectedValue,
-                                V1 argument1, V2 argument2, V3 argument3)
+                                Result (*function)(V1, V2, V3),
+                                Result expectedValue, V1 argument1,
+                                V2 argument2, V3 argument3)
       : SimpleTestCase<Result>(expectedValue), name(functionName), fn(function),
         arg1(argument1), arg2(argument2), arg3(argument3) {}
 
@@ -200,51 +201,44 @@ public:
 struct FunctionTestCases {
 
   template <typename Result, typename V1>
-  static AbstractValueTestCase* create(
-      const std::string &nm, Result(*fn)(V1),
-      Result expected, V1 v1) {
-    return new OneArgumentFunctionTestCase<Result, V1>(
-        nm, fn, expected, v1);
+  static AbstractValueTestCase *create(const std::string &nm, Result (*fn)(V1),
+                                       Result expected, V1 v1) {
+    return new OneArgumentFunctionTestCase<Result, V1>(nm, fn, expected, v1);
   }
 
   template <typename Result, typename V1>
-  static AbstractValueTestCase* create(
-      const std::string &nm, Result(*fn)(V1),
-      V1 v1) {
-    return new OneArgumentFunctionTestCase<Result, V1>(
-        nm, fn, v1);
+  static AbstractValueTestCase *create(const std::string &nm, Result (*fn)(V1),
+                                       V1 v1) {
+    return new OneArgumentFunctionTestCase<Result, V1>(nm, fn, v1);
   }
 
   template <typename Result, typename V1, typename V2>
-  static AbstractValueTestCase* create(
-      const std::string &nm, Result(*fn)(V1, V2),
-      Result expected, V1 v1, V2 v2) {
-    return new TwoArgumentFunctionTestCase<Result, V1, V2>(
-        nm, fn, expected, v1, v2);
+  static AbstractValueTestCase *create(const std::string &nm,
+                                       Result (*fn)(V1, V2), Result expected,
+                                       V1 v1, V2 v2) {
+    return new TwoArgumentFunctionTestCase<Result, V1, V2>(nm, fn, expected, v1,
+                                                           v2);
   }
 
   template <typename Result, typename V1, typename V2>
-  static AbstractValueTestCase* create(
-      const std::string &nm, Result(*fn)(V1, V2),
-      V1 v1, V2 v2) {
-    return new TwoArgumentFunctionTestCase<Result, V1, V2>(
-        nm, fn, v1, v2);
+  static AbstractValueTestCase *create(const std::string &nm,
+                                       Result (*fn)(V1, V2), V1 v1, V2 v2) {
+    return new TwoArgumentFunctionTestCase<Result, V1, V2>(nm, fn, v1, v2);
   }
 
   template <typename Result, typename V1, typename V2, typename V3>
-  static AbstractValueTestCase* create(
-      const std::string &nm, Result(*fn)(V1, V2, V3),
-      Result expected, V1 v1, V2 v2, V3 v3) {
+  static AbstractValueTestCase *create(const std::string &nm,
+                                       Result (*fn)(V1, V2, V3),
+                                       Result expected, V1 v1, V2 v2, V3 v3) {
     return new ThreeArgumentFunctionTestCase<Result, V1, V2, V3>(
         nm, fn, expected, v1, v2, v3);
   }
 
   template <typename Result, typename V1, typename V2, typename V3>
-  static AbstractValueTestCase* create(
-      const std::string &nm, Result(*fn)(V1, V2, V3),
-      V1 v1, V2 v2, V3 v3) {
-    return new ThreeArgumentFunctionTestCase<Result, V1, V2, V3>(
-        nm, fn, v1, v2, v3);
+  static AbstractValueTestCase *
+  create(const std::string &nm, Result (*fn)(V1, V2, V3), V1 v1, V2 v2, V3 v3) {
+    return new ThreeArgumentFunctionTestCase<Result, V1, V2, V3>(nm, fn, v1, v2,
+                                                                 v3);
   }
 };
 
@@ -256,7 +250,7 @@ class CompareWithReferenceTestCase : public AbstractValueTestCase {
   const std::array<A, 3> arguments;
 
   org_nodiscard bool effectiveValue(T &result,
-                                     const TestInterface &values) const {
+                                    const TestInterface &values) const {
     try {
       result = generateValue(values);
       return false;
@@ -377,6 +371,75 @@ public:
     return expectedThrown ? actualThrown : !actualThrown && expected == actual;
   };
 };
+
+struct AbstractFunctionTestScenario {
+  virtual bool success() const = 0;
+  virtual void print(std::ostream &out) const = 0;
+  virtual AbstractFunctionTestScenario *clone() const = 0;
+  virtual ~AbstractFunctionTestScenario() = default;
+};
+
+template <typename R, typename V>
+struct FunctionTestScenarioImplementation
+    : public AbstractFunctionTestScenario {
+  V input_;
+  R expected_;
+  R (*function_)(V);
+  const char *name_;
+
+  FunctionTestScenarioImplementation(V input, R expected, R (*function)(V),
+                                     const char *name)
+      : input_(input), expected_(expected), function_(function), name_(name) {}
+
+  bool success() const override { return expected_ == function_(input_); }
+
+  AbstractFunctionTestScenario *clone() const override {
+    return new FunctionTestScenarioImplementation<R, V>(input_, expected_,
+                                                        function_, name_);
+  }
+
+  void print(std::ostream &out) const override {
+    out << name_ << "(" << input_ << ")";
+    if (success()) {
+      out << " = " << expected_;
+    } else {
+      out << " = " << function_(input_) << ", but expected " << expected_;
+    }
+  }
+};
+
+class FunctionTestScenario {
+  const AbstractFunctionTestScenario *scenario_;
+
+public:
+  FunctionTestScenario() : scenario_(nullptr){};
+  FunctionTestScenario(const AbstractFunctionTestScenario *s) : scenario_(s) {}
+  FunctionTestScenario(const FunctionTestScenario &source)
+      : scenario_(source.scenario_->clone()) {}
+
+  FunctionTestScenario(FunctionTestScenario &&moved)
+      : scenario_(moved.scenario_) {
+    moved.scenario_ = nullptr;
+  }
+  void operator =(const FunctionTestScenario &source) {
+    scenario_ = source.scenario_->clone();
+  }
+  bool success() const { return scenario_->success(); }
+  void print(std::ostream &out) const { scenario_->print(out); }
+
+  ~FunctionTestScenario() {
+    delete scenario_;
+    scenario_ = nullptr;
+  }
+
+  template <typename R, typename V>
+  static FunctionTestScenario create(V input, R expected, R (*function)(V),
+                                     const char *name) {
+    return FunctionTestScenario(new FunctionTestScenarioImplementation<R, V>(
+        input, expected, function, name));
+  }
+};
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
 
@@ -385,10 +448,15 @@ std::ostream &operator<<(std::ostream &stream, const AbstractValueTestCase &s) {
   return stream;
 }
 
+std::ostream &operator<<(std::ostream &stream, const FunctionTestScenario &s) {
+  s.print(stream);
+  return stream;
+}
+
 #pragma clang diagnostic pop
 
 } // namespace
 
-} // namespace simpledsp::testhelper
+} // namespace org::simple::testhelper
 
 #endif // ORG_SIMPLE_TEST_HELPER_H

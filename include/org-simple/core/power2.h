@@ -27,14 +27,14 @@ namespace org::simple {
 template <typename size_type = size_t> struct Power2For {
 
   /**
-   * @return true if value is a power of two, false oherwise.
+   * @return true if value is a power of two, false otherwise.
    */
   static constexpr bool is(const size_type value) noexcept {
     return value >= 2 && is_minus_one(value - 1);
   }
 
   /**
-   * @return true if value is a power of two minus one, false oherwise.
+   * @return true if value is a power of two minus one, false otherwise.
    */
   static constexpr bool is_minus_one(const size_type value) noexcept {
     return value != 0 && Bits<size_type>::fill(value) == value;
@@ -82,7 +82,7 @@ template <typename size_type = size_t> struct Power2For {
 struct Power2 {
 
   /**
-   * @return true if value is a power of two, false oherwise.
+   * @return true if value is a power of two, false otherwise.
    */
   template <typename size_type>
   static constexpr bool is(const size_type value) noexcept {
@@ -90,7 +90,7 @@ struct Power2 {
   }
 
   /**
-   * @return true if value is a power of two minus one, false oherwise.
+   * @return true if value is a power of two minus one, false otherwise.
    */
   template <typename size_type>
   static constexpr bool is_minus_one(const size_type value) noexcept {

@@ -27,7 +27,7 @@ find_package(Threads)
 
 set(PROJECT_HEADERS include/org-simple/core/attributes.h include/org-simple/core/debug.h include/org-simple/core/bits.h include/org-simple/core/power2.h include/org-simple/core/bounds.h include/org-simple/core/index.h include/org-simple/core/circular.h)
 set(PROJECT_SRC src/org-simple/placeholder.cc)
-set(PROJECT_TESTS test/test-helper.h test/test.cc test/bounds-tests.cc test/power2-tests.cc test/circular-tests.cc)
+set(PROJECT_TESTS test/test-helper.h test/test.cc test/bounds-tests.cc test/power2-tests.cc test/circular-tests.cc test/bits-tests.cc)
 
 # Create the library
 
