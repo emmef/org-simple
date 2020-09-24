@@ -96,10 +96,10 @@ public:
   org_nodiscard virtual type_time_point now() const noexcept = 0;
   org_nodiscard virtual type_time_point check_get_now() { return now(); }
 
-  org_nodiscard const type_time_point deadline() const noexcept {
+  org_nodiscard type_time_point deadline() const noexcept {
     return deadline_;
   }
-  org_nodiscard const type_duration duration() const noexcept {
+  org_nodiscard type_duration duration() const noexcept {
     return duration_;
   }
 
@@ -156,7 +156,7 @@ public:
                             typename CLOCK::duration>::now;
 
   template <typename R, typename P>
-  TimeoutUsingClock(std::chrono::duration<R, P> timeout_duration)
+  explicit TimeoutUsingClock(std::chrono::duration<R, P> timeout_duration)
       : TimeoutWithDeadline<typename CLOCK::time_point,
                             typename CLOCK::duration>(
             std::chrono::duration_cast<type_duration>(timeout_duration)) {}
