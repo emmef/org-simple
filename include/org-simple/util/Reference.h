@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_REFERENCE_H
 #define ORG_SIMPLE_REFERENCE_H
 /*
- * org-simple/util/reference.h
+ * org-simple/util/Reference.h
  *
  * Added by michel on 2020-09-23
  * Copyright (C) 2015-2020 Michel Fleur.
@@ -28,7 +28,7 @@
 
 namespace org::simple {
 
-class base_ref_count_ptr {
+class UntypedRefCountPointer {
   void *ptr_;
   std::atomic<ptrdiff_t> count_;
   static std::atomic_flag flag_;
@@ -40,10 +40,10 @@ protected:
     if (p) {
       return p;
     }
-    throw std::invalid_argument("org::simple::base_ref_count_ptr: nullptr");
+    throw std::invalid_argument("org::simple::UntypedRefCountPointer: nullptr");
   }
 public:
-  explicit base_ref_count_ptr(void *ptr) : ptr_(ptr), count_(1) {}
+  explicit UntypedRefCountPointer(void *ptr) : ptr_(ptr), count_(1) {}
 
   bool add_ref() noexcept { return count_.fetch_add(1) >= 1; }
 
@@ -69,49 +69,49 @@ public:
 
   org_nodiscard void *get_ptr() const noexcept { return ptr_; }
 
-  virtual ~base_ref_count_ptr() noexcept = default;
+  virtual ~UntypedRefCountPointer() noexcept = default;
 };
 
-template <typename T> class ref_count_ptr final : public base_ref_count_ptr {
+template <typename T> class TypedRefCountPointer final : public UntypedRefCountPointer {
 protected:
   void destroy_ptr() noexcept override { delete static_cast<T *>(get()); }
 
 public:
-  explicit ref_count_ptr(T *ptr) : base_ref_count_ptr(ptr){};
+  explicit TypedRefCountPointer(T *ptr) : UntypedRefCountPointer(ptr){};
 
   T *get() noexcept { return static_cast<T *>(get_ptr()); }
 
-  ~ref_count_ptr() noexcept override {
+  ~TypedRefCountPointer() noexcept override {
     if (del_ref_no_destroy() >= 1) {
       destroy();
     }
   }
 };
 
-template <typename T> class reference {
-  ref_count_ptr<T> *ptr_;
+template <typename T> class Reference {
+  TypedRefCountPointer<T> *ptr_;
 
-  static void cleanup(base_ref_count_ptr *ptr_) {
+  static void cleanup(UntypedRefCountPointer *ptr_) {
     if (ptr_ && ptr_->del_ref_get_if_destroyed()) {
       delete ptr_;
     }
   }
 public:
-  reference() : ptr_(nullptr) {}
+  Reference() : ptr_(nullptr) {}
 
-  explicit reference<T>(T *ptr) : ptr_(new ref_count_ptr(ptr)){};
+  explicit Reference<T>(T *ptr) : ptr_(new TypedRefCountPointer(ptr)){};
 
-  reference<T> *operator&() = delete;
+  Reference<T> *operator&() = delete;
 
-  explicit reference(reference<T> &&source) noexcept : ptr_(source.ptr_) {
+  explicit Reference(Reference<T> &&source) noexcept : ptr_(source.ptr_) {
     source.ptr_ = nullptr;
   }
 
-  explicit reference(const reference<T> &source) : ptr_(source.ptr_) {
+  explicit Reference(const Reference<T> &source) : ptr_(source.ptr_) {
     ptr_->add_ref();
   }
 
-  void operator=(const reference<T> &source) {
+  void operator=(const Reference<T> &source) {
     if (&source == this || ptr_ == source.ptr_) {
       return;
     }
@@ -124,7 +124,7 @@ public:
 
   T *operator->() noexcept { return ptr_->get(); }
 
-  ~reference() {
+  ~Reference() {
     // Destroy when leaving scope: no queueing
     cleanup(ptr_);
     ptr_ = nullptr;
