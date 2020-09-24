@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_INDEX_H
 #define ORG_SIMPLE_INDEX_H
 /*
- * org-simple/index.h
+ * org-simple/Index.h
  *
  * Added by michel on 2020-09-21
  * Copyright (C) 2015-2020 Michel Fleur.
