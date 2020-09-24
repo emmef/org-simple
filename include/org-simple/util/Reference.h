@@ -26,24 +26,46 @@
 #include <org-simple/core/attributes.h>
 #include <stdexcept>
 
+#ifndef ORG_SIMPLE_CORE_REF_COUNT_POINTER_ALLOW_NULL_INIT
+static void *ref_counter_pointer_check_null_init(void *ptr) {
+  if (ptr) {
+    return ptr;
+  }
+  throw std::invalid_argument("org::simple::UntypedRefCountPointer: nullptr");
+}
+#else
+static constexpr void *ref_counter_pointer_check_null_init(void *ptr) {
+  return ptr;
+}
+#endif
+
+#ifdef ORG_SIMPLE_CORE_REF_COUNT_POINTER_CHECK_NULL_DEREFERENCE
+static void *ref_counter_pointer_check_null_dereference(void *ptr) {
+  if (ptr) {
+    return ptr;
+  }
+  throw std::invalid_argument("org::simple::UntypedRefCountPointer: nullptr");
+}
+#else
+static constexpr void *ref_counter_pointer_check_null_dereference(void *ptr) {
+  return ptr;
+}
+#endif
+
 namespace org::simple {
 
 class UntypedRefCountPointer {
   void *ptr_;
   std::atomic<ptrdiff_t> count_;
-  static std::atomic_flag flag_;
 
 protected:
-  virtual void destroy_ptr() noexcept = 0;
+  virtual void destroy_ptr(void *ptr) noexcept = 0;
 
-  static void * not_null(void *p) {
-    if (p) {
-      return p;
-    }
-    throw std::invalid_argument("org::simple::UntypedRefCountPointer: nullptr");
-  }
 public:
-  explicit UntypedRefCountPointer(void *ptr) : ptr_(ptr), count_(1) {}
+  explicit UntypedRefCountPointer(void *ptr)
+      : ptr_(ref_counter_pointer_check_null_init(ptr)), count_(1) {}
+  UntypedRefCountPointer(const UntypedRefCountPointer &) = delete;
+  UntypedRefCountPointer(UntypedRefCountPointer &&) = delete;
 
   bool add_ref() noexcept { return count_.fetch_add(1) >= 1; }
 
@@ -58,26 +80,35 @@ public:
     return false;
   }
 
-  void destroy() {
+  void destroy() noexcept {
+    static std::atomic_flag flag_;
     // At least attempts to use recent state and make memory visible afterwards.
     flag_.test_and_set(std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_acquire);
-    destroy_ptr();
+    destroy_ptr(ptr_);
+    ptr_ = nullptr;
     std::atomic_thread_fence(std::memory_order_release);
     flag_.clear();
   }
 
-  org_nodiscard void *get_ptr() const noexcept { return ptr_; }
+  org_nodiscard void *get_ptr() const noexcept {
+    return ref_counter_pointer_check_null_dereference(ptr_);
+  }
 
   virtual ~UntypedRefCountPointer() noexcept = default;
 };
 
-template <typename T> class TypedRefCountPointer final : public UntypedRefCountPointer {
+template <typename T>
+class TypedRefCountPointer final : public UntypedRefCountPointer {
 protected:
-  void destroy_ptr() noexcept override { delete static_cast<T *>(get()); }
+  void destroy_ptr(void *ptr) noexcept override {
+    delete static_cast<T *>(ptr);
+  }
 
 public:
   explicit TypedRefCountPointer(T *ptr) : UntypedRefCountPointer(ptr){};
+  TypedRefCountPointer(const TypedRefCountPointer &) = delete;
+  TypedRefCountPointer(TypedRefCountPointer &&) = delete;
 
   T *get() noexcept { return static_cast<T *>(get_ptr()); }
 
@@ -96,6 +127,7 @@ template <typename T> class Reference {
       delete ptr_;
     }
   }
+
 public:
   Reference() : ptr_(nullptr) {}
 
@@ -103,7 +135,7 @@ public:
 
   Reference<T> *operator&() = delete;
 
-  explicit Reference(Reference<T> &&source) noexcept : ptr_(source.ptr_) {
+  Reference(Reference<T> &&source) noexcept : ptr_(source.ptr_) {
     source.ptr_ = nullptr;
   }
 
