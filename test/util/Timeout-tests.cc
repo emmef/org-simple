@@ -5,7 +5,7 @@
 #include "test-helper.h"
 #include <org-simple/util/Timeout.h>
 
-using namespace org::simple;
+using namespace org::simple::util;
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_Timeout)
 

@@ -29,7 +29,7 @@
 #include <org-simple/core/Bits.h>
 #include <org-simple/core/bounds.h>
 
-namespace org::simple {
+namespace org::simple::core {
 struct MemoryModel {
   static constexpr unsigned size_t_bits = 8 * sizeof(size_t);
   static constexpr unsigned address_bits =
@@ -68,15 +68,15 @@ struct MemoryModel {
  */
 template <typename SIZE = size_t, int size_bit_limit = 0> struct SizeType {
   static_assert(std::is_integral_v<SIZE>,
-                "org::simple::size::system::SizeType: size_type must be an "
+                "org::simple::core::size::system::SizeType: size_type must be an "
                 "integral type.");
 
-  static_assert(!std::is_signed_v<SIZE>, "org::simple::size::system::SizeType: "
+  static_assert(!std::is_signed_v<SIZE>, "org::simple::core::size::system::SizeType: "
                                          "size_type must be an unsigned type.");
 
   static_assert(
       sizeof(SIZE) <= sizeof(size_t),
-      "org::simple::size::system::SizeType: size_type cannot be larger "
+      "org::simple::core::size::system::SizeType: size_type cannot be larger "
       "than std::size_t.");
 
   static_assert(int(MemoryModel::size_t_bits) + size_bit_limit > 0,
@@ -176,7 +176,7 @@ template <typename SIZE = size_t, int size_bit_limit = 0> struct SizeType {
    * @return the maximum number of elements, that can be zero.
    */
   static constexpr size_type max_count_for_element_size(size_t element_size) {
-    return max / org::simple::maximum(size_t(1), element_size);
+    return max / org::simple::core::maximum(size_t(1), element_size);
   }
 
   /**
@@ -535,6 +535,6 @@ template <typename T, typename size_type = std::size_t,
           size_type max_size_bits = 0>
 using SizeFor = Size<sizeof(T), size_type, max_size_bits>;
 
-} // namespace org::simple
+} // namespace org::simple::core
 
 #endif // ORG_SIMPLE_SIZE_H

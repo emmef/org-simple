@@ -28,7 +28,7 @@
 #include <org-simple/core/attributes.h>
 #include <typeinfo>
 
-namespace org::simple::testhelper {
+namespace org::simple::test {
 
 namespace {
 class AbstractValueTestCase {
@@ -457,6 +457,6 @@ std::ostream &operator<<(std::ostream &stream, const FunctionTestScenario &s) {
 
 } // namespace
 
-} // namespace org::simple::testhelper
+} // namespace org::simple::test
 
 #endif // ORG_SIMPLE_TEST_HELPER_H

@@ -31,7 +31,7 @@ static void *ref_counter_pointer_check_null_init(void *ptr) {
   if (ptr) {
     return ptr;
   }
-  throw std::invalid_argument("org::simple::UntypedRefCountPointer: nullptr");
+  throw std::invalid_argument("org::simple::util::UntypedRefCountPointer: nullptr");
 }
 #else
 static constexpr void *ref_counter_pointer_check_null_init(void *ptr) {
@@ -44,7 +44,7 @@ static void *ref_counter_pointer_check_null_dereference(void *ptr) {
   if (ptr) {
     return ptr;
   }
-  throw std::invalid_argument("org::simple::UntypedRefCountPointer: nullptr");
+  throw std::invalid_argument("org::simple::util::UntypedRefCountPointer: nullptr");
 }
 #else
 static constexpr void *ref_counter_pointer_check_null_dereference(void *ptr) {
@@ -52,7 +52,7 @@ static constexpr void *ref_counter_pointer_check_null_dereference(void *ptr) {
 }
 #endif
 
-namespace org::simple {
+namespace org::simple::util {
 
 class UntypedRefCountPointer {
   void *ptr_;
@@ -128,7 +128,7 @@ template <typename T> class Reference {
     }
   }
 
-  Reference<T> *operator&();
+  Reference<T> *operator&() = delete;
 
 public:
   Reference() : ptr_(nullptr) {}
@@ -145,7 +145,7 @@ public:
   }
 
   Reference & operator=(const Reference<T> &source) {
-    if (&source == this || ptr_ == source.ptr_) {
+    if (ptr_ == source.ptr_) {
       return *this;
     }
     cleanup(ptr_);
@@ -165,6 +165,6 @@ public:
   }
 };
 
-} // namespace org::simple
+} // namespace org::simple::util
 
 #endif // ORG_SIMPLE_REFERENCE_H

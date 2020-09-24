@@ -25,7 +25,7 @@
 #include <org-simple/core/Size.h>
 #include <type_traits>
 
-namespace org::simple {
+namespace org::simple::core {
 
 enum class WrappingType { BIT_MASK, MODULO };
 
@@ -264,6 +264,6 @@ using ModuloIndexFor = WrappedIndex<WrappingType::MODULO, sizeof(Element),
     size_type, max_size_bits>;
 
 
-} // namespace org::simple
+} // namespace org::simple::core
 
 #endif // ORG_SIMPLE_CIRCULAR_H

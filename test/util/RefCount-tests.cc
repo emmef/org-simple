@@ -15,9 +15,9 @@
 
 using Owned = org::simple::test::OwnedReference;
 using Owner = org::simple::test::ReferenceOwner;
-using Ref = org::simple::TypedRefCountPointer<Owned>;
+using Ref = org::simple::util::TypedRefCountPointer<Owned>;
 
-struct RefCntPtr : public org::simple::UntypedRefCountPointer {
+struct RefCntPtr : public org::simple::util::UntypedRefCountPointer {
   void destroy_ptr(void *ptr) noexcept override { free(ptr); }
 
   RefCntPtr(void *ptr) : UntypedRefCountPointer(ptr) {}

@@ -24,7 +24,7 @@
 #include <org-simple/core/attributes.h>
 #include <stdexcept>
 
-namespace org::simple {
+namespace org::simple::core {
 struct Index {
 
   template <typename S> org_nodiscard static S checked(S index, S size) {
@@ -100,6 +100,6 @@ struct Index {
   };
 };
 
-} // namespace org::simple
+} // namespace org::simple::core
 
 #endif // ORG_SIMPLE_INDEX_H

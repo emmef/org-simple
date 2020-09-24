@@ -29,7 +29,7 @@
 
 #include <org-simple/core/attributes.h>
 
-namespace org::simple {
+namespace org::simple::util {
 
 class Timeout {
 public:
@@ -224,6 +224,6 @@ private:
   type_duration slice_;
 };
 
-} // namespace org::simple
+} // namespace org::simple::util
 
 #endif // ORG_SIMPLE_TIMEOUT_H

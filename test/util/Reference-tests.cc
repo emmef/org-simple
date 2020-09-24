@@ -16,7 +16,7 @@
 
 using Owned = org::simple::test::OwnedReference;
 using Owner = org::simple::test::ReferenceOwner;
-using Ref = org::simple::Reference<org::simple::test::OwnedReference>;
+using Ref = org::simple::util::Reference<org::simple::test::OwnedReference>;
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_Reference)
 

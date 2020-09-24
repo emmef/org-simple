@@ -9,26 +9,26 @@
 
 namespace {
 
-using FunctionTest = org::simple::testhelper::FunctionTestScenario;
+using FunctionTest = org::simple::test::FunctionTestScenario;
 
 struct Scenarios {
 
   static FunctionTest most_significant_bit(size_t value, int expected) {
 
     return FunctionTest::create(value, expected,
-                                org::simple::Bits<size_t>::most_significant,
+                                org::simple::core::Bits<size_t>::most_significant,
                                 "Bits::most_significant");
   }
 
   static FunctionTest most_significant_single_bit(size_t value, int expected) {
     return FunctionTest::create(
-        value, expected, org::simple::Bits<size_t>::most_significant_single,
+        value, expected, org::simple::core::Bits<size_t>::most_significant_single,
         "Bits::most_significant_single");
   }
 
   static FunctionTest bit_fill(size_t value, size_t expected) {
     return FunctionTest::create(value, expected,
-                                org::simple::Bits<size_t>::fill,
+                                org::simple::core::Bits<size_t>::fill,
                                 "Bits::fill");
   }
 };

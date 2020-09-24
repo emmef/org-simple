@@ -7,7 +7,7 @@
 
 namespace {
 
-using Metric = org::simple::MaskedIndexFor<char>;
+using Metric = org::simple::core::MaskedIndexFor<char>;
 
 constexpr size_t requestedSize = 13;
 constexpr size_t properSize = 16;

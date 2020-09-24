@@ -12,26 +12,26 @@ namespace {
 
 constexpr unsigned short SIZE_BITS = 10;
 constexpr size_t SIZE_LIMIT = size_t(1) << SIZE_BITS;
-using FixedRange = org::simple::Size<1, size_t, SIZE_BITS>;
+using FixedRange = org::simple::core::Size<1, size_t, SIZE_BITS>;
 
-using Functions = org::simple::testhelper::FunctionTestCases;
+using Functions = org::simple::test::FunctionTestCases;
 
-using TestCase = org::simple::testhelper::AbstractValueTestCase;
+using TestCase = org::simple::test::AbstractValueTestCase;
 
 struct WithinTests {
   static TestCase *createWithin(bool expected, size_t value, size_t min,
                                 size_t max) {
-    return Functions::create("is_within", org::simple::is_within, expected, value,
+    return Functions::create("is_within", org::simple::core::is_within, expected, value,
                              min, max);
   }
   static TestCase *createWithinExcl(bool expected, size_t value, size_t min,
                                     size_t max) {
-    return Functions::create("is_within_excl", org::simple::is_within_excl,
+    return Functions::create("is_within_excl", org::simple::core::is_within_excl,
                              expected, value, min, max);
   }
 };
 
-std::vector<org::simple::testhelper::AbstractValueTestCase *> *
+std::vector<org::simple::test::AbstractValueTestCase *> *
 generateTestCases() {
   constexpr size_t MAX_LIMIT = FixedRange::Size::max;
 
@@ -72,7 +72,7 @@ generateTestCases() {
   }
 
   auto testCases =
-      new std::vector<org::simple::testhelper::AbstractValueTestCase *>();
+      new std::vector<org::simple::test::AbstractValueTestCase *>();
 
   for (size_t i : singleValues) {
     bool isWithin = i >= 0 && i <= MAX_LIMIT;
@@ -158,7 +158,7 @@ generateTestCases() {
 
 class TestGenerator {
 
-  std::vector<org::simple::testhelper::AbstractValueTestCase *> *testCases;
+  std::vector<org::simple::test::AbstractValueTestCase *> *testCases;
 
 public:
   TestGenerator() { testCases = generateTestCases(); }
@@ -173,7 +173,7 @@ public:
     }
   }
 
-  org_nodiscard std::vector<org::simple::testhelper::AbstractValueTestCase *>
+  org_nodiscard std::vector<org::simple::test::AbstractValueTestCase *>
   getTestCases() const {
     return *testCases;
   }

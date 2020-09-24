@@ -25,7 +25,7 @@
 #include <limits>
 #include <type_traits>
 
-namespace org::simple {
+namespace org::simple::core {
 
 /**
  * Defines various bit-related operations for a size-like type.
@@ -123,6 +123,6 @@ public:
   }
 };
 
-} // namespace org::simple
+} // namespace org::simple::core
 
 #endif // ORG_SIMPLE_BITS_H

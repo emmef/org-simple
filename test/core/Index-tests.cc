@@ -6,8 +6,8 @@
 #include <boost/test/unit_test.hpp>
 #include <org-simple/core/Index.h>
 
-using Exclusive = org::simple::Index;
-using Inclusive = org::simple::Index::Inclusive;
+using Exclusive = org::simple::core::Index;
+using Inclusive = org::simple::core::Index::Inclusive;
 
 static constexpr size_t SIZE = 10;
 static constexpr size_t ZERO = 0;

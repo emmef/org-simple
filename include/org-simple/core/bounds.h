@@ -26,7 +26,7 @@
 #include <type_traits>
 #include <org-simple/core/attributes.h>
 
-namespace org::simple {
+namespace org::simple::core {
 
 template <typename T>
 org_nodiscard static constexpr T maximum(const T v1, const T v2) noexcept {
@@ -129,6 +129,6 @@ struct Unsigned {
   }
 };
 
-} // namespace org::simple
+} // namespace org::simple::core
 
 #endif // ORG_SIMPLE_BOUNDS_H

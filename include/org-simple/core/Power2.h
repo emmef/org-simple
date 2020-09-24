@@ -23,7 +23,7 @@
 
 #include <org-simple/core/Bits.h>
 
-namespace org::simple {
+namespace org::simple::core {
 template <typename size_type = size_t> struct Power2For {
 
   /**
@@ -138,6 +138,6 @@ struct Power2 {
   }
 };
 
-} // namespace org::simple
+} // namespace org::simple::core
 
 #endif // ORG_SIMPLE_POWER2_H

@@ -33,7 +33,7 @@ struct PowerOfTwoImplementation {
 
 template <bool USE_CONSTEXPR>
 struct SubjectImpl : public PowerOfTwoImplementation {
-  using Impl = org::simple::Power2;
+  using Impl = org::simple::core::Power2;
 
   org_nodiscard const char *name() const override {
     return USE_CONSTEXPR ? "Power2::constant" : "Power2";
@@ -50,7 +50,7 @@ struct SubjectImpl : public PowerOfTwoImplementation {
   }
 
   org_nodiscard size_t alignedWith(size_t value, size_t power) const override {
-    return org::simple::Power2::get_aligned_with(value, power);
+    return org::simple::core::Power2::get_aligned_with(value, power);
   }
 };
 
@@ -113,7 +113,7 @@ struct ReferenceImpl : public PowerOfTwoImplementation {
 
 template <typename T, typename A, class P>
 using AbstractPower2TestCase =
-org::simple::testhelper::CompareWithReferenceTestCase<T, A, P>;
+org::simple::test::CompareWithReferenceTestCase<T, A, P>;
 
 template <typename T, typename A>
 class Power2TestCase
@@ -204,7 +204,7 @@ SubjectImpl<true> constant;
 SubjectImpl<false> runtime;
 
 struct TestSet {
-  using TestCase = org::simple::testhelper::AbstractValueTestCase;
+  using TestCase = org::simple::test::AbstractValueTestCase;
 
   std::vector<const TestCase *> getTestCases() { return testCases; }
 
