@@ -22,7 +22,7 @@
  */
 
 #include <limits>
-#include <org-simple/core/size.h>
+#include <org-simple/core/Size.h>
 #include <type_traits>
 
 namespace org::simple {

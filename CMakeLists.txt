@@ -25,9 +25,9 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost REQUIRED COMPONENTS unit_test_framework)
 find_package(Threads)
 
-set(PROJECT_HEADERS include/org-simple/core/attributes.h include/org-simple/core/debug.h include/org-simple/core/bits.h include/org-simple/core/power2.h include/org-simple/core/bounds.h include/org-simple/core/Index.h include/org-simple/core/circular.h include/org-simple/util/Reference.h include/org-simple/util/Timeout.h)
+set(PROJECT_HEADERS include/org-simple/core/attributes.h include/org-simple/core/debug.h include/org-simple/core/Bits.h include/org-simple/core/Power2.h include/org-simple/core/bounds.h include/org-simple/core/Index.h include/org-simple/core/Circular.h include/org-simple/util/Reference.h include/org-simple/util/Timeout.h)
 set(PROJECT_SRC src/org-simple/placeholder.cc)
-set(PROJECT_TESTS test/test-helper.h test/test.cc test/util/OwnedReference.h test/util/OwnedReference.cc test/util/OwnedReference-tests.cc test/core/bounds-tests.cc test/core/power2-tests.cc test/core/circular-tests.cc test/core/bits-tests.cc test/util/Timeout-tests.cc test/util/Reference-tests.cc test/util/RefCount-tests.cc test/core/Index-tests.cc)
+set(PROJECT_TESTS test/test-helper.h test/test.cc test/util/OwnedReference.h test/util/OwnedReference.cc test/util/OwnedReference-tests.cc test/core/bounds-tests.cc test/core/Power2-tests.cc test/core/Circular-tests.cc test/core/Bits-tests.cc test/util/Timeout-tests.cc test/util/Reference-tests.cc test/util/RefCount-tests.cc test/core/Index-tests.cc)
 
 # Create the library
 

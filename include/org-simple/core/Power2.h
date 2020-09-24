@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-#include <org-simple/core/bits.h>
+#include <org-simple/core/Bits.h>
 
 namespace org::simple {
 template <typename size_type = size_t> struct Power2For {

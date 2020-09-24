@@ -26,7 +26,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include <org-simple/core/bits.h>
+#include <org-simple/core/Bits.h>
 #include <org-simple/core/bounds.h>
 
 namespace org::simple {

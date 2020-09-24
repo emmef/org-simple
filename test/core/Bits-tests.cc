@@ -4,8 +4,8 @@
 
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
+#include <org-simple/core/Bits.h>
 #include <test-helper.h>
-#include <org-simple/core/bits.h>
 
 namespace {
 

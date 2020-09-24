@@ -2,11 +2,11 @@
 // Created by michel on 21-09-20.
 //
 
-#include <cstddef>
+#include "test-helper.h"
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
-#include <org-simple/core/size.h>
-#include "test-helper.h"
+#include <cstddef>
+#include <org-simple/core/Size.h>
 
 namespace {
 

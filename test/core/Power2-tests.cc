@@ -2,11 +2,11 @@
 // Created by michel on 21-09-20.
 //
 
+#include "test-helper.h"
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
+#include <org-simple/core/Power2.h>
 #include <org-simple/core/attributes.h>
-#include <org-simple/core/power2.h>
-#include "test-helper.h"
 
 namespace {
 

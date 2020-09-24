@@ -2,8 +2,8 @@
 // Created by michel on 21-09-20.
 //
 
-#include <org-simple/core/circular.h>
 #include <boost/test/unit_test.hpp>
+#include <org-simple/core/Circular.h>
 
 namespace {
 
