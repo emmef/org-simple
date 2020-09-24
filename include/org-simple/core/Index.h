@@ -31,11 +31,7 @@ struct Index {
     if (index < size) {
       return index;
     }
-    throw std::invalid_argument("IndexPolicy::index out of range");
-  }
-
-  template <typename S> org_nodiscard static S wrapped(S index, S size) {
-    return index % size;
+    throw std::out_of_range("IndexPolicy::index out of range");
   }
 
   template <typename S> org_nodiscard static S unchecked(S index, S) {
@@ -71,11 +67,7 @@ struct Index {
       if (index <= size) {
         return index;
       }
-      throw std::invalid_argument("IndexPolicy::offset out of range");
-    }
-
-    template <typename S> org_nodiscard static S wrapped(S index, S size) {
-      return index % size;
+      throw std::out_of_range("IndexPolicy::offset out of range");
     }
 
     template <typename S> org_nodiscard static S unchecked(S index, S) {
