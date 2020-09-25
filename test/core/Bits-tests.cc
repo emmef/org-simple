@@ -14,21 +14,21 @@ struct Scenarios {
 
   static FunctionTest most_significant_bit(size_t value, int expected) {
 
-    return FunctionTest::create(value, expected,
-                                org::simple::core::Bits<size_t>::most_significant,
-                                "Bits::most_significant");
+    return FunctionTest::create(
+        value, expected, org::simple::core::Bits<size_t>::most_significant,
+        "Bits::most_significant");
   }
 
   static FunctionTest most_significant_single_bit(size_t value, int expected) {
     return FunctionTest::create(
-        value, expected, org::simple::core::Bits<size_t>::most_significant_single,
+        value, expected,
+        org::simple::core::Bits<size_t>::most_significant_single,
         "Bits::most_significant_single");
   }
 
   static FunctionTest bit_fill(size_t value, size_t expected) {
-    return FunctionTest::create(value, expected,
-                                org::simple::core::Bits<size_t>::fill,
-                                "Bits::fill");
+    return FunctionTest::create(
+        value, expected, org::simple::core::Bits<size_t>::fill, "Bits::fill");
   }
 };
 
@@ -97,7 +97,7 @@ public:
     testCases.push_back(Scenarios::bit_fill(0x8070100, 0xfffffff));
   }
 
-  std::vector<FunctionTest> const getTestCases() { return testCases; }
+  const std::vector<FunctionTest> getTestCases() { return testCases; }
 
 } TESTCASES;
 

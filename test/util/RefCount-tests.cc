@@ -9,9 +9,9 @@
  */
 #undef ORG_SIMPLE_CORE_REF_COUNT_POINTER_ALLOW_NULL_INIT
 
+#include "OwnedReference.h"
 #include "test-helper.h"
 #include <org-simple/util/Reference.h>
-#include "OwnedReference.h"
 
 using Owned = org::simple::test::OwnedReference;
 using Owner = org::simple::test::ReferenceOwner;
@@ -102,7 +102,6 @@ BOOST_AUTO_TEST_CASE(testInitDelDestroyDoubleNoop) {
   BOOST_CHECK_MESSAGE(!destroyed, "Owned object was not doubly destroyed");
   BOOST_CHECK_EQUAL(0, owner.count());
 }
-
 
 BOOST_AUTO_TEST_CASE(testInitDelDestroyDoubleAdd) {
   Owner owner(10);

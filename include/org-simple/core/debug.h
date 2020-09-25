@@ -24,14 +24,16 @@
 #ifdef ORG_SIMPLE_CORE_DEBUG_ENABLED
 #include <cstdio>
 #include <typeinfo>
-#define debugLineArgs(F,...) std::printf("%s: " F "\n", typeid(*this).name(), __VA_ARGS__)
-#define debugLineClass(S,C) std::printf("%s: " S "\n", typeid(C).name())
-#define debugLineClassArgs(F,C,...) std::printf("%s: " F "\n", typeid(C).name(), __VA_ARGS__)
+#define debugLineArgs(F, ...)                                                  \
+  std::printf("%s: " F "\n", typeid(*this).name(), __VA_ARGS__)
+#define debugLineClass(S, C) std::printf("%s: " S "\n", typeid(C).name())
+#define debugLineClassArgs(F, C, ...)                                          \
+  std::printf("%s: " F "\n", typeid(C).name(), __VA_ARGS__)
 #define debugLine(S) std::printf("%s: " S "\n", typeid(*this).name())
 #else
-#define debugLineArgs(F,...)
-#define debugLineClass(S,C)
-#define debugLineClassArgs(F,C,...)
+#define debugLineArgs(F, ...)
+#define debugLineClass(S, C)
+#define debugLineClassArgs(F, C, ...)
 #define debugLine(S)
 #endif
 

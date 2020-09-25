@@ -23,7 +23,6 @@
 
 #include <atomic>
 #include <cstddef>
-#include <org-simple/core/attributes.h>
 #include <stdexcept>
 
 #ifndef ORG_SIMPLE_CORE_REF_COUNT_POINTER_ALLOW_NULL_INIT
@@ -31,7 +30,8 @@ static void *ref_counter_pointer_check_null_init(void *ptr) {
   if (ptr) {
     return ptr;
   }
-  throw std::invalid_argument("org::simple::util::UntypedRefCountPointer: nullptr");
+  throw std::invalid_argument(
+      "org::simple::util::UntypedRefCountPointer: nullptr");
 }
 #else
 static constexpr void *ref_counter_pointer_check_null_init(void *ptr) {
@@ -44,7 +44,8 @@ static void *ref_counter_pointer_check_null_dereference(void *ptr) {
   if (ptr) {
     return ptr;
   }
-  throw std::invalid_argument("org::simple::util::UntypedRefCountPointer: nullptr");
+  throw std::invalid_argument(
+      "org::simple::util::UntypedRefCountPointer: nullptr");
 }
 #else
 static constexpr void *ref_counter_pointer_check_null_dereference(void *ptr) {
@@ -91,7 +92,7 @@ public:
     flag_.clear();
   }
 
-  org_nodiscard void *get_ptr() const noexcept {
+  [[nodiscard]] void *get_ptr() const noexcept {
     return ref_counter_pointer_check_null_dereference(ptr_);
   }
 
@@ -128,7 +129,6 @@ template <typename T> class Reference {
     }
   }
 
-
 public:
   Reference() : ptr_(nullptr) {}
 
@@ -138,11 +138,9 @@ public:
     source.ptr_ = nullptr;
   }
 
-  Reference(const Reference<T> &source) : ptr_(source.ptr_) {
-    ptr_->add_ref();
-  }
+  Reference(const Reference<T> &source) : ptr_(source.ptr_) { ptr_->add_ref(); }
 
-  Reference & operator=(const Reference<T> &source) {
+  Reference &operator=(const Reference<T> &source) {
     if (&source == this || ptr_ == source.ptr_) {
       return *this;
     }

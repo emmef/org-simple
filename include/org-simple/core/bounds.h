@@ -24,39 +24,38 @@
 #include <algorithm>
 #include <cstddef>
 #include <type_traits>
-#include <org-simple/core/attributes.h>
 
 namespace org::simple::core {
 
 template <typename T>
-org_nodiscard static constexpr T maximum(const T v1, const T v2) noexcept {
+[[nodiscard]] static constexpr T maximum(const T v1, const T v2) noexcept {
   static_assert(std::is_arithmetic_v<T>);
   return v1 < v2 ? v2 : v1;
 }
 
 template <typename T>
-org_nodiscard static constexpr T minimum(const T v1, const T v2) noexcept {
+[[nodiscard]] static constexpr T minimum(const T v1, const T v2) noexcept {
   static_assert(std::is_arithmetic_v<T>);
   return v2 < v1 ? v2 : v1;
 }
 
 template <typename T>
-org_nodiscard static constexpr T clamped(const T v, const T min,
-                                          const T max) noexcept {
+[[nodiscard]] static constexpr T clamped(const T v, const T min,
+                                         const T max) noexcept {
   static_assert(std::is_arithmetic_v<T>);
   return v <= min ? min : v >= max ? max : v;
 }
 
 template <typename T>
-org_nodiscard static constexpr bool is_within(const T v, const T min,
-                                               const T max) noexcept {
+[[nodiscard]] static constexpr bool is_within(const T v, const T min,
+                                              const T max) noexcept {
   static_assert(std::is_arithmetic_v<T>);
   return v >= min && v <= max;
 }
 
 template <typename T>
-org_nodiscard static constexpr bool is_within_excl(const T v, const T min,
-                                                    const T max) noexcept {
+[[nodiscard]] static constexpr bool is_within_excl(const T v, const T min,
+                                                   const T max) noexcept {
   static_assert(std::is_arithmetic_v<T>);
   return v > min && v < max;
 }
@@ -78,11 +77,9 @@ struct Unsigned {
     static_assert(is_unsigned_integral<destination_type>());
     static_assert(is_unsigned_integral<source_type>());
     if constexpr (sizeof(destination_type) >= sizeof(source_type)) {
-      return destination_type(source_value) <=
-             destination_maximum;
+      return destination_type(source_value) <= destination_maximum;
     } else {
-      return source_value <=
-             source_type(destination_maximum);
+      return source_value <= source_type(destination_maximum);
     }
   }
 

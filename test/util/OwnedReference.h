@@ -21,16 +21,16 @@
  * limitations under the License.
  */
 
-#include <cstddef>
-#include <mutex>
 #include <atomic>
+#include <cstddef>
 #include <iostream>
+#include <mutex>
 
 namespace org::simple::test {
 
 class ReferenceOwner {
   struct Entry {
-    void * ptr;
+    void *ptr;
     int id;
   };
   Entry *ptrs_;
@@ -68,16 +68,13 @@ class OwnedReference {
 
 public:
   explicit OwnedReference(ReferenceOwner &owner)
-      : owner_(owner), id_(owner_.add_get_id(this)) {
-  }
+      : owner_(owner), id_(owner_.add_get_id(this)) {}
 
   [[nodiscard]] int id() const { return id_; }
 
-  ~OwnedReference() {
-    owner_.remove(this, id_);
-  }
+  ~OwnedReference() { owner_.remove(this, id_); }
 };
 
-} // namespace org::simple
+} // namespace org::simple::test
 
 #endif // ORG_SIMPLE_OWNEDREFERENCE_H

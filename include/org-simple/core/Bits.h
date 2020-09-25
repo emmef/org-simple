@@ -40,7 +40,6 @@ template <typename size_type = size_t> class Bits {
   };
 
 public:
-
   /**
    * Returns the number of bits for the chosen size_type.
    */

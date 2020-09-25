@@ -222,9 +222,8 @@ BOOST_AUTO_TEST_CASE(testMetricSetSizeSame) {
   Metric m(requestedSize);
   auto oldSize = m.size();
   m.set_element_count(properSize);
-  BOOST_CHECK_MESSAGE(
-      m.size() == oldSize,
-      "Setting size to same value should not change anything");
+  BOOST_CHECK_MESSAGE(m.size() == oldSize,
+                      "Setting size to same value should not change anything");
 }
 
 BOOST_AUTO_TEST_CASE(testMetricSetSizeOneBigger) {
@@ -244,4 +243,3 @@ BOOST_AUTO_TEST_CASE(testMetricSetSizeHalf) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-

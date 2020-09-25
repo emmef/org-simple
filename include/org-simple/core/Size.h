@@ -67,12 +67,14 @@ struct MemoryModel {
  * sizes.
  */
 template <typename SIZE = size_t, int size_bit_limit = 0> struct SizeType {
-  static_assert(std::is_integral_v<SIZE>,
-                "org::simple::core::size::system::SizeType: size_type must be an "
-                "integral type.");
+  static_assert(
+      std::is_integral_v<SIZE>,
+      "org::simple::core::size::system::SizeType: size_type must be an "
+      "integral type.");
 
-  static_assert(!std::is_signed_v<SIZE>, "org::simple::core::size::system::SizeType: "
-                                         "size_type must be an unsigned type.");
+  static_assert(!std::is_signed_v<SIZE>,
+                "org::simple::core::size::system::SizeType: "
+                "size_type must be an unsigned type.");
 
   static_assert(
       sizeof(SIZE) <= sizeof(size_t),
@@ -101,8 +103,9 @@ template <typename SIZE = size_t, int size_bit_limit = 0> struct SizeType {
   /**
    * The number of bits used to represent size values.
    */
-  static constexpr unsigned size_bits = size_bit_limit > 0 ? size_bit_limit
-                                 : MemoryModel::size_t_bits + size_bit_limit;
+  static constexpr unsigned size_bits =
+      size_bit_limit > 0 ? size_bit_limit
+                         : MemoryModel::size_t_bits + size_bit_limit;
 
   /**
    * The maximum value of a size.
@@ -257,7 +260,7 @@ struct Size {
    * @return true if size is valid, false otherwise.
    */
   template <typename T>
-  org_nodiscard static constexpr bool is_valid(T size) noexcept {
+  [[nodiscard]] static constexpr bool is_valid(T size) noexcept {
     return Unsigned::is_nonzero_not_greater(size, max);
   }
 
@@ -266,7 +269,7 @@ struct Size {
    * @return true if size is valid, false otherwise.
    */
   template <typename source_size_type, source_size_type size_bits>
-  org_nodiscard static constexpr bool is_valid(
+  [[nodiscard]] static constexpr bool is_valid(
       const Size<element_size, source_size_type, size_bits> &size) noexcept {
     return is_valid(size.get());
   }
@@ -276,7 +279,7 @@ struct Size {
    * @return true if element_index is valid, false otherwise.
    */
   template <typename T>
-  org_nodiscard static constexpr bool is_valid_index(T element_index) noexcept {
+  [[nodiscard]] static constexpr bool is_valid_index(T element_index) noexcept {
     return Unsigned::is_not_greater(element_index, max_index);
   }
 
@@ -285,7 +288,7 @@ struct Size {
    * @return true if element_index is valid, false otherwise.
    */
   template <typename source_size_type, source_size_type size_bits>
-  org_nodiscard static constexpr bool
+  [[nodiscard]] static constexpr bool
   is_valid_index(const Size<element_size, source_size_type, size_bits>
                      &element_index) noexcept {
     return is_valid_index(element_index.get());
@@ -296,7 +299,7 @@ struct Size {
    * non-zero and no greater than max.
    * @return true if the sum represents a valid size.
    */
-  org_nodiscard static constexpr bool is_valid_sum(size_type v1,
+  [[nodiscard]] static constexpr bool is_valid_sum(size_type v1,
                                                    size_type v2) noexcept {
     return Unsigned::is_sum_nonzero_not_greater(v1, v2, max);
   }
@@ -306,7 +309,7 @@ struct Size {
    * non-zero and no greater than max.
    * @return true if the product represents a valid size.
    */
-  org_nodiscard static constexpr bool is_valid_product(size_type v1,
+  [[nodiscard]] static constexpr bool is_valid_product(size_type v1,
                                                        size_type v2) noexcept {
     return Unsigned::is_product_nonzero_not_greater(v1, v2, max);
   }
@@ -409,31 +412,31 @@ struct Size {
   /**
    * @return value
    */
-  org_nodiscard explicit operator size_type() const noexcept { return value; }
+  [[nodiscard]] explicit operator size_type() const noexcept { return value; }
 
   /**
    * Explicitly returns value.
    * @return value
    */
-  org_nodiscard size_t get() const noexcept { return value; }
+  [[nodiscard]] size_t get() const noexcept { return value; }
 
   /**
    * Returns the maximum size from an instance.
    * @return the maximum size, max.
    */
-  org_nodiscard size_t maximum() const noexcept { return max; }
+  [[nodiscard]] size_t maximum() const noexcept { return max; }
 
   /**
    * Returns the maximum element index from an instance.
    * @return the maximum element index, max_index.
    */
-  org_nodiscard size_t maximum_index() const noexcept { return max_index; }
+  [[nodiscard]] size_t maximum_index() const noexcept { return max_index; }
 
   /**
    * Returns the maximum bit mask from an instance.
    * @return the maximum bit mask, max_bit_mask.
    */
-  org_nodiscard size_t maximum_bit_mask() const noexcept {
+  [[nodiscard]] size_t maximum_bit_mask() const noexcept {
     return max_bit_mask;
   }
 

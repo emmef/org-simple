@@ -81,5 +81,4 @@ BOOST_AUTO_TEST_CASE(testReferencesHandleMove) {
   BOOST_CHECK_EQUAL(0, owner.count());
 }
 
-
 BOOST_AUTO_TEST_SUITE_END()

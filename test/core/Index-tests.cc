@@ -64,7 +64,6 @@ BOOST_AUTO_TEST_CASE(testIndexUnCheckedSizeDoesNotThrow) {
   BOOST_CHECK_EQUAL(SIZE, Exclusive::unchecked(SIZE, SIZE));
 }
 
-
 BOOST_AUTO_TEST_CASE(testInclusiveCheckedZeroSizeZero) {
   BOOST_CHECK_EQUAL(ZERO, Inclusive::checked(ZERO, ZERO));
 }
@@ -91,7 +90,8 @@ BOOST_AUTO_TEST_CASE(testInclusiveCheckedSize) {
 
 BOOST_AUTO_TEST_CASE(testInclusiveCheckedSizePlusOneThrows) {
   [[maybe_unused]] size_t out;
-  BOOST_CHECK_THROW(out = Inclusive::checked(SIZE + ONE, SIZE), std::out_of_range);
+  BOOST_CHECK_THROW(out = Inclusive::checked(SIZE + ONE, SIZE),
+                    std::out_of_range);
 }
 
 BOOST_AUTO_TEST_CASE(testInclusiveUnCheckedZeroSizeZero) {
@@ -121,6 +121,5 @@ BOOST_AUTO_TEST_CASE(testInclusiveUnCheckedSizeDoesNotThrow) {
 BOOST_AUTO_TEST_CASE(testInclusiveUnCheckedSizePlusOneDoesNotThrow) {
   BOOST_CHECK_EQUAL(SIZE + ONE, Inclusive::unchecked(SIZE + ONE, SIZE));
 }
-
 
 BOOST_AUTO_TEST_SUITE_END()

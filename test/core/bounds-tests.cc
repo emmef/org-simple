@@ -19,18 +19,18 @@ using TestCase = org::simple::test::AbstractValueTestCase;
 struct WithinTests {
   static TestCase *createWithin(bool expected, size_t value, size_t min,
                                 size_t max) {
-    return Functions::create("is_within", org::simple::core::is_within, expected, value,
-                             min, max);
+    return Functions::create("is_within", org::simple::core::is_within,
+                             expected, value, min, max);
   }
   static TestCase *createWithinExcl(bool expected, size_t value, size_t min,
                                     size_t max) {
-    return Functions::create("is_within_excl", org::simple::core::is_within_excl,
-                             expected, value, min, max);
+    return Functions::create("is_within_excl",
+                             org::simple::core::is_within_excl, expected, value,
+                             min, max);
   }
 };
 
-std::vector<org::simple::test::AbstractValueTestCase *> *
-generateTestCases() {
+std::vector<org::simple::test::AbstractValueTestCase *> *generateTestCases() {
   constexpr size_t MAX_LIMIT = FixedRange::Size::max;
 
   std::vector<size_t> singleValues;
@@ -86,29 +86,26 @@ generateTestCases() {
                                            FixedRange::Size::is_valid<size_t>,
                                            isValidSize, i));
 
-    testCases->push_back(Functions::create("FixedRange::is_valid_index",
-                                           FixedRange::Size::is_valid_index<size_t>,
-                                           isValidIndex, i));
+    testCases->push_back(Functions::create(
+        "FixedRange::is_valid_index", FixedRange::Size::is_valid_index<size_t>,
+        isValidIndex, i));
     if (isValidIndex) {
-      testCases->push_back(Functions::create("FixedRange::get_valid_index",
-                                             FixedRange::get_valid_index<size_t>,
-                                             i, i));
-    }
-    else {
-      testCases->push_back(Functions::create("FixedRange::get_valid_index",
-                                             FixedRange::get_valid_index<size_t>,
-                                             i));
+      testCases->push_back(
+          Functions::create("FixedRange::get_valid_index",
+                            FixedRange::get_valid_index<size_t>, i, i));
+    } else {
+      testCases->push_back(
+          Functions::create("FixedRange::get_valid_index",
+                            FixedRange::get_valid_index<size_t>, i));
     }
     if (isValidSize) {
-      testCases->push_back(Functions::create("FixedRange::get_valid_size",
-                                             FixedRange::Size::get_valid<size_t>,
-                                             i, i));
-    }
-    else {
-      testCases->push_back(Functions::create("FixedRange::get_valid_size",
-                                             FixedRange::Size::get_valid<size_t>,
-                                             i));
-
+      testCases->push_back(
+          Functions::create("FixedRange::get_valid_size",
+                            FixedRange::Size::get_valid<size_t>, i, i));
+    } else {
+      testCases->push_back(
+          Functions::create("FixedRange::get_valid_size",
+                            FixedRange::Size::get_valid<size_t>, i));
     }
   }
 
@@ -120,14 +117,13 @@ generateTestCases() {
                                            FixedRange::is_valid_product,
                                            isValidSizeProduct, i.v1, i.v2));
     if (isValidSizeProduct) {
-      testCases->push_back(Functions::create(
-          "FixedRange::get_valid_product",
-          FixedRange::get_valid_product, product, i.v1, i.v2));
-    }
-    else {
-      testCases->push_back(Functions::create(
-          "FixedRange::get_valid_product",
-          FixedRange::get_valid_product, i.v1, i.v2));
+      testCases->push_back(Functions::create("FixedRange::get_valid_product",
+                                             FixedRange::get_valid_product,
+                                             product, i.v1, i.v2));
+    } else {
+      testCases->push_back(Functions::create("FixedRange::get_valid_product",
+                                             FixedRange::get_valid_product,
+                                             i.v1, i.v2));
     }
   }
 
@@ -140,15 +136,12 @@ generateTestCases() {
                                            isValidSizeSum, i.v1, i.v2));
     if (isValidSizeSum) {
       testCases->push_back(Functions::create("FixedRange::get_valid_sum",
-                                             FixedRange::get_valid_sum,
-                                             sum, i.v1, i.v2));
-    }
-    else {
-      testCases->push_back(Functions::create("FixedRange::get_valid_sum",
-                                             FixedRange::get_valid_sum,
+                                             FixedRange::get_valid_sum, sum,
                                              i.v1, i.v2));
+    } else {
+      testCases->push_back(Functions::create(
+          "FixedRange::get_valid_sum", FixedRange::get_valid_sum, i.v1, i.v2));
     }
-
   }
 
   return testCases;
@@ -171,15 +164,12 @@ public:
     }
   }
 
-  org_nodiscard std::vector<org::simple::test::AbstractValueTestCase *>
+  [[nodiscard]] std::vector<org::simple::test::AbstractValueTestCase *>
   getTestCases() const {
     return *testCases;
   }
-
 };
 } // namespace
-
-
 
 BOOST_AUTO_TEST_SUITE(org_simple_bounds)
 
@@ -189,7 +179,7 @@ BOOST_AUTO_TEST_CASE(testConstructorExactMaxSize) {
 }
 
 BOOST_AUTO_TEST_CASE(testConstructorValidSize) {
-  BOOST_CHECK_EQUAL(size_t(FixedRange(3u)), 3u);
+  BOOST_CHECK_EQUAL(FixedRange(3u).get(), 3u);
 }
 
 BOOST_AUTO_TEST_CASE(testConstructorTooLargeSize) {
@@ -238,9 +228,6 @@ BOOST_AUTO_TEST_CASE(testProductTooLarge) {
 
 TestGenerator TEST_GENERATOR;
 
-BOOST_DATA_TEST_CASE(sample, TEST_GENERATOR.getTestCases()) {
-  sample->test();
-}
-
+BOOST_DATA_TEST_CASE(sample, TEST_GENERATOR.getTestCases()) { sample->test(); }
 
 BOOST_AUTO_TEST_SUITE_END()

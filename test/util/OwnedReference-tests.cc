@@ -2,8 +2,8 @@
 // Created by michel on 24-09-20.
 //
 
-#include "boost-unit-tests.h"
 #include "OwnedReference.h"
+#include "boost-unit-tests.h"
 
 using Owned = org::simple::test::OwnedReference;
 using Owner = org::simple::test::ReferenceOwner;
@@ -16,7 +16,6 @@ BOOST_AUTO_TEST_CASE(testOwnerStarsWithZeroErrors) {
   BOOST_CHECK_EQUAL(0, owner.errors());
 }
 
-
 BOOST_AUTO_TEST_CASE(testOwnerCountMatchesAdds) {
   Owner owner(2);
   int x, y;
@@ -27,7 +26,6 @@ BOOST_AUTO_TEST_CASE(testOwnerCountMatchesAdds) {
   owner.add_get_id(&y);
   BOOST_CHECK_EQUAL(2, owner.count());
 }
-
 
 BOOST_AUTO_TEST_CASE(testOwnerCountMatchesAddsAndRemoves) {
   Owner owner(2);

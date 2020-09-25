@@ -21,11 +21,10 @@
  * limitations under the License.
  */
 
+#include "boost-unit-tests.h"
 #include <array>
 #include <iostream>
-#include <org-simple/core/attributes.h>
 #include <typeinfo>
-#include "boost-unit-tests.h"
 
 namespace org::simple::test {
 
@@ -64,11 +63,12 @@ template <typename Value> class SimpleTestCase : public AbstractValueTestCase {
 public:
   virtual Value actualValue() const = 0;
 
-  SimpleTestCase(Value expected) : expectedValue(expected), throws(false) {}
+  explicit SimpleTestCase(Value expected)
+      : expectedValue(expected), throws(false) {}
 
   SimpleTestCase() : throws(true) {}
 
-  void test() const override final {
+  void test() const final {
     std::stringstream &out = log();
     if (throws) {
       try {
@@ -120,13 +120,13 @@ class OneArgumentFunctionTestCase : public SimpleTestCase<Result> {
   V1 arg1;
 
 public:
-  OneArgumentFunctionTestCase(const std::string &functionName,
+  OneArgumentFunctionTestCase(const std::string functionName,
                               Result (*function)(V1), Result expectedValue,
                               V1 argument)
       : SimpleTestCase<Result>(expectedValue), name(functionName), fn(function),
         arg1(argument) {}
 
-  OneArgumentFunctionTestCase(const std::string &functionName,
+  OneArgumentFunctionTestCase(const std::string functionName,
                               Result (*function)(V1), V1 argument)
       : SimpleTestCase<Result>(), name(functionName), fn(function),
         arg1(argument) {}
@@ -147,13 +147,13 @@ class TwoArgumentFunctionTestCase : public SimpleTestCase<Result> {
   V2 arg2;
 
 public:
-  TwoArgumentFunctionTestCase(const std::string &functionName,
+  TwoArgumentFunctionTestCase(const std::string functionName,
                               Result (*function)(V1, V2), Result expectedValue,
                               V1 argument1, V2 argument2)
       : SimpleTestCase<Result>(expectedValue), name(functionName), fn(function),
         arg1(argument1), arg2(argument2) {}
 
-  TwoArgumentFunctionTestCase(const std::string &functionName,
+  TwoArgumentFunctionTestCase(const std::string functionName,
                               Result (*function)(V1, V2), V1 argument1,
                               V2 argument2)
       : SimpleTestCase<Result>(), name(functionName), fn(function),
@@ -176,14 +176,14 @@ class ThreeArgumentFunctionTestCase : public SimpleTestCase<Result> {
   V3 arg3;
 
 public:
-  ThreeArgumentFunctionTestCase(const std::string &functionName,
+  ThreeArgumentFunctionTestCase(const std::string functionName,
                                 Result (*function)(V1, V2, V3),
                                 Result expectedValue, V1 argument1,
                                 V2 argument2, V3 argument3)
       : SimpleTestCase<Result>(expectedValue), name(functionName), fn(function),
         arg1(argument1), arg2(argument2), arg3(argument3) {}
 
-  ThreeArgumentFunctionTestCase(const std::string &functionName,
+  ThreeArgumentFunctionTestCase(const std::string functionName,
                                 Result (*function)(V1, V2, V3), V1 argument1,
                                 V2 argument2, V3 argument3)
       : SimpleTestCase<Result>(), name(functionName), fn(function),
@@ -248,7 +248,7 @@ class CompareWithReferenceTestCase : public AbstractValueTestCase {
   const size_t count;
   const std::array<A, 3> arguments;
 
-  org_nodiscard bool effectiveValue(T &result,
+  [[nodiscard]] bool effectiveValue(T &result,
                                     const TestInterface &values) const {
     try {
       result = generateValue(values);
@@ -289,15 +289,15 @@ public:
       : expectedValues(expected), actualValues(actual), count(3),
         arguments({v1, v2, v3}) {}
 
-  org_nodiscard virtual const char *methodName() const = 0;
+  [[nodiscard]] virtual const char *methodName() const = 0;
 
-  org_nodiscard virtual const char *typeOfTestName() const = 0;
+  [[nodiscard]] virtual const char *typeOfTestName() const = 0;
 
-  org_nodiscard virtual const char *getArgumentName(size_t) const {
+  [[nodiscard]] virtual const char *getArgumentName(size_t) const {
     return nullptr;
   }
 
-  org_nodiscard virtual T generateValue(const TestInterface &) const = 0;
+  [[nodiscard]] virtual T generateValue(const TestInterface &) const = 0;
 
   void test() const override {
     T expected;
@@ -342,7 +342,7 @@ public:
     return output << ")";
   }
 
-  org_nodiscard const char *getArgumentNameOrDefault(size_t i) const {
+  [[nodiscard]] const char *getArgumentNameOrDefault(size_t i) const {
     const char *string = getArgumentName(i);
     if (string) {
       return string;
@@ -372,9 +372,9 @@ public:
 };
 
 struct AbstractFunctionTestScenario {
-  virtual bool success() const = 0;
+  [[nodiscard]] virtual bool success() const = 0;
   virtual void print(std::ostream &out) const = 0;
-  virtual AbstractFunctionTestScenario *clone() const = 0;
+  [[nodiscard]] virtual AbstractFunctionTestScenario *clone() const = 0;
   virtual ~AbstractFunctionTestScenario() = default;
 };
 
@@ -390,9 +390,11 @@ struct FunctionTestScenarioImplementation
                                      const char *name)
       : input_(input), expected_(expected), function_(function), name_(name) {}
 
-  bool success() const override { return expected_ == function_(input_); }
+  [[nodiscard]] bool success() const override {
+    return expected_ == function_(input_);
+  }
 
-  AbstractFunctionTestScenario *clone() const override {
+  [[nodiscard]] AbstractFunctionTestScenario *clone() const override {
     return new FunctionTestScenarioImplementation<R, V>(input_, expected_,
                                                         function_, name_);
   }
@@ -412,18 +414,22 @@ class FunctionTestScenario {
 
 public:
   FunctionTestScenario() : scenario_(nullptr){};
-  FunctionTestScenario(const AbstractFunctionTestScenario *s) : scenario_(s) {}
+  explicit FunctionTestScenario(const AbstractFunctionTestScenario *s)
+      : scenario_(s) {}
   FunctionTestScenario(const FunctionTestScenario &source)
       : scenario_(source.scenario_->clone()) {}
 
-  FunctionTestScenario(FunctionTestScenario &&moved)
+  FunctionTestScenario(FunctionTestScenario &&moved) noexcept
       : scenario_(moved.scenario_) {
     moved.scenario_ = nullptr;
   }
-  void operator =(const FunctionTestScenario &source) {
-    scenario_ = source.scenario_->clone();
+  FunctionTestScenario &operator=(const FunctionTestScenario &source) {
+    if (&source != this) {
+      scenario_ = source.scenario_->clone();
+    }
+    return *this;
   }
-  bool success() const { return scenario_->success(); }
+  [[nodiscard]] bool success() const { return scenario_->success(); }
   void print(std::ostream &out) const { scenario_->print(out); }
 
   ~FunctionTestScenario() {

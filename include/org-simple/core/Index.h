@@ -21,20 +21,19 @@
  * limitations under the License.
  */
 
-#include <org-simple/core/attributes.h>
 #include <stdexcept>
 
 namespace org::simple::core {
 struct Index {
 
-  template <typename S> org_nodiscard static S checked(S index, S size) {
+  template <typename S> [[nodiscard]] static S checked(S index, S size) {
     if (index < size) {
       return index;
     }
     throw std::out_of_range("IndexPolicy::index out of range");
   }
 
-  template <typename S> org_nodiscard static S unchecked(S index, S) {
+  template <typename S> [[nodiscard]] static S unchecked(S index, S) {
     return index;
   }
 
@@ -42,7 +41,7 @@ struct Index {
    * Returns checked index, or unchecked if
    * ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED is defined.
    */
-  template <typename S> org_nodiscard static S safe(S index, S size) {
+  template <typename S> [[nodiscard]] static S safe(S index, S size) {
 #ifndef ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED
     return checked(index, size);
 #else
@@ -54,7 +53,7 @@ struct Index {
    * Returns unchecked index, or checked if
    * ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED is defined.
    */
-  template <typename S> org_nodiscard static S unsafe(S index, S size) {
+  template <typename S> [[nodiscard]] static S unsafe(S index, S size) {
 #ifndef ORG_SIMPLE_INDEX_POLICY_FORCE_UNSAFE_CHECKED
     return unchecked(index, size);
 #else
@@ -63,14 +62,14 @@ struct Index {
   }
 
   struct Inclusive {
-    template <typename S> org_nodiscard static S checked(S index, S size) {
+    template <typename S> [[nodiscard]] static S checked(S index, S size) {
       if (index <= size) {
         return index;
       }
       throw std::out_of_range("IndexPolicy::offset out of range");
     }
 
-    template <typename S> org_nodiscard static S unchecked(S index, S) {
+    template <typename S> [[nodiscard]] static S unchecked(S index, S) {
       return index;
     }
 
@@ -78,7 +77,7 @@ struct Index {
      * Returns checked index, or unchecked if
      * ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED is defined.
      */
-    template <typename S> org_nodiscard static S safe(S index, S size) {
+    template <typename S> [[nodiscard]] static S safe(S index, S size) {
 #ifndef ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED
       return checked(index, size);
 #else
@@ -90,7 +89,7 @@ struct Index {
      * Returns unchecked index, or checked if
      * ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED is defined.
      */
-    template <typename S> org_nodiscard static S unsafe(S index, S size) {
+    template <typename S> [[nodiscard]] static S unsafe(S index, S size) {
 #ifndef ORG_SIMPLE_INDEX_POLICY_FORCE_UNSAFE_CHECKED
       return unchecked(index, size);
 #else

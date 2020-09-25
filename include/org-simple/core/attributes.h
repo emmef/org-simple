@@ -22,14 +22,12 @@
  */
 
 #if __cplusplus >= 201703L
-#define org_nodiscard [[nodiscard]]
 #if defined(__clang__) || defined(__GNUC__)
 #define org_force_inline __attribute__((always_inline))
 #elif defined(_MSC_VER)
 #define org_force_inline __forceinline
 #endif
 #else
-#define org_nodiscard
 #define org_force_inline inline
 #endif
 

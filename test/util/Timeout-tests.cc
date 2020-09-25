@@ -5,44 +5,30 @@
 #include "test-helper.h"
 #include <org-simple/util/Timeout.h>
 
-using namespace org::simple::util;
+using Fake = org::simple::util::TimeoutFakedClock<std::chrono::steady_clock>;
+
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_Timeout)
 
 BOOST_AUTO_TEST_CASE(testTimeoutFakeClockIntegerArgument) {
-  TimeoutFakedClock timeout10(10);
-  TimeoutFakedClock timeout13(13);
+  Fake timeout10(Fake::type_duration(10));
+  Fake timeout13(Fake::type_duration(13));
 
-  BOOST_CHECK_MESSAGE(timeout10.duration() == 10,
+  BOOST_CHECK_MESSAGE(timeout10.duration().count() == 10,
                       "Duration as given at construction");
 
-  BOOST_CHECK_MESSAGE(timeout13.duration() == 13,
-                      "Duration as given at construction");
-}
-
-BOOST_AUTO_TEST_CASE(testTimeoutFakeClockDurationArgument) {
-  TimeoutFakedClock timeout10milli(std::chrono::milliseconds(10));
-  TimeoutFakedClock timeout10micro(std::chrono::microseconds(10));
-  TimeoutFakedClock timeout13micro(std::chrono::microseconds(13));
-
-  BOOST_CHECK_MESSAGE(timeout10milli.duration() == 10,
-                      "Duration as given at construction");
-  BOOST_CHECK_MESSAGE(timeout10micro.duration() == 10,
-                      "Duration as given at construction");
-
-  BOOST_CHECK_MESSAGE(timeout13micro.duration() == 13,
+  BOOST_CHECK_MESSAGE(timeout13.duration().count() == 13,
                       "Duration as given at construction");
 }
 
 BOOST_AUTO_TEST_CASE(testTimeoutTestMechanism) {
-  using tuc = TimeoutFakedClock;
-  tuc timeout(std::chrono::milliseconds(10));
+  Fake timeout(std::chrono::milliseconds(10));
 
-  BOOST_CHECK_MESSAGE(timeout.duration() == 10,
+  BOOST_CHECK_MESSAGE(timeout.duration().count() == 10,
                       "Duration as given at construction");
 
-  tuc::type_time_point start = timeout.now();
-  tuc::type_time_point deadline = start + timeout.duration();
+  Fake::type_time_point start = timeout.now();
+  Fake::type_time_point deadline = start + timeout.duration();
 
   timeout.start();
   bool timed_out = false;
@@ -55,13 +41,14 @@ BOOST_AUTO_TEST_CASE(testTimeoutTestMechanism) {
       }
       timed_out = true;
     }
-    timeout.set_now(timeout.now() + 1);
+    timeout.set_now(timeout.now() + Fake::type_duration(1));
   }
   BOOST_CHECK(true);
 }
 
+
 BOOST_AUTO_TEST_CASE(testTimeoutUsingClock) {
-  using tuc = TimeoutUsingClock<std::chrono::steady_clock>;
+  using tuc = org::simple::util::TimeoutUsingClock<std::chrono::steady_clock>;
   tuc timeout(std::chrono::milliseconds(100));
 
   timeout.start();
@@ -83,7 +70,7 @@ BOOST_AUTO_TEST_CASE(testTimeoutUsingClock) {
 }
 
 BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleep) {
-  using tuc = TimeoutSlicedSleep<std::chrono::steady_clock>;
+  using tuc = org::simple::util::TimeoutSlicedSleep<std::chrono::steady_clock>;
   tuc timeout(std::chrono::milliseconds(500), 10);
 
   tuc::type_time_point start = tuc::clock::now();
@@ -110,7 +97,7 @@ BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleep) {
 }
 
 BOOST_AUTO_TEST_CASE(testTimeOutImmediate) {
-  Timeout &to = TimeoutImmediately::instance();
+  org::simple::util::Timeout &to = org::simple::util::TimeoutImmediately::instance();
 
   BOOST_CHECK_EQUAL(true, to.timed_out());
   to.start();
@@ -118,11 +105,19 @@ BOOST_AUTO_TEST_CASE(testTimeOutImmediate) {
 }
 
 BOOST_AUTO_TEST_CASE(testTimeOutNever) {
-  Timeout &to = TimeoutNever::instance();
+  org::simple::util::Timeout &to = org::simple::util::TimeoutNever::instance();
 
   BOOST_CHECK_EQUAL(false, to.timed_out());
   to.start();
   BOOST_CHECK_EQUAL(false, to.timed_out());
+}
+
+BOOST_AUTO_TEST_CASE(testTimeoutStart) {
+  struct TimeOutImp : public org::simple::util::Timeout {
+    void start() noexcept override {}
+    [[nodiscard]] virtual bool timed_out() = 0;
+
+  };
 }
 
 BOOST_AUTO_TEST_SUITE_END()
