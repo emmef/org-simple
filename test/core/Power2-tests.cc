@@ -3,10 +3,7 @@
 //
 
 #include "test-helper.h"
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/unit_test.hpp>
 #include <org-simple/core/Power2.h>
-#include <org-simple/core/attributes.h>
 
 namespace {
 
@@ -26,31 +23,29 @@ struct PowerOfTwoImplementation {
   org_nodiscard virtual bool minusOne(size_t size) const = 0;
 
   org_nodiscard virtual size_t alignedWith(size_t value,
-  size_t power) const = 0;
+                                           size_t power) const = 0;
+  org_nodiscard virtual bool isAlignedWith(size_t value,
+                                           size_t power) const = 0;
 
   virtual ~PowerOfTwoImplementation() = default;
 };
 
-template <bool USE_CONSTEXPR>
 struct SubjectImpl : public PowerOfTwoImplementation {
-  using Impl = org::simple::core::Power2;
-
-  org_nodiscard const char *name() const override {
-    return USE_CONSTEXPR ? "Power2::constant" : "Power2";
-  }
-
+  org_nodiscard const char *name() const override { return "Power2"; }
   org_nodiscard size_t nextOrSame(size_t size) const override {
-    return Impl::same_or_bigger(size);
+    return org::simple::core::Power2::same_or_bigger(size);
   }
-
-  org_nodiscard bool is(size_t size) const override { return Impl::is(size); }
-
+  org_nodiscard bool is(size_t size) const override {
+    return org::simple::core::Power2::is(size);
+  }
   org_nodiscard bool minusOne(size_t size) const override {
-    return Impl::is_minus_one(size);
+    return org::simple::core::Power2::is_minus_one(size);
   }
-
   org_nodiscard size_t alignedWith(size_t value, size_t power) const override {
     return org::simple::core::Power2::get_aligned_with(value, power);
+  };
+  org_nodiscard bool isAlignedWith(size_t value, size_t power) const override {
+    return org::simple::core::Power2::is_aligned_with(value, power);
   }
 };
 
@@ -79,17 +74,20 @@ struct ReferenceImpl : public PowerOfTwoImplementation {
     for (size_t test = 2; test > 0; test *= 2) {
       if (test == size) {
         return true;
-      };
+      }
     }
     return size == 1 + (maximumSize / 2);
   }
 
   org_nodiscard bool minusOne(size_t size) const override {
-    if (size == maximumSize) {
+    switch (size) {
+    case maximumSize:
+    case 1:
       return true;
-    }
-    if (size == 0) {
+    case 0:
       return false;
+    default:
+      break;
     }
     for (size_t test = 2; test > 0; test *= 2) {
       if (test > size) {
@@ -109,11 +107,15 @@ struct ReferenceImpl : public PowerOfTwoImplementation {
     return power * ((value + power - 1) / power);
   }
 
+  org_nodiscard bool isAlignedWith(size_t value, size_t power) const override {
+    return value == alignedWith(value, power);
+  }
+
 } referenceImplementation;
 
 template <typename T, typename A, class P>
 using AbstractPower2TestCase =
-org::simple::test::CompareWithReferenceTestCase<T, A, P>;
+    org::simple::test::CompareWithReferenceTestCase<T, A, P>;
 
 template <typename T, typename A>
 class Power2TestCase
@@ -123,12 +125,12 @@ class Power2TestCase
 public:
   Power2TestCase(const PowerOfTwoImplementation &subject, A arg)
       : AbstractPower2TestCase<T, A, PowerOfTwoImplementation>(
-      referenceImplementation, subject, arg),
+            referenceImplementation, subject, arg),
         name(subject.name()) {}
 
   Power2TestCase(const PowerOfTwoImplementation &subject, A arg1, A arg2)
       : AbstractPower2TestCase<T, A, PowerOfTwoImplementation>(
-      referenceImplementation, subject, arg1, arg2),
+            referenceImplementation, subject, arg1, arg2),
         name(subject.name()) {}
 
   org_nodiscard const char *typeOfTestName() const override {
@@ -200,8 +202,27 @@ struct AlignedWithTestCase : public Power2TestCase<size_t, size_t> {
   }
 };
 
-SubjectImpl<true> constant;
-SubjectImpl<false> runtime;
+struct IsAlignedWithTestCase : public Power2TestCase<bool, size_t> {
+
+  IsAlignedWithTestCase(const size_t offset, size_t power,
+                        const PowerOfTwoImplementation &subject)
+      : Power2TestCase<bool, size_t>(subject, offset, power) {}
+
+  org_nodiscard const char *methodName() const override {
+    return "is_aligned_with";
+  }
+
+  org_nodiscard bool
+  generateValue(const PowerOfTwoImplementation &impl) const override {
+    return impl.isAlignedWith(getArgument(0), getArgument(1));
+  }
+
+  org_nodiscard const char *getArgumentName(size_t i) const override {
+    return i == 0 ? "offset" : i == 1 ? "powerOfTwoValue" : nullptr;
+  }
+};
+
+SubjectImpl constant;
 
 struct TestSet {
   using TestCase = org::simple::test::AbstractValueTestCase;
@@ -209,6 +230,14 @@ struct TestSet {
   std::vector<const TestCase *> getTestCases() { return testCases; }
 
   TestSet() {
+    // Corner cases
+    testCases.emplace_back(new IsPowerTestCase(0, constant));
+    testCases.emplace_back(new IsPowerTestCase(1, constant));
+    testCases.emplace_back(new IsMinusOneTestCase(1, constant));
+    testCases.emplace_back(new IsPowerTestCase(maximumSize, constant));
+    testCases.emplace_back(new IsMinusOneTestCase(maximumSize, constant));
+
+    // Generate unique values for testing values surrounding powers of two
     std::vector<size_t> powerTestValues;
     for (size_t i = 2, j = 1; i > j; j = i, i *= 2) {
       addIfAbsent(powerTestValues, j - 1);
@@ -217,23 +246,21 @@ struct TestSet {
     }
     addIfAbsent(powerTestValues, std::numeric_limits<size_t>::max() - 1);
     addIfAbsent(powerTestValues, std::numeric_limits<size_t>::max());
-
+    // Test these values
     for (size_t value : powerTestValues) {
-      testCases.emplace_back(new IsPowerTestCase(value, runtime));
       testCases.emplace_back(new IsPowerTestCase(value, constant));
-      testCases.emplace_back(new IsMinusOneTestCase(value, runtime));
       testCases.emplace_back(new IsMinusOneTestCase(value, constant));
-      testCases.emplace_back(new NextPowerTestCase(value, runtime));
       testCases.emplace_back(new NextPowerTestCase(value, constant));
     }
+    // Alignment test cases
     for (size_t offset : powerTestValues) {
       for (size_t powerOfTwo : powerTestValues) {
         if (offset < 10000000 && powerOfTwo < 128 &&
             referenceImplementation.is(powerOfTwo)) {
           testCases.emplace_back(
-              new AlignedWithTestCase(offset, powerOfTwo, runtime));
-          testCases.emplace_back(
               new AlignedWithTestCase(offset, powerOfTwo, constant));
+          testCases.emplace_back(
+              new IsAlignedWithTestCase(offset, powerOfTwo, constant));
         }
       }
     }
@@ -272,4 +299,3 @@ BOOST_DATA_TEST_CASE(Power2Scenarios, TEST_SET.getTestCases()) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
