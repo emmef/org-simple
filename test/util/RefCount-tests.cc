@@ -20,7 +20,7 @@ using Ref = org::simple::util::TypedRefCountPointer<Owned>;
 struct RefCntPtr : public org::simple::util::UntypedRefCountPointer {
   void destroy_ptr(void *ptr) noexcept override { free(ptr); }
 
-  RefCntPtr(void *ptr) : UntypedRefCountPointer(ptr) {}
+  explicit RefCntPtr(void *ptr) : UntypedRefCountPointer(ptr) {}
 };
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_RefCount)
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(
 
 BOOST_AUTO_TEST_CASE(testInitDelDestroyCorrect) {
   Owner owner(10);
-  Owned *owned = new Owned(owner);
+  auto *owned = new Owned(owner);
   Ref refPtr(owned);
   BOOST_CHECK_EQUAL(1, owner.count());
   bool destroyed = refPtr.del_ref_get_if_destroyed();
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(testInitDelDestroyCorrect) {
 
 BOOST_AUTO_TEST_CASE(testInitDelDestroyDoubleNoop) {
   Owner owner(10);
-  Owned *owned = new Owned(owner);
+  auto *owned = new Owned(owner);
   Ref refPtr(owned);
   BOOST_CHECK_EQUAL(1, owner.count());
   refPtr.del_ref_get_if_destroyed();
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(testInitDelDestroyDoubleNoop) {
 
 BOOST_AUTO_TEST_CASE(testInitDelDestroyDoubleAdd) {
   Owner owner(10);
-  Owned *owned = new Owned(owner);
+  auto *owned = new Owned(owner);
   Ref refPtr(owned);
   BOOST_CHECK_EQUAL(1, owner.count());
   refPtr.add_ref();
@@ -120,7 +120,7 @@ BOOST_AUTO_TEST_CASE(testInitDelDestroyDoubleAdd) {
 
 BOOST_AUTO_TEST_CASE(testInitDelNoDestroyCorrect) {
   Owner owner(10);
-  Owned *owned = new Owned(owner);
+  auto *owned = new Owned(owner);
   Ref refPtr(owned);
   BOOST_CHECK_EQUAL(1, owner.count());
   ptrdiff_t count_before_del_ref = refPtr.del_ref_no_destroy();
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(testInitDelNoDestroyCorrect) {
 
 BOOST_AUTO_TEST_CASE(testInitDelNoDestroyDoubleNoop) {
   Owner owner(10);
-  Owned *owned = new Owned(owner);
+  auto *owned = new Owned(owner);
   Ref refPtr(owned);
   ptrdiff_t count_before_del_ref = refPtr.del_ref_no_destroy();
   BOOST_CHECK_EQUAL(1, count_before_del_ref);

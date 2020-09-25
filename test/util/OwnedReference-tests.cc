@@ -2,8 +2,7 @@
 // Created by michel on 24-09-20.
 //
 
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/unit_test.hpp>
+#include "boost-unit-tests.h"
 #include "OwnedReference.h"
 
 using Owned = org::simple::test::OwnedReference;
@@ -33,12 +32,13 @@ BOOST_AUTO_TEST_CASE(testOwnerCountMatchesAdds) {
 BOOST_AUTO_TEST_CASE(testOwnerCountMatchesAddsAndRemoves) {
   Owner owner(2);
   int x, y;
-  int x_id, y_id;
+  int x_id;
+  [[maybe_unused]] int y_id;
 
   BOOST_CHECK_EQUAL(0, owner.count());
   x_id = owner.add_get_id(&x);
   BOOST_CHECK_EQUAL(1, owner.count());
-  y_id = owner.add_get_id(&y);
+  owner.add_get_id(&y);
   BOOST_CHECK_EQUAL(2, owner.count());
   owner.remove(&x, x_id);
   BOOST_CHECK_EQUAL(1, owner.count());

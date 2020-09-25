@@ -2,8 +2,7 @@
 // Created by michel on 23-09-20.
 //
 
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/unit_test.hpp>
+#include "boost-unit-tests.h"
 #include <org-simple/core/Bits.h>
 #include <test-helper.h>
 
@@ -72,13 +71,13 @@ public:
     testCases.push_back(Scenarios::most_significant_bit(0x1C, 4));
     testCases.push_back(Scenarios::most_significant_single_bit(0x1C, -4));
 
-    int maxbit = sizeof(size_t) * 8 - 1;
-    size_t max = size_t(1) << maxbit;
+    int max_bit = sizeof(size_t) * 8 - 1;
+    size_t max = size_t(1) << size_t(max_bit);
 
-    testCases.push_back(Scenarios::most_significant_bit(max, maxbit));
-    testCases.push_back(Scenarios::most_significant_single_bit(max, maxbit));
+    testCases.push_back(Scenarios::most_significant_bit(max, max_bit));
+    testCases.push_back(Scenarios::most_significant_single_bit(max, max_bit));
 
-    testCases.push_back(Scenarios::most_significant_bit(max + 1, maxbit));
+    testCases.push_back(Scenarios::most_significant_bit(max + 1, max_bit));
     testCases.push_back(Scenarios::most_significant_single_bit(max + 1, -1));
 
     testCases.push_back(Scenarios::bit_fill(0x01, 0x01));
@@ -98,7 +97,7 @@ public:
     testCases.push_back(Scenarios::bit_fill(0x8070100, 0xfffffff));
   }
 
-  const std::vector<FunctionTest> getTestCases() { return testCases; }
+  std::vector<FunctionTest> const getTestCases() { return testCases; }
 
 } TESTCASES;
 

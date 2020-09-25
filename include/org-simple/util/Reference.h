@@ -128,13 +128,11 @@ template <typename T> class Reference {
     }
   }
 
-  Reference<T> *operator&() = delete;
 
 public:
   Reference() : ptr_(nullptr) {}
 
   explicit Reference<T>(T *ptr) : ptr_(new TypedRefCountPointer(ptr)){};
-
 
   Reference(Reference<T> &&source) noexcept : ptr_(source.ptr_) {
     source.ptr_ = nullptr;
@@ -145,7 +143,7 @@ public:
   }
 
   Reference & operator=(const Reference<T> &source) {
-    if (ptr_ == source.ptr_) {
+    if (&source == this || ptr_ == source.ptr_) {
       return *this;
     }
     cleanup(ptr_);

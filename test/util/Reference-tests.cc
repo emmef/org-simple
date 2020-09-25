@@ -54,6 +54,7 @@ BOOST_AUTO_TEST_CASE(testReferencesHandleAssignmentCorrectly) {
       BOOST_CHECK_EQUAL(2, owner.count());
       ref2 = ref; // original owned object of ref2 should be destroyed
       BOOST_CHECK_EQUAL(1, owner.count());
+      [[maybe_unused]] Owned *suppressWarning = ref2.get();
     }
     BOOST_CHECK_EQUAL(1, owner.count());
   }

@@ -12,7 +12,6 @@ ReferenceOwner::ReferenceOwner(size_t capacity)
     ptrs_[i] = {nullptr, 0};
   }
 }
-int ReferenceOwner::new_id() { return ids_.fetch_add(1); }
 size_t ReferenceOwner::count() {
   size_t result = 0;
   lock guard(mutex_);

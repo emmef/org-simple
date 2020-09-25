@@ -2,8 +2,7 @@
 // Created by michel on 24-09-20.
 //
 
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/unit_test.hpp>
+#include "boost-unit-tests.h"
 #include <org-simple/core/Index.h>
 
 using Exclusive = org::simple::core::Index;
@@ -16,7 +15,7 @@ static constexpr size_t ONE = 1;
 BOOST_AUTO_TEST_SUITE(org_simple_core_Index)
 
 BOOST_AUTO_TEST_CASE(testIndexCheckedZeroSizeZeroFails) {
-  size_t out;
+  [[maybe_unused]] size_t out;
   BOOST_CHECK_THROW(out = Exclusive::checked(ZERO, ZERO), std::out_of_range);
 }
 
@@ -37,7 +36,7 @@ BOOST_AUTO_TEST_CASE(testIndexCheckedSizeMinusOne) {
 }
 
 BOOST_AUTO_TEST_CASE(testIndexCheckedSizeThrows) {
-  size_t out;
+  [[maybe_unused]] size_t out;
   BOOST_CHECK_THROW(out = Exclusive::checked(SIZE, SIZE), std::out_of_range);
 }
 
@@ -91,7 +90,7 @@ BOOST_AUTO_TEST_CASE(testInclusiveCheckedSize) {
 }
 
 BOOST_AUTO_TEST_CASE(testInclusiveCheckedSizePlusOneThrows) {
-  size_t out;
+  [[maybe_unused]] size_t out;
   BOOST_CHECK_THROW(out = Inclusive::checked(SIZE + ONE, SIZE), std::out_of_range);
 }
 

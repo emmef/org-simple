@@ -36,25 +36,24 @@ public:
   virtual void start() noexcept {}
   virtual ~Timeout() = default;
   org_nodiscard virtual bool timed_out() = 0;
-  org_nodiscard bool in_time() { return !timed_out(); }
 };
 
 class TimeoutNever final : public Timeout {
-  TimeoutNever() = default;
-
 public:
-  static TimeoutNever instance;
   org_nodiscard bool timed_out() override { return false; }
-  TimeoutNever(const TimeoutNever &source) = default;
+  static Timeout &instance() {
+    static TimeoutNever inst;
+    return inst;
+  }
 };
 
 class TimeoutImmediately final : public Timeout {
-  TimeoutImmediately() = default;
-
 public:
-  static TimeoutImmediately instance;
   org_nodiscard bool timed_out() override { return true; }
-  TimeoutImmediately(const TimeoutImmediately &source) = default;
+  static Timeout &instance() {
+    static TimeoutImmediately inst;
+    return inst;
+  }
 };
 
 template <typename type_time_point, bool is_arithmetic>
@@ -91,17 +90,17 @@ public:
   TimeoutWithDeadline(const TimeoutWithDeadline &source)
       : duration_(source.duration_) {}
 
-  void start() noexcept override { deadline_ = now() + duration_; }
+  void start() noexcept override {
+    started_ = now();
+    deadline_ = started_ + duration_;
+  }
 
   org_nodiscard virtual type_time_point now() const noexcept = 0;
   org_nodiscard virtual type_time_point check_get_now() { return now(); }
 
-  org_nodiscard type_time_point deadline() const noexcept {
-    return deadline_;
-  }
-  org_nodiscard type_duration duration() const noexcept {
-    return duration_;
-  }
+  org_nodiscard type_time_point started() const noexcept { return started_; }
+  org_nodiscard type_time_point deadline() const noexcept { return deadline_; }
+  org_nodiscard type_duration duration() const noexcept { return duration_; }
 
   org_nodiscard bool timed_out() override {
     return check_get_now() > deadline_;
@@ -109,6 +108,7 @@ public:
 
 private:
   type_duration duration_;
+  type_time_point started_ = TimePointValues<type_time_point>::minimum;
   type_time_point deadline_ = TimePointValues<type_time_point>::initial;
 };
 
@@ -119,6 +119,7 @@ public:
   using type_time_point = long;
   using type_duration = long;
   using TimeoutWithDeadline<long, long>::duration;
+  using TimeoutWithDeadline<long, long>::started;
   using TimeoutWithDeadline<long, long>::deadline;
   using TimeoutWithDeadline<long, long>::now;
 
@@ -151,6 +152,8 @@ public:
   using TimeoutWithDeadline<typename CLOCK::time_point,
                             typename CLOCK::duration>::duration;
   using TimeoutWithDeadline<typename CLOCK::time_point,
+                            typename CLOCK::duration>::started;
+  using TimeoutWithDeadline<typename CLOCK::time_point,
                             typename CLOCK::duration>::deadline;
   using TimeoutWithDeadline<typename CLOCK::time_point,
                             typename CLOCK::duration>::now;
@@ -181,6 +184,8 @@ public:
   using type_duration = typename CLOCK::duration;
   using TimeoutWithDeadline<typename CLOCK::time_point,
                             typename CLOCK::duration>::duration;
+  using TimeoutWithDeadline<typename CLOCK::time_point,
+                            typename CLOCK::duration>::started;
   using TimeoutWithDeadline<typename CLOCK::time_point,
                             typename CLOCK::duration>::deadline;
   using TimeoutWithDeadline<typename CLOCK::time_point,

@@ -29,8 +29,6 @@
 namespace org::simple::test {
 
 class ReferenceOwner {
-  static constexpr size_t DEFAULT_POINTERS = 1000;
-
   struct Entry {
     void * ptr;
     int id;
@@ -46,16 +44,14 @@ class ReferenceOwner {
   using lock = std::lock_guard<std::mutex>;
 
 public:
-  ReferenceOwner(size_t capacity);
-
-  int new_id();
+  explicit ReferenceOwner(size_t capacity);
 
   size_t count();
 
-  int not_found() const { return not_found_; }
-  int id_wrong() const { return id_wrong_; }
-  int ptr_wrong() const { return ptr_wrong_; }
-  int errors() const;
+  [[nodiscard]] int not_found() const { return not_found_; }
+  [[nodiscard]] int id_wrong() const { return id_wrong_; }
+  [[nodiscard]] int ptr_wrong() const { return ptr_wrong_; }
+  [[nodiscard]] int errors() const;
 
   int add_get_id(void *ptr);
 
@@ -71,11 +67,11 @@ class OwnedReference {
   int id_;
 
 public:
-  OwnedReference(ReferenceOwner &owner)
+  explicit OwnedReference(ReferenceOwner &owner)
       : owner_(owner), id_(owner_.add_get_id(this)) {
   }
 
-  int id() const { return id_; }
+  [[nodiscard]] int id() const { return id_; }
 
   ~OwnedReference() {
     owner_.remove(this, id_);

@@ -3,8 +3,6 @@
 //
 
 #include "test-helper.h"
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/unit_test.hpp>
 #include <cstddef>
 #include <org-simple/core/Size.h>
 

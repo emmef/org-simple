@@ -22,11 +22,10 @@
  */
 
 #include <array>
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/unit_test.hpp>
 #include <iostream>
 #include <org-simple/core/attributes.h>
 #include <typeinfo>
+#include "boost-unit-tests.h"
 
 namespace org::simple::test {
 

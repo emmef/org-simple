@@ -9,7 +9,6 @@ using namespace org::simple::util;
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_Timeout)
 
-
 BOOST_AUTO_TEST_CASE(testTimeoutFakeClockIntegerArgument) {
   TimeoutFakedClock timeout10(10);
   TimeoutFakedClock timeout13(13);
@@ -54,6 +53,7 @@ BOOST_AUTO_TEST_CASE(testTimeoutTestMechanism) {
                                    "deadline was already passed");
         return;
       }
+      timed_out = true;
     }
     timeout.set_now(timeout.now() + 1);
   }
@@ -62,12 +62,12 @@ BOOST_AUTO_TEST_CASE(testTimeoutTestMechanism) {
 
 BOOST_AUTO_TEST_CASE(testTimeoutUsingClock) {
   using tuc = TimeoutUsingClock<std::chrono::steady_clock>;
-  tuc timeout(std::chrono::milliseconds(10));
-
-  tuc::type_time_point start = tuc::clock::now();
-  tuc::type_time_point deadline = start + timeout.duration();
+  tuc timeout(std::chrono::milliseconds(100));
 
   timeout.start();
+  tuc::type_time_point start = timeout.started();
+  tuc::type_time_point deadline = start + timeout.duration();
+
   bool timed_out = false;
   while (!timeout.timed_out()) {
     if (tuc::clock::now() > deadline) {
@@ -76,6 +76,7 @@ BOOST_AUTO_TEST_CASE(testTimeoutUsingClock) {
                                    "deadline was already passed");
         return;
       }
+      timed_out = true;
     }
   }
   BOOST_CHECK(true);
@@ -98,6 +99,7 @@ BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleep) {
                                    "deadline was already passed");
         return;
       }
+      timed_out = true;
     }
     slices++;
   }
@@ -105,6 +107,22 @@ BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleep) {
     std::cout << "Used " << slices << " slices." << std::endl;
     BOOST_FAIL("Too many slices used");
   }
+}
+
+BOOST_AUTO_TEST_CASE(testTimeOutImmediate) {
+  Timeout &to = TimeoutImmediately::instance();
+
+  BOOST_CHECK_EQUAL(true, to.timed_out());
+  to.start();
+  BOOST_CHECK_EQUAL(true, to.timed_out());
+}
+
+BOOST_AUTO_TEST_CASE(testTimeOutNever) {
+  Timeout &to = TimeoutNever::instance();
+
+  BOOST_CHECK_EQUAL(false, to.timed_out());
+  to.start();
+  BOOST_CHECK_EQUAL(false, to.timed_out());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
