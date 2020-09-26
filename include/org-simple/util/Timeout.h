@@ -54,157 +54,88 @@ public:
   }
 };
 
-template <typename time_point, typename duration_type>
+template <typename Clock = std::chrono::system_clock>
 class TimeoutWithDeadline : public Timeout {
 public:
-  using type_duration = duration_type;
-  using type_time_point = time_point;
+  typedef Clock clock;
+  typedef typename Clock::duration duration;
+  typedef typename Clock::time_point time_point;
 
-  explicit TimeoutWithDeadline(type_duration timeout_duration)
-      : duration_(timeout_duration) {}
+  explicit TimeoutWithDeadline(duration timeout)
+      : timeout_(timeout), deadline_(clock::now() + timeout_) {}
+
+  template <typename R, typename P>
+  explicit TimeoutWithDeadline(std::chrono::duration<R, P> timeout)
+      : TimeoutWithDeadline(std::chrono::duration_cast<duration>(timeout)) {}
 
   TimeoutWithDeadline(const TimeoutWithDeadline &source)
-      : duration_(source.duration_) {}
+      : TimeoutWithDeadline(source.timeout()) {}
 
-  void start() noexcept override {
-    started_ = now();
-    deadline_ = started_ + duration_;
-  }
-
-  [[nodiscard]] virtual type_time_point now() const noexcept = 0;
-  [[nodiscard]] virtual type_time_point check_get_now() { return now(); }
-
-  [[nodiscard]] type_time_point started() const noexcept { return started_; }
-  [[nodiscard]] type_time_point deadline() const noexcept { return deadline_; }
-  [[nodiscard]] type_duration duration() const noexcept { return duration_; }
+  TimeoutWithDeadline(TimeoutWithDeadline &&source)
+      : TimeoutWithDeadline(source.timeout()) {}
 
   [[nodiscard]] bool timed_out() override {
-    return check_get_now() > deadline_;
+    time_point t = clock::now();
+    if (t > deadline_) {
+      return true;
+    }
+    execute_policy(t);
+    return clock::now() > deadline_;
   }
+
+  [[nodiscard]] time_point deadline() const noexcept { return deadline_; }
+  [[nodiscard]] time_point timeout() const noexcept { return timeout_; }
+
+  virtual void execute_policy( [[maybe_unused]] time_point now) { };
 
 private:
-  type_duration duration_;
-  type_time_point started_ = type_time_point::min();
-  type_time_point deadline_ = type_time_point();
+  duration timeout_;
+  time_point deadline_;
 };
 
-template <class CLOCK = std::chrono::system_clock>
-class TimeoutFakedClock : public TimeoutWithDeadline<typename CLOCK::time_point,
-                                                     typename CLOCK::duration> {
+template <class Clock = std::chrono::system_clock>
+class TimeoutSlicedSleep : public TimeoutWithDeadline<Clock> {
 
 public:
-  using type_time_point = typename CLOCK::time_point;
-  using type_duration = typename CLOCK::duration;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::duration;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::started;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::deadline;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::now;
+  using TimeoutWithDeadline<Clock>::timeout;
+  using TimeoutWithDeadline<Clock>::deadline;
+
+  typedef typename TimeoutWithDeadline<Clock>::clock clock;
+  typedef typename TimeoutWithDeadline<Clock>::time_point time_point;
+  typedef typename TimeoutWithDeadline<Clock>::duration duration;
+
+  explicit TimeoutSlicedSleep(duration timeout, unsigned slices)
+      : TimeoutWithDeadline<Clock>(timeout), last_sleep_(time_point::min()),
+        slice_(std::max(duration(1), timeout / std::max(1u, slices))) {}
 
   template <typename R, typename P>
-  explicit TimeoutFakedClock(std::chrono::duration<R, P> timeout_duration)
-      : TimeoutWithDeadline<type_time_point, type_duration>(timeout_duration),
-        now_(deadline()) {}
-
-  TimeoutFakedClock(const TimeoutFakedClock &source)
-      : TimeoutFakedClock(source.duration(), source.now_) {}
-
-  [[nodiscard]] type_time_point now() const noexcept override { return now_; }
-  void set_now(type_time_point now) { now_ = now; }
-
-private:
-  type_time_point now_;
-};
-
-template <class CLOCK = std::chrono::system_clock>
-class TimeoutUsingClock : public TimeoutWithDeadline<typename CLOCK::time_point,
-                                                     typename CLOCK::duration> {
-
-public:
-  using clock = CLOCK;
-  using type_time_point = typename CLOCK::time_point;
-  using type_duration = typename CLOCK::duration;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::duration;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::started;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::deadline;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::now;
-
-  template <typename R, typename P>
-  explicit TimeoutUsingClock(std::chrono::duration<R, P> timeout_duration)
-      : TimeoutWithDeadline<type_time_point,
-                            type_duration>(
-            std::chrono::duration_cast<type_duration>(timeout_duration)) {}
-
-  TimeoutUsingClock(const TimeoutUsingClock &source)
-      : TimeoutWithDeadline<type_time_point,
-                            type_duration>(source.duration()) {}
-
-  [[nodiscard]] type_time_point now() const noexcept override {
-    return CLOCK::now();
-  }
-};
-
-template <class CLOCK = std::chrono::system_clock>
-class TimeoutSlicedSleep
-    : public TimeoutWithDeadline<typename CLOCK::time_point,
-                                 typename CLOCK::duration> {
-
-public:
-  using clock = CLOCK;
-  using type_time_point = typename CLOCK::time_point;
-  using type_duration = typename CLOCK::duration;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::duration;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::started;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::deadline;
-  using TimeoutWithDeadline<type_time_point,
-                            type_duration>::now;
-
-  template <typename R, typename P>
-  TimeoutSlicedSleep(std::chrono::duration<R, P> timeout_duration,
-                     unsigned slices)
-      : TimeoutWithDeadline<type_time_point,
-                            type_duration>(
-            std::chrono::duration_cast<type_duration>(timeout_duration)) {
-    slice_ = std::max(type_duration(1), duration() / slices);
-  }
+  explicit TimeoutSlicedSleep(std::chrono::duration<R, P> timeout,
+                              unsigned slices)
+      : TimeoutWithDeadline<Clock>(
+            std::chrono::duration_cast<duration>(timeout), slices) {}
 
   TimeoutSlicedSleep(const TimeoutSlicedSleep &source)
-      : TimeoutSlicedSleep(source.duration(), source.slice_) {}
+      : TimeoutSlicedSleep(source.timeout, source.slice_) {}
 
-  [[nodiscard]] type_time_point now() const noexcept override {
-    return CLOCK::now();
-  }
+  TimeoutSlicedSleep(const TimeoutSlicedSleep &&source) noexcept
+      : TimeoutSlicedSleep(source.timeout, source.slice_) {}
 
-  void start() noexcept override {
-    TimeoutWithDeadline<type_time_point,
-                        type_duration>::start();
-    last_sleep_ = type_time_point::min();
-  }
 
-  [[nodiscard]] type_time_point check_get_now() override {
-    type_time_point t = now();
-    type_time_point dl = deadline();
-    if (t > dl) {
-      return t;
-    }
+  void execute_policy(time_point) override {
+    time_point dl = deadline();
     std::this_thread::sleep_for(std::min(slice_, dl - last_sleep_));
-    last_sleep_ = now();
-    return last_sleep_;
+    last_sleep_ = clock::now();
   }
+
+  duration slice() const noexcept { return slice_; }
 
 private:
-  type_time_point last_sleep_;
-  type_duration slice_;
+  time_point last_sleep_;
+  duration slice_;
+
+  explicit TimeoutSlicedSleep(duration timeout, duration slice)
+      : TimeoutWithDeadline<Clock>(timeout), last_sleep_(time_point::min()),
+        slice_(slice) {}
 };
 
 } // namespace org::simple::util

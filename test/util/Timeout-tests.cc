@@ -3,37 +3,86 @@
 //
 
 #include "test-helper.h"
+#include <org-simple/util/FakeClock.h>
 #include <org-simple/util/Timeout.h>
 
-using Fake = org::simple::util::TimeoutFakedClock<std::chrono::steady_clock>;
+typedef org::simple::util::FakeClock FakeClock;
+typedef typename FakeClock::duration duration;
+typedef typename FakeClock::time_point time_point;
+typedef org::simple::util::TimeoutWithDeadline<FakeClock> TimeoutWithDeadline;
+typedef org::simple::util::TimeoutSlicedSleep<FakeClock> TimeoutSlicedSleep;
 
+static int64_t sleep_time_with_noise(int64_t sleep_time) {
+  double factor = 0.1 * sleep_time / RAND_MAX;
+  return sleep_time  + factor * rand();
+}
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_Timeout)
 
-BOOST_AUTO_TEST_CASE(testTimeoutFakeClockIntegerArgument) {
-  Fake timeout10(Fake::type_duration(10));
-  Fake timeout13(Fake::type_duration(13));
+BOOST_AUTO_TEST_CASE(testTimeoutWithDeadlineDeadlineValue) {
+  int64_t duration_count = abs(rand());
+  duration timeout_duration = duration(duration_count);
+  FakeClock::set_now(duration(rand()));
+  auto start_count = FakeClock ::get_count();
+  TimeoutWithDeadline timeout(timeout_duration);
 
-  BOOST_CHECK_MESSAGE(timeout10.duration().count() == 10,
-                      "Duration as given at construction");
-
-  BOOST_CHECK_MESSAGE(timeout13.duration().count() == 13,
-                      "Duration as given at construction");
+  BOOST_CHECK_EQUAL(start_count + duration_count,
+                    timeout.deadline().time_since_epoch().count());
 }
 
-BOOST_AUTO_TEST_CASE(testTimeoutTestMechanism) {
-  Fake timeout(std::chrono::milliseconds(10));
+BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleepDeadlineValue) {
+  int64_t duration_count = abs(rand());
+  duration timeout_duration = duration(duration_count);
+  FakeClock::set_now(duration(rand()));
+  auto start_count = FakeClock ::get_count();
+  TimeoutSlicedSleep timeout(timeout_duration, 3);
 
-  BOOST_CHECK_MESSAGE(timeout.duration().count() == 10,
-                      "Duration as given at construction");
+  BOOST_CHECK_EQUAL(start_count + duration_count,
+                    timeout.deadline().time_since_epoch().count());
+}
 
-  Fake::type_time_point start = timeout.now();
-  Fake::type_time_point deadline = start + timeout.duration();
+BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleepSliceValueZeroYieldsDurationCount) {
+  int64_t duration_count = 10;
+  duration timeout_duration = duration(duration_count);
+  TimeoutSlicedSleep timeout(timeout_duration, 0);
 
-  timeout.start();
+  BOOST_CHECK_EQUAL(duration_count, timeout.slice().count());
+}
+
+BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleepSliceValueOneYieldsDurationCount) {
+  int64_t duration_count = 10;
+  duration timeout_duration = duration(duration_count);
+  TimeoutSlicedSleep timeout(timeout_duration, 1);
+
+  BOOST_CHECK_EQUAL(duration_count, timeout.slice().count());
+}
+
+BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleepSliceValueTwoYieldsHalfDurationCount) {
+  int64_t duration_count = 10;
+  duration timeout_duration = duration(duration_count);
+  TimeoutSlicedSleep timeout(timeout_duration, 2);
+
+  BOOST_CHECK_EQUAL(duration_count / 2, timeout.slice().count());
+}
+
+BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleepSliceValueTooBigYieldsOne) {
+  int64_t duration_count = 10;
+  duration timeout_duration = duration(duration_count);
+  TimeoutSlicedSleep timeout(timeout_duration, duration_count * 2);
+
+  BOOST_CHECK_EQUAL(1, timeout.slice().count());
+}
+
+BOOST_AUTO_TEST_CASE(testTimeoutWithDeadline) {
+  int64_t duration_count = 10;
+  duration timeout_duration = duration(duration_count);
+  FakeClock::set_now(duration(rand()));
+  TimeoutWithDeadline timeout(timeout_duration);
+  time_point deadline = timeout.deadline();
+
   bool timed_out = false;
   while (!timeout.timed_out()) {
-    if (timeout.now() > deadline) {
+    if (FakeClock::now() > deadline) {
       if (timed_out) {
         BOOST_CHECK_MESSAGE(false, "Check for timed_out failed even after "
                                    "deadline was already passed");
@@ -41,23 +90,26 @@ BOOST_AUTO_TEST_CASE(testTimeoutTestMechanism) {
       }
       timed_out = true;
     }
-    timeout.set_now(timeout.now() + Fake::type_duration(1));
+    FakeClock::add_get_count(1);
   }
   BOOST_CHECK(true);
 }
 
 
-BOOST_AUTO_TEST_CASE(testTimeoutUsingClock) {
-  using tuc = org::simple::util::TimeoutUsingClock<std::chrono::steady_clock>;
-  tuc timeout(std::chrono::milliseconds(100));
-
-  timeout.start();
-  tuc::type_time_point start = timeout.started();
-  tuc::type_time_point deadline = start + timeout.duration();
+BOOST_AUTO_TEST_CASE(testTimeOutSlicedSleep) {
+  int64_t duration_count = 1000000;
+  unsigned slices = 10;
+  duration timeout_duration = duration(duration_count);
+  FakeClock::set_now(duration(rand()));
+  TimeoutSlicedSleep timeout(timeout_duration, slices);
+  int64_t sleepCount = timeout.slice().count();
+  time_point deadline = timeout.deadline();
 
   bool timed_out = false;
+  unsigned actual_slices = 0;
   while (!timeout.timed_out()) {
-    if (tuc::clock::now() > deadline) {
+    FakeClock::add_get_count(sleep_time_with_noise(sleepCount));
+    if (FakeClock::now() > deadline) {
       if (timed_out) {
         BOOST_CHECK_MESSAGE(false, "Check for timed_out failed even after "
                                    "deadline was already passed");
@@ -65,59 +117,29 @@ BOOST_AUTO_TEST_CASE(testTimeoutUsingClock) {
       }
       timed_out = true;
     }
+    actual_slices++;
+    FakeClock::add_get_count(1);
   }
-  BOOST_CHECK(true);
-}
-
-BOOST_AUTO_TEST_CASE(testTimeoutSlicedSleep) {
-  using tuc = org::simple::util::TimeoutSlicedSleep<std::chrono::steady_clock>;
-  tuc timeout(std::chrono::milliseconds(500), 10);
-
-  tuc::type_time_point start = tuc::clock::now();
-  tuc::type_time_point deadline = start + timeout.duration();
-
-  timeout.start();
-  bool timed_out = false;
-  int slices = 0;
-  while (!timeout.timed_out()) {
-    if (tuc::clock::now() > deadline) {
-      if (timed_out) {
-        BOOST_CHECK_MESSAGE(false, "Check for timed_out failed even after "
-                                   "deadline was already passed");
-        return;
-      }
-      timed_out = true;
-    }
-    slices++;
-  }
-  if (slices > 11) {
-    std::cout << "Used " << slices << " slices." << std::endl;
+  if (actual_slices > slices + 1) {
     BOOST_FAIL("Too many slices used");
   }
-}
-
-BOOST_AUTO_TEST_CASE(testTimeOutImmediate) {
-  org::simple::util::Timeout &to = org::simple::util::TimeoutImmediately::instance();
-
-  BOOST_CHECK_EQUAL(true, to.timed_out());
-  to.start();
-  BOOST_CHECK_EQUAL(true, to.timed_out());
+  else if (actual_slices < slices - 1) {
+    BOOST_FAIL("Too few slices used");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(testTimeOutNever) {
-  org::simple::util::Timeout &to = org::simple::util::TimeoutNever::instance();
+  org::simple::util::Timeout &to =
+      org::simple::util::TimeoutNever::instance();
 
-  BOOST_CHECK_EQUAL(false, to.timed_out());
-  to.start();
   BOOST_CHECK_EQUAL(false, to.timed_out());
 }
 
-BOOST_AUTO_TEST_CASE(testTimeoutStart) {
-  struct TimeOutImp : public org::simple::util::Timeout {
-    void start() noexcept override {}
-    [[nodiscard]] virtual bool timed_out() = 0;
+BOOST_AUTO_TEST_CASE(testTimeOutImmediately) {
+  org::simple::util::Timeout &to =
+      org::simple::util::TimeoutImmediately::instance();
 
-  };
+  BOOST_CHECK_EQUAL(true, to.timed_out());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
