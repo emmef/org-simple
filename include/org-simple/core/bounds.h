@@ -28,29 +28,32 @@
 namespace org::simple::core {
 
 template <typename T>
-[[nodiscard]] static constexpr T maximum(const T v1, const T v2) noexcept {
-  static_assert(std::is_arithmetic_v<T>);
-  return v1 < v2 ? v2 : v1;
-}
-
-template <typename T>
-[[nodiscard]] static constexpr T minimum(const T v1, const T v2) noexcept {
-  static_assert(std::is_arithmetic_v<T>);
-  return v2 < v1 ? v2 : v1;
-}
-
-template <typename T>
-[[nodiscard]] static constexpr T clamped(const T v, const T min,
-                                         const T max) noexcept {
-  static_assert(std::is_arithmetic_v<T>);
-  return v <= min ? min : v >= max ? max : v;
-}
-
-template <typename T>
 [[nodiscard]] static constexpr bool is_within(const T v, const T min,
                                               const T max) noexcept {
   static_assert(std::is_arithmetic_v<T>);
   return v >= min && v <= max;
+}
+
+template <typename T, typename V>
+[[nodiscard]] static constexpr bool is_within(const V v, const T min,
+                                              const T max) noexcept {
+  if constexpr (std::is_floating_point_v<T> || std::is_floating_point_v<V>) {
+    return v >= min && v <= max;
+  } else if constexpr (std::is_unsigned_v<T>) {
+    if constexpr (std::is_unsigned_v<V>) {
+      return v >= min && v <= max;
+    } else {
+      return v >= 0 && static_cast<T>(v) >= min && static_cast<T>(v) <= max;
+    }
+  } else { // T is signed
+    if constexpr (std::is_unsigned_v<V>) {
+      return v <= static_cast<V>(std::numeric_limits<T>::max) &&
+             static_cast<T>(v) >= min && static_cast<T>(v) <= max;
+    }
+    else {
+      return v >= min && v <= max;
+    }
+  }
 }
 
 template <typename T>
@@ -60,71 +63,27 @@ template <typename T>
   return v > min && v < max;
 }
 
-struct Unsigned {
-  template <class T> static constexpr bool is_unsigned_integral() {
-    return std::is_integral_v<T> && std::is_unsigned_v<T>;
-  }
-
-  template <typename T>
-  static constexpr bool is_not_greater(T value, T max) noexcept {
-    return value <= max;
-  }
-
-  template <typename destination_type, typename source_type>
-  static constexpr bool
-  is_not_greater(source_type source_value,
-                 destination_type destination_maximum) noexcept {
-    static_assert(is_unsigned_integral<destination_type>());
-    static_assert(is_unsigned_integral<source_type>());
-    if constexpr (sizeof(destination_type) >= sizeof(source_type)) {
-      return destination_type(source_value) <= destination_maximum;
+template <typename T, typename V>
+[[nodiscard]] static constexpr bool is_within_excl(const V v, const T min,
+                                                   const T max) noexcept {
+  if constexpr (std::is_floating_point_v<T> || std::is_floating_point_v<V>) {
+    return v > min && v < max;
+  } else if constexpr (std::is_unsigned_v<T>) {
+    if constexpr (std::is_unsigned_v<V>) {
+      return v > min && v < max;
     } else {
-      return source_value <= source_type(destination_maximum);
+      return v >= 0 && static_cast<T>(v) > min && static_cast<T>(v) < max;
+    }
+  } else { // T is signed
+    if constexpr (std::is_unsigned_v<V>) {
+      return v <= static_cast<V>(std::numeric_limits<T>::max) &&
+             static_cast<T>(v) > min && static_cast<T>(v) < max;
+    }
+    else {
+      return v > min && v < max;
     }
   }
-
-  template <typename T>
-  static constexpr bool is_nonzero_not_greater(T value, T max) noexcept {
-    static_assert(is_unsigned_integral<T>());
-    return value && value <= max;
-  }
-
-  template <typename destination_type, typename source_type>
-  static constexpr bool
-  is_nonzero_not_greater(source_type source_value,
-                         destination_type destination_maximum) noexcept {
-    static_assert(is_unsigned_integral<destination_type>());
-    static_assert(is_unsigned_integral<source_type>());
-
-    return source_value && is_not_greater(source_value, destination_maximum);
-  }
-
-  template <typename T>
-  static constexpr bool is_sum_nonzero_not_greater(T v1, T v2, T max) noexcept {
-    static_assert(is_unsigned_integral<T>());
-    return v1 > 0 ? v1 <= max && max - v1 >= v2 : v2 > 0 && v2 <= max;
-  }
-
-  template <typename T>
-  static constexpr bool
-  is_product_nonzero_not_greater(T v1, T v2, size_t size_max) noexcept {
-    static_assert(is_unsigned_integral<T>());
-    return v1 > 0 && v2 > 0 && size_max / v1 >= v2;
-  }
-
-  template <typename T>
-  static constexpr bool is_sum_not_greater(T v1, T v2, T max) noexcept {
-    static_assert(is_unsigned_integral<T>());
-    return v1 <= max && max - v1 >= v2;
-  }
-
-  template <typename T>
-  static constexpr bool is_product_not_greater(T v1, T v2,
-                                               size_t max) noexcept {
-    static_assert(is_unsigned_integral<T>());
-    return v1 == 0 || (v1 <= max && max / v1 >= v2);
-  }
-};
+}
 
 } // namespace org::simple::core
 

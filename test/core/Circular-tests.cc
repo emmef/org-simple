@@ -7,7 +7,11 @@
 
 namespace {
 
-using Metric = org::simple::core::MaskedIndexFor<char>;
+using SizeMetric = org::simple::core::SizeMetric<size_t>;
+
+using Metric =
+    org::simple::core::WrappedIndex<org::simple::core::WrappingType::BIT_MASK,
+                                    SizeMetric>;
 
 constexpr size_t requestedSize = 13;
 constexpr size_t properSize = 16;
@@ -222,6 +226,7 @@ BOOST_AUTO_TEST_CASE(testMetricSetSizeSame) {
   Metric m(requestedSize);
   auto oldSize = m.size();
   m.set_element_count(properSize);
+  BOOST_CHECK_EQUAL(m.size(), oldSize);
   BOOST_CHECK_MESSAGE(m.size() == oldSize,
                       "Setting size to same value should not change anything");
 }
@@ -238,6 +243,7 @@ BOOST_AUTO_TEST_CASE(testMetricSetSizeHalf) {
   Metric m(requestedSize);
   auto oldSize = m.size();
   m.set_element_count(properSize / 2);
+  BOOST_CHECK_EQUAL(m.size(), oldSize / 2);
   BOOST_CHECK_MESSAGE(m.size() == oldSize / 2,
                       "Setting size to half, yields half size");
 }

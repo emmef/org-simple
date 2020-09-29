@@ -30,128 +30,163 @@
 #include <org-simple/core/bounds.h>
 
 namespace org::simple::core {
-struct MemoryModel {
-  static constexpr unsigned size_t_bits = 8 * sizeof(size_t);
-  static constexpr unsigned address_bits =
-#if defined(SIMPLE_CORE_MEMORY_MODEL_ADDRESS_BITS)
-      clamp(int(SIMPLE_CORE_MEMORY_MODEL_ADDRESS_BITS), 1, size_t_bits);
-#else
-      size_t_bits;
-  /*
-   * The actual (virtual) addressing space is limited by the hardware and the
-   * operating system memory model(s). These limits are ignored here. First,
-   * because they are generally so high that they are rather theoretical.
-   * Second, because it is difficult to find out the correct limits for all
-   * combinations of operating systems and architectures. Third, limiting the
-   * size does not protect the programmer from the combination of a too-high
-   * offset and a size. Unless there is a water-tight way of solving this, we
-   * keep the theoretical limit and assume people in the know provide a proper
-   * value/expression for SIMPLE_CORE_MEMORY_MODEL_ADDRESS_BITS.
-   */
-#endif
-
-  static constexpr size_t address_max =
-      Bits<size_t>::max_value_for_bits(address_bits);
-};
 
 /**
- * Describes properties of sizes that are stored in the underlying SIZE data
- * type, that must be integral, unsigned and cannot be larger than std::size_t.
- *
- * Sizes can be artificially limited to a reduced number of bits by setting
- * size_bit_limit to a non-zero value. Positive value set the number of bits,
- * negative values subtract from the number of bits in size_type.
- *
- * @tparam SIZE The integral, unsigned type that contains sizes.
- * @tparam size_bit_limit The artificially reduced number of bits to represent
- * sizes.
+ * Defines a size metric that is completely defined by the size_type that must
+ * be unsigned and no bigger than size_t.
+ * @tparam size_type The underlying size type used, which must be unsigned and
+ * no bigger than size_t.
  */
-template <typename SIZE = size_t, int size_bit_limit = 0> struct SizeType {
+template <typename size_type> struct SizeMetric;
+
+/**
+ * Defines a size metric like org::simple::core::SizeMetric<size_type> but
+ * where sizes can only be expressed in a maximum number of bits:
+ * size_bit_limit.
+ * @tparam size_type The underlying size type used, which must be unsigned and
+ * no bigger than size_t.
+ * @tparam bits maximum number of bits used to express size, which
+ * must be positive and cannot exceed the number of bits in size_type.
+ */
+template <typename size_type, unsigned bits> struct SizeMetricWithBitLimit;
+
+/**
+ * Defines a size metric like org::simple::core::SizeMetric<size_type> but
+ * where sizes are hard limited to limit.
+ * @tparam size_type The underlying size type used, which must be unsigned and
+ * no bigger than size_t.
+ * @tparam limit the maximum size limit, which
+ * must be positive and cannot exceed the maximum size expressed by size_type.
+ */
+template <typename size_type, size_type limit> struct SizeMetricWithLimit;
+
+/**
+ * Defines a size metric that is based on Metric where the limits are based on
+ * elements with the specified size in units. Units are bytes, unless the
+ * Metric is already a derived one (for example an ArrayMetric).
+ * @tparam Metric The base metric type, for example
+ * org::simple::core::SizeMetric, org::simple::core::BitLimitedSizeMetric or
+ * org::simple::core::LimitedSizeMetric.
+ * @tparam size_type The underlying size type used, which must be unsigned and
+ * no bigger than size_t.
+ * @tparam element_size The number of units
+ */
+template <class Metric, typename size_type, size_type element_size>
+struct ElementSizeMetric;
+
+struct SizeValidator {
+  template <typename size_type> static constexpr bool is_valid_size_type() {
+    return std::is_unsigned_v<size_type> &&
+           std::numeric_limits<size_type>::max() <=
+               std::numeric_limits<size_t>::max();
+  }
+
+  template <typename size_type>
+  static constexpr bool is_valid_size_type_limit(size_type limit) {
+    return is_valid_size_type<size_type> && limit > 0;
+  }
+
+  template <typename size> struct Type {
+    static_assert(
+        is_valid_size_type<size>(),
+        "org::simple::core::SizeValidator::Type: size_type must be unsigned "
+        "and must not be able to contain larger values than size_t.");
+
+    typedef size size_type;
+    static constexpr size max = std::numeric_limits<size>::max();
+  };
+
+  template <typename size> struct TypeCheck {
+    static_assert(
+        is_valid_size_type<size>(),
+        "org::simple::core::SizeValidator::Type: size_type must be unsigned "
+        "and must not be able to contain larger values than size_t.");
+
+    static constexpr size size_value = 0;
+    static constexpr bool bool_value = false;
+  };
+
+  template <typename size, size limit> struct Limit : public Type<size> {
+    static_assert(
+        limit > 0,
+        "org::simple::core::SizeValidator::Limit: limit must be positive.");
+
+    typedef size size_type;
+    static constexpr size max = limit;
+  };
+
+  template <typename size, unsigned size_bits_used>
+  struct BitLimit : public Type<size> {
+    static_assert(
+        size_bits_used > 0 && size_bits_used <= sizeof(size) * 8,
+        "org::simple::core::SizeValidator::BitLimit: size_bits_used be "
+        "positive and not larger than number of bits in size_type.");
+
+    typedef size size_type;
+    static constexpr size max = size(1) << size_bits_used;
+  };
+
+  template <typename T, typename size_type>
+  struct Metric : public Type<size_type> {
+    static_assert(std::is_same_v<typename T::size_type, size_type>);
+    static_assert(std::is_same_v<decltype(T::max), const size_type>);
+    static_assert(std::is_same_v<decltype(T::max_index), const size_type>);
+    static_assert(std::is_same_v<decltype(T::max_mask), const size_type>);
+
+    static_assert(T::max > 0,
+                  "org::simple::core::SizeValidator::Limit: T::max must "
+                  "be positive.");
+    static_assert(T::max_index <= T::max,
+                  "org::simple::core::SizeValidator::Limit:"
+                  " T::max_index cannot exceed T::max.");
+    static_assert(T::max_mask <= T::max_index,
+                  "org::simple::core::SizeValidator::Limit: T::max_mask cannot "
+                  "exceed T::max_index.");
+    static_assert(org::simple::core::Bits<size_type>::fill(T::max_mask) ==
+                      T::max_mask,
+                  "org::simple::core::SizeValidator::Limit: T::max_mask "
+                  "must have all bits set");
+  };
+}; // struct SizeValidator
+
+template <typename Metric, typename size>
+struct SizeMetricBase : public SizeValidator::Type<size> {
+  static_assert(std::is_same_v<typename Metric::size_type, size>);
+  static_assert(std::is_same_v<decltype(Metric::max), const size>);
   static_assert(
-      std::is_integral_v<SIZE>,
-      "org::simple::core::size::system::SizeType: size_type must be an "
-      "integral type.");
+      Metric::max > 0,
+      "org::simple::core::SizeMetricBase: metric::max must be positive.");
 
-  static_assert(!std::is_signed_v<SIZE>,
-                "org::simple::core::size::system::SizeType: "
-                "size_type must be an unsigned type.");
-
-  static_assert(
-      sizeof(SIZE) <= sizeof(size_t),
-      "org::simple::core::size::system::SizeType: size_type cannot be larger "
-      "than std::size_t.");
-
-  static_assert(int(MemoryModel::size_t_bits) + size_bit_limit > 0,
-                "SizeType::number of unused bits for size cannot equal or "
-                "exceed number of bits in size_type");
-  static_assert(size_bit_limit <= MemoryModel::size_t_bits,
-                "SizeType: explicit size_bit_limit cannot exceed number of "
-                "bits in size_type.");
-
-  using size_type = SIZE;
-
-  /**
-   * The number of bits in the underlying size_type.
-   */
-  static constexpr unsigned type_bits = 8 * sizeof(size_type);
-
-  /**
-   * The maximum value that can be represented by the underlying size_type.
-   */
-  static constexpr size_type type_max = std::numeric_limits<size_type>::max();
-
-  /**
-   * The number of bits used to represent size values.
-   */
-  static constexpr unsigned size_bits =
-      size_bit_limit > 0 ? size_bit_limit
-                         : MemoryModel::size_t_bits + size_bit_limit;
-
-  /**
-   * The maximum value of a size.
-   */
-  static constexpr size_type max =
-      Bits<size_type>::max_value_for_bits(size_bits);
-
-  /**
-   * The maximum index to address structures with a size. This is equal to max
-   * if max is equal to std::numeric_limits<size_type>::max() and max minus one
-   * otherwise. This value is always a power of two minus one.
-   */
+  typedef size size_type;
+  static constexpr size_type max = Metric::max;
   static constexpr size_type max_index =
-      type_bits == size_bits ? std::numeric_limits<size_type>::max()
-                             : (size_type(1) << size_bits) - 1;
-
-  /**
-   * The maximum bit mask that can be used for "wrapped" addressing structures
-   * like circular buffers.
-   */
-  static constexpr size_type max_bit_mask =
+      max == std::numeric_limits<size_type>::max() ? max : max - 1;
+  static constexpr size_type max_mask =
       Bits<size_type>::bit_mask_not_exceeding(max_index);
 
+  template <size_type element_size>
+  using Elements = ElementSizeMetric<SizeMetricBase<Metric, size_type>,
+                                     size_type, element_size>;
+
   /**
-   * Returns whether size is valid: non-zero and not greater than max.
-   * @return true if size if valid, false otherwise.
+   * Returns whether value is valid.
+   * @return true if value is valid, false otherwise.
    */
-  static constexpr bool is_valid(size_type size) noexcept {
-    return Unsigned::is_nonzero_not_greater(size, max);
+  template <typename T>
+  static constexpr auto value(T value) noexcept
+      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+    return value > 0 && value <= max;
   }
 
   /**
-   * Returns whether index is valid: not greater than max_index.
-   * @return true if index if valid, false otherwise.
+   * Returns whether value is valid: not greater than max_index.
+   * @return true if value is valid, false otherwise.
    */
-  static constexpr bool is_valid_index(size_type index) noexcept {
-    return Unsigned::is_not_greater(index, max_index);
-  }
 
-  /**
-   * Returns whether size is valid, where size is of another size_type.
-   * @return true if size if valid, false otherwise.
-   */
-  template <typename src_size_type>
-  static constexpr bool is_valid(src_size_type size) noexcept {
-    return Unsigned::is_nonzero_not_greater(size, max);
+  template <typename T>
+  static constexpr auto index(size_type value) noexcept
+      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+    return value <= max_index;
   }
 
   /**
@@ -159,8 +194,10 @@ template <typename SIZE = size_t, int size_bit_limit = 0> struct SizeType {
    * that is non-zero and not greater than max.
    * @return true if the sum represents a valid size, false otherwise.
    */
-  static constexpr bool is_valid_sum(size_type v1, size_type v2) noexcept {
-    return Unsigned::is_sum_nonzero_not_greater(v1, v2, max);
+  template <typename T>
+  static constexpr auto sum(T v1, T v2) noexcept
+      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+    return v1 > 0 ? v1 <= max && max - v1 >= v2 : v2 > 0 && v2 <= max;
   }
 
   /**
@@ -168,375 +205,166 @@ template <typename SIZE = size_t, int size_bit_limit = 0> struct SizeType {
    * size that is non-zero and not greater than max.
    * @return true if the product represents a valid size, false otherwise.
    */
-  static constexpr bool is_valid_product(size_type v1, size_type v2) noexcept {
-    return Unsigned::is_product_nonzero_not_greater(v1, v2, max);
+  template <typename T>
+  static constexpr auto product(T v1, T v2) noexcept
+      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+    return v1 > 0 && v2 > 0 && max / v1 >= v2;
   }
 
   /**
-   * Returns the maximum number of elements in an array with elements of the
-   * specified size.
-   * @param element_size The size of each element.
-   * @return the maximum number of elements, that can be zero.
-   */
-  static constexpr size_type max_count_for_element_size(size_t element_size) {
-    return max / org::simple::core::maximum(size_t(1), element_size);
-  }
-
-  /**
-   * Returns the maximum index to address an array with elements of the
-   * specified size.
-   * @param element_size The size of each element.
-   * @return the maximum index, that can be zero.
-   */
-  static constexpr size_type max_index_for_element_size(size_t element_size) {
-    return element_size > 1 ? max_count_for_element_size(element_size) - 1
-                            : max_index;
-  }
-
-  /**
-   * Returns the maximum bit mask that can be used for "wrapped" addressing
-   * structures, when backed by an array with elements of the specified size.
-   */
-  static constexpr size_type
-  max_bit_mask_for_element_size(size_t element_size) {
-    return Bits<size_type>::bit_mask_not_exceeding(
-        max_index_for_element_size(element_size));
-  }
-};
-
-static constexpr size_t system_max_size_in_bytes = SizeType<size_t>::max;
-
-static constexpr size_t system_max_byte_index = SizeType<size_t>::max_index;
-
-/**
- * Represents the size_type-represented, non-zero size of an array with elements
- * of element_size. In addition, a number of static properties and utilities are
- * provided.
- *
- * The size range can be artificially reduced by setting max_size_bits to a
- * non-zero value: this mechanism is explained in SizeType<size_type,
- * max_size_bits>.
- *
- * @tparam element_size The size of each element.
- * @tparam SIZE The integral, unsigned type that contains sizes.
- *  @tparam size_bit_limit The artificially reduced number of bits to represent
- * sizes.
- */
-template <size_t element_size, typename SIZE = std::size_t,
-          int max_size_bits = 0>
-struct Size {
-  static_assert(element_size > 0, "Size: element_size cannot be zero.");
-
-  using size_type = SIZE;
-  using Type = SizeType<size_type, max_size_bits>;
-
-  /**
-   * The maximum number of elements.
-   */
-  static constexpr size_type max =
-      Type::max_count_for_element_size(element_size);
-
-  /**
-   * The maximum element index.
-   */
-  static constexpr size_type max_index =
-      Type::max_index_for_element_size(element_size);
-
-  /**
-   * The maximum bit mask for "wrapped" index models. This is normally the same
-   * as max_index, except in cases where max_index is equal to the numeric limit
-   * of size_t. In that case, the size of a wrapped index model (max_index + 1)
-   * cannot be represented by size_type and the max_bit_mask is the next smaller
-   * power of two minus one.
-   * r
-   */
-  static constexpr size_type
-      max_bit_mask = max_index == Type::type_max
-                         ? Type::max >> 1
-                         : Bits<size_type>::bit_mask_not_exceeding(max_index);
-
-  /**
-   * Returns whether size is valid: non-zero and no greater than max.
-   * @return true if size is valid, false otherwise.
+   * Returns whether mask is valid: not greater than mask and all bits set.
+   * @return true if mask if valid, false otherwise.
    */
   template <typename T>
-  [[nodiscard]] static constexpr bool is_valid(T size) noexcept {
-    return Unsigned::is_nonzero_not_greater(size, max);
+  static constexpr auto mask(T mask) noexcept
+      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+    return mask <= max_mask && Bits<size_type>::fill(mask) == mask;
   }
 
   /**
-   * Returns whether size is valid: non-zero and no greater than max.
-   * @return true if size is valid, false otherwise.
+   * Returns v if #value(v) is true, throws std::range_error otherwise.
    */
-  template <typename source_size_type, source_size_type size_bits>
-  [[nodiscard]] static constexpr bool is_valid(
-      const Size<element_size, source_size_type, size_bits> &size) noexcept {
-    return is_valid(size.get());
-  }
-
-  /**
-   * Returns whether element_index is valid: non-zero and no greater than max.
-   * @return true if element_index is valid, false otherwise.
-   */
-  template <typename T>
-  [[nodiscard]] static constexpr bool is_valid_index(T element_index) noexcept {
-    return Unsigned::is_not_greater(element_index, max_index);
-  }
-
-  /**
-   * Returns whether element_index is valid: non-zero and no greater than max.
-   * @return true if element_index is valid, false otherwise.
-   */
-  template <typename source_size_type, source_size_type size_bits>
-  [[nodiscard]] static constexpr bool
-  is_valid_index(const Size<element_size, source_size_type, size_bits>
-                     &element_index) noexcept {
-    return is_valid_index(element_index.get());
-  }
-
-  /**
-   * Returns whether the sum of v1 and v2 represents a valid size:
-   * non-zero and no greater than max.
-   * @return true if the sum represents a valid size.
-   */
-  [[nodiscard]] static constexpr bool is_valid_sum(size_type v1,
-                                                   size_type v2) noexcept {
-    return Unsigned::is_sum_nonzero_not_greater(v1, v2, max);
-  }
-
-  /**
-   * Returns whether the product of v1 and v2 represents a valid size:
-   * non-zero and no greater than max.
-   * @return true if the product represents a valid size.
-   */
-  [[nodiscard]] static constexpr bool is_valid_product(size_type v1,
-                                                       size_type v2) noexcept {
-    return Unsigned::is_product_nonzero_not_greater(v1, v2, max);
-  }
-
-  /**
-   * Returns size if it is valid and throws std::invalid_argument
-   * otherwise.
-   * @return element_size
-   * @see is_valid(size_type)
-   */
-  template <typename T> static constexpr size_type get_valid(T size) {
-    if (is_valid(size)) {
-      return size;
+  static constexpr size_type valid_value(size_type v) {
+    if (value(v)) {
+      return v;
     }
-    throw std::invalid_argument(
-        "Size: size must be positive and not greater than Size::max.");
+    throw std::range_error("org::simple::core::SizeMetricBase: Size value "
+                           "must be positive and cannot exceed max.");
   }
 
   /**
-   * Returns the size if it represents a valid size and throws
-   * std::invalid_argument otherwise.
-   * @return the value of size cast to size_type.
+   * Returns v if #value(v) is true, throws std::range_error otherwise.
    */
-  template <typename ST, ST size_bits>
-  static constexpr size_type
-  get_valid(const Size<element_size, ST, size_bits> &elementCount) {
-    return get_valid(elementCount.get());
-  }
-
-  /**
-   * Returns element_index if it is valid and throws std::invalid_argument
-   * otherwise.
-   * @return element_index
-   * @see is_valid(size_type)
-   */
-  template <typename T>
-  static constexpr size_type get_valid_index(T element_index) {
-    if (is_valid_index(element_index)) {
-      return element_index;
+  template <typename src_size_type>
+  static constexpr size_type valid_value(src_size_type v) {
+    if (value(v)) {
+      return static_cast<size_type>(v);
     }
-    throw std::invalid_argument(
-        "Size: index must not be greater than Size::max_index");
+    throw std::range_error("org::simple::core::SizeMetricBase: Size value "
+                           "must be positive and cannot exceed max.");
   }
 
   /**
-   * Returns element_index if it is valid and throws std::invalid_argument
-   * otherwise.
-   * @return element_index
-   * @see is_valid(size_type)
+   * Returns v if #index(v) is true, throws std::range_error otherwise.
    */
-  template <typename ST, ST size_bits>
-  static constexpr size_type
-  get_valid_index(const Size<element_size, ST, size_bits> &element_index) {
-
-    return get_valid_index(element_index.get());
+  static constexpr size_type valid_index(size_type v) {
+    if (index(v)) {
+      return v;
+    }
+    throw std::range_error("org::simple::core::SizeMetricBase: Index "
+                           "value cannot exceed max_index.");
   }
 
   /**
-   * Returns the sum of v1 and v2 is it is valid and throws
+   * Returns the sum (v1 + v2) if #sum(v1, v2) is true, throws
    * std::invalid_argument otherwise.
-   * @return the sum of v1 and v2.
-   * @see is_valid_sum(size_type, size_type)
    */
-  static constexpr size_type get_valid_sum(size_type v1, size_type v2) {
-    if (is_valid_sum(v1, v2)) {
+  static constexpr size_type valid_sum(size_type v1, size_type v2) {
+    if (sum(v1, v2)) {
       return v1 + v2;
     }
     throw std::invalid_argument(
-        "Size: sum must be positive and not greater than Size::max.");
+        "org::simple::core::SizeMetricBase: Sum of values must be positive and "
+        "cannot exceed max.");
   }
 
   /**
-   * Returns the product of v1 and v2 is it is valid and throws
+   * Returns the product (v1 * v2) if #product(v1, v2) is true, throws
    * std::invalid_argument otherwise.
-   * @return the product of v1 and v2.
-   * @see is_valid_product(size_type, size_type)
    */
-  static constexpr size_type get_valid_product(size_type v1, size_type v2) {
-    if (is_valid_product(v1, v2)) {
+  static constexpr size_type valid_product(size_type v1, size_type v2) {
+    if (product(v1, v2)) {
       return v1 * v2;
     }
     throw std::invalid_argument(
-        "Size: product must be positive and not greater than Size::max.");
+        "org::simple::core::SizeMetricBase: Product of values must be positive "
+        "and cannot exceed max.");
   }
 
   /**
-   * Construct a Size based on a valid size or throws
-   * std::invalid_argument otherwise.
+   * Returns v if #mask(v) is true, throws std::invalid_argument otherwise.
    */
-  template <typename T> explicit Size(const T size) : value(get_valid(size)) {}
-
-  /**
-   * Construct a Size based on a valid size or throws
-   * std::invalid_argument otherwise.
-   */
-  template <typename ST, ST size_bits>
-  explicit Size(const Size<element_size, ST, size_bits> &size)
-      : value(get_valid(size)) {}
-
-  /**
-   * @return value
-   */
-  [[nodiscard]] explicit operator size_type() const noexcept { return value; }
-
-  /**
-   * Explicitly returns value.
-   * @return value
-   */
-  [[nodiscard]] size_t get() const noexcept { return value; }
-
-  /**
-   * Returns the maximum size from an instance.
-   * @return the maximum size, max.
-   */
-  [[nodiscard]] size_t maximum() const noexcept { return max; }
-
-  /**
-   * Returns the maximum element index from an instance.
-   * @return the maximum element index, max_index.
-   */
-  [[nodiscard]] size_t maximum_index() const noexcept { return max_index; }
-
-  /**
-   * Returns the maximum bit mask from an instance.
-   * @return the maximum bit mask, max_bit_mask.
-   */
-  [[nodiscard]] size_t maximum_bit_mask() const noexcept {
-    return max_bit_mask;
+  static constexpr size_type valid_mask(size_type v) {
+    if (mask(v)) {
+      return v;
+    }
+    throw std::invalid_argument(
+        "org::simple::core::SizeMetricBase: Mask must have all bits set and "
+        "cannot exceed max_mask.");
   }
 
+  ////////////////////////////////////
   /**
-   * Adds other_size if that results in a valid total size and
-   * throws std::invalid_argument otherwise.
+   * Returns the maximum number of elements in an array with elements of the
+   * specified size in units. Units are bytes, unless the Metric that declared
+   * this SizeValueChecks is already a derived one (for example an
+   * ArrayMetric).
+   * @param element_size The size of each element in units.
+   * @return the maximum number of elements, that can be zero.
    */
-  Size &operator+=(size_type other_size) {
-    value = get_valid_sum(value, other_size);
-    return *this;
+  static constexpr size_type max_element_count(size_type element_size) {
+    return max / std::max(size_type(1), element_size);
   }
-
-  /**
-   * Adds other_size if that results in a valid total size and
-   * throws std::invalid_argument otherwise.
-   */
-  Size &operator+=(const Size &other_size) {
-    value = get_valid_sum(value, other_size.value);
-    return *this;
-  }
-
-  /**
-   * Multiplies with other_size if that results in a valid total element
-   * count and throws std::invalid_argument otherwise.
-   */
-  Size &operator*=(size_type other_size) {
-    value = get_valid_product(value, other_size);
-    return *this;
-  }
-
-  /**
-   * Multiplies with other_size if that results in a valid total element
-   * count and throws std::invalid_argument otherwise.
-   */
-  Size &operator*=(const Size &other_size) {
-    value = get_valid_product(value, other_size.value);
-    return *this;
-  }
-
-  /**
-   * Returns a size with the sum of size and other_size if that results in a
-   * valid total size and throws std::invalid_argument otherwise.
-   */
-  friend Size operator+(Size size, size_type other_size) {
-    size += other_size;
-    return size;
-  }
-
-  /**
-   * Returns a size with the sum of size and other_size if that results in a
-   * valid total size and throws std::invalid_argument otherwise.
-   */
-  friend Size operator+(Size size, const Size &other_size) {
-    size += other_size;
-    return size;
-  }
-
-  /**
-   * Returns a size with the product of size and other_size if that results
-   * in a valid total size and throws std::invalid_argument otherwise.
-   */
-  friend Size operator*(Size size, size_type other_size) {
-    size *= other_size;
-    return size;
-  }
-
-  /**
-   * Returns a size with the product of size and other_size if that results
-   * in a valid total size and throws std::invalid_argument otherwise.
-   */
-  friend Size operator*(Size size, const Size &other_size) {
-    size *= other_size;
-    return size;
-  }
-
-  /**
-   * Assigns a new size is that is valid and throws
-   * std::invalid_argument otherwise.
-   */
-  template <typename T> Size &operator=(T other_size) {
-    value = get_valid(other_size);
-    return *this;
-  }
-
-  /**
-   * Explicitly assigns an size with different typing if that results
-   * in a valid size and throws std::invalid_argument otherwise.
-   */
-  template <typename ST, ST size_bits>
-  void assign(const Size<element_size, ST, size_bits> other_size) {
-    operator=(other_size.get());
-  }
-
-private:
-  size_type value;
 };
 
-template <typename T, typename size_type = std::size_t,
-          size_type max_size_bits = 0>
-using SizeFor = Size<sizeof(T), size_type, max_size_bits>;
+template <typename size> struct SizeMetric {
+  typedef SizeValidator::Type<size> base;
+  typedef SizeMetricBase<base, size> check;
+  typedef size size_type;
+
+  static constexpr size_type max = check::max;
+  static constexpr size_type max_index = check::max_index;
+  static constexpr size_type max_mask = check::max_mask;
+
+  template <size_type element_size>
+  using Elements = typename check::template Elements<element_size>;
+};
+
+template <typename size, size limit> struct SizeMetricWithLimit {
+  typedef SizeValidator::Limit<size, limit> base;
+  typedef SizeMetricBase<base, size> check;
+  typedef size size_type;
+
+  static constexpr size_type max = check::max;
+  static constexpr size_type max_index = check::max_index;
+  static constexpr size_type max_mask = check::max_mask;
+
+  template <size_type element_size>
+  using Elements = typename check::template Elements<element_size>;
+};
+
+template <typename size, unsigned size_bits_used>
+struct SizeMetricWithBitLimit {
+  typedef SizeValidator::BitLimit<size, size_bits_used> base;
+  typedef SizeMetricBase<base, size> check;
+  typedef size size_type;
+
+  static constexpr size_type max = check::max;
+  static constexpr size_type max_index = check::max_index;
+  static constexpr size_type max_mask = check::max_mask;
+
+  template <size_type element_size>
+  using Elements = typename check::template Elements<element_size>;
+};
+
+template <class Metric, typename size, size element_size>
+struct ElementSizeMetric : private SizeValidator::Metric<Metric, size> {
+  static_assert(element_size > 0 && element_size <= Metric::max,
+                "org::simple::core::ArrayMetric: element_size must be positive "
+                "and cannot exceed Metric::max");
+
+  typedef Metric base;
+  typedef SizeValidator::Limit<size, Metric::max / element_size> derived;
+  typedef SizeMetricBase<derived, size> check;
+  typedef size size_type;
+
+  static constexpr size_type max = check::max;
+  static constexpr size_type max_index = check::max_index;
+  static constexpr size_type max_mask = check::max_mask;
+
+  template <size_type group_size>
+  using Elements = typename check::template Elements<group_size>;
+};
 
 } // namespace org::simple::core
 
