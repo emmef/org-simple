@@ -5,231 +5,407 @@
 #include "test-helper.h"
 #include <cstddef>
 #include <org-simple/core/Size.h>
-//
-//namespace {
-//
-//constexpr unsigned short SIZE_BITS = 10;
-//constexpr size_t SIZE_LIMIT = size_t(1) << SIZE_BITS;
-//using Size = org::simple::core::SizeMetricWithBitLimit<size_t, SIZE_BITS>;
-//template <size_t range>
-//using FixedRange = org::simple::core::SizeMetricWithBitLimit<size_t, range>;
-//
-//using Functions = org::simple::test::FunctionTestCases;
-//
-//using TestCase = org::simple::test::AbstractValueTestCase;
-//
-//struct WithinTests {
-//  static TestCase *createWithin(bool expected, size_t value, size_t min,
-//                                size_t max) {
-//    return Functions::create("is_within", org::simple::core::is_within,
-//                             expected, value, min, max);
-//  }
-//  static TestCase *createWithinExcl(bool expected, size_t value, size_t min,
-//                                    size_t max) {
-//    return Functions::create("is_within_excl",
-//                             org::simple::core::is_within_excl, expected, value,
-//                             min, max);
-//  }
-//};
-//
-//std::vector<org::simple::test::AbstractValueTestCase *> *generateTestCases() {
-//  constexpr size_t MAX_LIMIT = Size::max;
-//
-//  std::vector<size_t> singleValues;
-//  singleValues.push_back(0);
-//  singleValues.push_back(1);
-//  singleValues.push_back(2);
-//  singleValues.push_back(3);
-//  singleValues.push_back(MAX_LIMIT - 1);
-//  singleValues.push_back(MAX_LIMIT);
-//  singleValues.push_back(MAX_LIMIT + 1);
-//
-//  struct Pair {
-//    size_t v1;
-//    size_t v2;
-//  };
-//
-//  std::vector<Pair> productValues;
-//  for (size_t i = 0; i <= MAX_LIMIT + 1; i++) {
-//    for (size_t j = i; j <= MAX_LIMIT + 1; j++) {
-//      size_t product = j * i;
-//      if (product < 4 || (product > MAX_LIMIT - 2 && product < MAX_LIMIT + 2)) {
-//        productValues.push_back({i, j});
-//        productValues.push_back({j, i});
-//      }
-//    }
-//  }
-//
-//  std::vector<Pair> sumValues;
-//  for (size_t i = 0; i <= MAX_LIMIT + 1; i++) {
-//    for (size_t j = i; j <= MAX_LIMIT + 1; j++) {
-//      size_t sum = j + i;
-//      if (sum < 4 || (sum > MAX_LIMIT - 2 && sum < MAX_LIMIT + 2)) {
-//        productValues.push_back({i, j});
-//        productValues.push_back({j, i});
-//      }
-//    }
-//  }
-//
-//  auto testCases =
-//      new std::vector<org::simple::test::AbstractValueTestCase *>();
-//
-//  for (size_t i : singleValues) {
-//    bool isWithin = i >= 0 && i <= MAX_LIMIT;
-//    bool isWithinExcl = i > 0 && i < MAX_LIMIT;
-//    bool isValidSize = i > 0 && i <= MAX_LIMIT;
-//    bool isValidIndex = i >= 0 && i < MAX_LIMIT;
-//
-//    testCases->push_back(WithinTests::createWithin(isWithin, i, 0, MAX_LIMIT));
-//    testCases->push_back(
-//        WithinTests::createWithinExcl(isWithinExcl, i, 0, MAX_LIMIT));
-//
-//    testCases->push_back(Functions::create("Size::check::value",
-//                                           Size::check::value,
-//                                           isValidSize, i));
-//
-//    testCases->push_back(Functions::create(
-//        "Size::check::is_valid_index", Size::check::index,
-//        isValidIndex, i));
-//    if (isValidIndex) {
-//      testCases->push_back(
-//          Functions::create("Size::check::get_valid_index",
-//                            Size::check::valid_index, i, i));
-//    } else {
-//      testCases->push_back(
-//          Functions::create("Size::check::get_valid_index",
-//                            Size::check::valid_index, i));
-//    }
-//    if (isValidSize) {
-//      testCases->push_back(
-//          Functions::create("Size::check::get_valid_size",
-//                            Size::check::valid_value, i, i));
-//    } else {
-//      testCases->push_back(
-//          Functions::create("Size::check::get_valid_size",
-//                            Size::check::valid_value, i));
-//    }
-//  }
-//
-//  for (Pair &i : productValues) {
-//    size_t product = i.v1 * i.v2;
-//    bool isValidSizeProduct = product > 0 && product <= MAX_LIMIT;
-//
-//    testCases->push_back(Functions::create("Size::check::is_valid_product",
-//                                           Size::check::valid_product,
-//                                           isValidSizeProduct, i.v1, i.v2));
-//    if (isValidSizeProduct) {
-//      testCases->push_back(Functions::create("Size::check::get_valid_product",
-//                                             Size::check::valid_product,
-//                                             product, i.v1, i.v2));
-//    } else {
-//      testCases->push_back(Functions::create("Size::check::get_valid_product",
-//                                             Size::check::valid_product,
-//                                             i.v1, i.v2));
-//    }
-//  }
-//
-//  for (Pair &i : sumValues) {
-//    size_t sum = i.v1 * i.v2;
-//    bool isValidSizeSum = sum > 0 && sum <= MAX_LIMIT;
-//
-//    testCases->push_back(Functions::create("Size::check::is_valid_sum",
-//                                           Size::check::sum,
-//                                           isValidSizeSum, i.v1, i.v2));
-//    if (isValidSizeSum) {
-//      testCases->push_back(Functions::create("Size::check::get_valid_sum",
-//                                             Size::check::valid_sum, sum,
-//                                             i.v1, i.v2));
-//    } else {
-//      testCases->push_back(Functions::create(
-//          "Size::check::get_valid_sum", Size::check::valid_sum, i.v1, i.v2));
-//    }
-//  }
-//
-//  return testCases;
-//} // namespace
-//
-//class TestGenerator {
-//
-//  std::vector<org::simple::test::AbstractValueTestCase *> *testCases;
-//
-//public:
-//  TestGenerator() { testCases = generateTestCases(); }
-//
-//  ~TestGenerator() {
-//    if (testCases) {
-//      for (auto testCase : *testCases) {
-//        delete testCase;
-//      }
-//      delete testCases;
-//      testCases = nullptr;
-//    }
-//  }
-//
-//  [[nodiscard]] std::vector<org::simple::test::AbstractValueTestCase *>
-//  getTestCases() const {
-//    return *testCases;
-//  }
-//};
-//} // namespace
-//
-//BOOST_AUTO_TEST_SUITE(org_simple_bounds)
-//
-//BOOST_AUTO_TEST_CASE(testConstructorExactMaxSize) {
-//  FixedRange size(SIZE_LIMIT);
-//  BOOST_CHECK_EQUAL(size_t(size), SIZE_LIMIT);
-//}
-//
-//BOOST_AUTO_TEST_CASE(testConstructorValidSize) {
-//  BOOST_CHECK_EQUAL(FixedRange(3u).get(), 3u);
-//}
-//
-//BOOST_AUTO_TEST_CASE(testConstructorTooLargeSize) {
-//  BOOST_CHECK_THROW(FixedRange(SIZE_LIMIT + 1), std::invalid_argument);
-//}
-//
-//BOOST_AUTO_TEST_CASE(testConstructorZeroSize) {
-//  BOOST_CHECK_THROW(FixedRange(0u), std::invalid_argument);
-//}
-//
-//BOOST_AUTO_TEST_CASE(testAdditionValid) {
-//  size_t v1 = 5;
-//  size_t v2 = 128;
-//  size_t sum = v1 + v2;
-//  FixedRange size(v1);
-//
-//  BOOST_CHECK_EQUAL(size_t(size + v2), sum);
-//}
-//
-//BOOST_AUTO_TEST_CASE(testAdditionTooLarge) {
-//  size_t v1 = 900;
-//  size_t v2 = 128;
-//  FixedRange size(v1);
-//  FixedRange result(1u);
-//
-//  BOOST_CHECK_THROW(result = size + v2, std::invalid_argument);
-//}
-//
-//BOOST_AUTO_TEST_CASE(testProductValid) {
-//  size_t v1 = 5;
-//  size_t v2 = 128;
-//  size_t product = v1 * v2;
-//  FixedRange size(v1);
-//
-//  BOOST_CHECK_EQUAL(size_t(size * v2), product);
-//}
-//
-//BOOST_AUTO_TEST_CASE(testProductTooLarge) {
-//  size_t v1 = 900;
-//  size_t v2 = 128;
-//  FixedRange size(v1);
-//  FixedRange result(1u);
-//
-//  BOOST_CHECK_THROW(result = size * v2, std::invalid_argument);
-//}
-//
-//TestGenerator TEST_GENERATOR;
-//
-//BOOST_DATA_TEST_CASE(sample, TEST_GENERATOR.getTestCases()) { sample->test(); }
-//
-//BOOST_AUTO_TEST_SUITE_END()
+#include <valarray>
+
+namespace {
+
+using Functions = org::simple::test::FunctionTestCases;
+using TestCase = org::simple::test::AbstractValueTestCase;
+
+template <typename T> std::vector<T> generateTestValues(T min, T max) {
+  static constexpr T lowest = std::numeric_limits<T>::lowest();
+  static constexpr T highest = std::numeric_limits<T>::max();
+
+  std::vector<T> values;
+  if constexpr (!std::is_floating_point_v<T>) {
+    switch (min) {
+    case lowest:
+      break;
+    case lowest + T(1):
+      values.push_back(lowest);
+      // FALL-THROUGH
+    default:
+      values.push_back(min - 1);
+    }
+  }
+  values.push_back(min);
+  values.push_back(min + 1);
+  values.push_back(max - 1);
+  values.push_back(max);
+  if constexpr (!std::is_floating_point_v<T>) {
+    switch (max) {
+    case highest:
+      break;
+    case highest - T(1):
+      values.push_back(highest);
+      // FALL-THROUGH
+    default:
+      values.push_back(max + 1);
+    }
+  }
+  return values;
+}
+
+template <bool> struct IntermediateTypeSelectorBase;
+
+template <> struct IntermediateTypeSelectorBase<true> {
+  typedef long double intermediate;
+};
+
+template <> struct IntermediateTypeSelectorBase<false> {
+  typedef long long signed intermediate;
+};
+
+template <typename Value, typename Bounds> struct IntermediateTypeSelector {
+  static constexpr bool is_floating_point =
+      std::is_floating_point_v<Value> || std::is_floating_point_v<Bounds>;
+
+  typedef typename IntermediateTypeSelectorBase<is_floating_point>::intermediate
+      type;
+
+  static_assert(std::numeric_limits<type>::lowest() <=
+                std::numeric_limits<Value>::lowest() &&
+                std::numeric_limits<type>::lowest() <=
+                std::numeric_limits<Bounds>::lowest() &&
+                std::numeric_limits<type>::max() >=
+                std::numeric_limits<Value>::max() &&
+                std::numeric_limits<type>::max() >=
+                std::numeric_limits<Bounds>::max());
+};
+
+struct WithinTests {
+
+  template <typename Value, typename Bounds>
+  static TestCase *createWithin(Value value, Bounds min, Bounds max) {
+    typedef typename IntermediateTypeSelector<Value, Bounds>::type intermediate;
+    bool expected = intermediate(value) >= intermediate(min) &&
+                    intermediate(value) <= intermediate(max);
+    return Functions::create("is_within", org::simple::core::is_within,
+                             expected, value, min, max);
+  }
+
+  template <typename Value, typename Bounds>
+  static TestCase *createWithinExcl(Value value, Bounds min, Bounds max) {
+    typedef typename IntermediateTypeSelector<Value, Bounds>::type intermediate;
+    bool expected = intermediate(value) > intermediate(min) &&
+                    intermediate(value) < intermediate(max);
+    return Functions::create("is_within_excl",
+                             org::simple::core::is_within_excl, expected, value,
+                             min, max);
+  }
+};
+
+std::vector<org::simple::test::AbstractValueTestCase *> *generateTestCases() {
+  auto testCases =
+      new std::vector<org::simple::test::AbstractValueTestCase *>();
+
+  unsigned short U_LO = std::numeric_limits<unsigned short>::lowest();
+  unsigned short U_HI = std::numeric_limits<unsigned short>::max();
+  unsigned short U_MIN = 2;
+  unsigned short U_MAX = 10;
+
+  signed short I_LO = std::numeric_limits<signed short>::lowest();
+  signed short I_HI = std::numeric_limits<signed short>::max();
+  signed short I_MIN1 = -10;
+  signed short I_MAX1 = -5;
+  signed short I_MIN2 = -5;
+  signed short I_MAX2 = 5;
+  signed short I_MIN3 = 5;
+  signed short I_MAX3 = 10;
+
+  float F_LO = std::numeric_limits<signed short>::lowest();
+  float F_HI = std::numeric_limits<signed short>::max();
+  float F_MIN1 = -10;
+  float F_MAX1 = -5;
+  float F_MIN2 = -5;
+  float F_MAX2 = 5;
+  float F_MIN3 = 5;
+  float F_MAX3 = 10;
+
+  std::vector<unsigned short> unsigned_limits = generateTestValues(U_LO, U_HI);
+  std::vector<unsigned short> unsigned_arbitrary =
+      generateTestValues<unsigned short>(U_MIN, U_MAX);
+
+  for (unsigned short t : unsigned_limits) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+  }
+
+  for (unsigned short t : unsigned_arbitrary) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+  }
+
+  std::vector<signed short> signed_limits = generateTestValues(I_LO, I_HI);
+  std::vector<signed short> signed_arbitrary_negative =
+      generateTestValues<signed short>(I_MIN1, I_MAX1);
+  std::vector<signed short> signed_arbitrary_around =
+      generateTestValues<signed short>(I_MIN2, I_MAX2);
+  std::vector<signed short> signed_arbitrary_positive =
+      generateTestValues<signed short>(I_MIN3, I_MAX3);
+
+  for (signed short t : signed_limits) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
+  }
+
+  for (signed short t : signed_arbitrary_negative) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
+  }
+
+  for (signed short t : signed_arbitrary_around) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
+  }
+
+  for (signed short t : signed_arbitrary_positive) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
+  }
+
+  std::vector<float> float_limits = generateTestValues(F_LO, F_HI);
+  std::vector<float> float_arbitrary_negative =
+      generateTestValues<float>(I_MIN1, I_MAX1);
+  std::vector<float> float_arbitrary_around =
+      generateTestValues<float>(I_MIN2, I_MAX2);
+  std::vector<float> float_arbitrary_positive =
+      generateTestValues<float>(I_MIN3, I_MAX3);
+
+
+  for (float t : float_limits) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
+  }
+
+  for (float t : float_arbitrary_negative) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
+  }
+
+  for (float t : float_arbitrary_around) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
+  }
+
+  for (float t : float_arbitrary_positive) {
+    testCases->push_back(WithinTests::createWithin(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithin(t, U_MIN, U_MAX));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_LO, U_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, U_MIN, U_MAX));
+
+    testCases->push_back(WithinTests::createWithin(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_LO, I_HI));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN1, I_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
+  }
+
+  return testCases;
+}
+
+class TestGenerator {
+
+  std::vector<org::simple::test::AbstractValueTestCase *> *testCases;
+
+public:
+  TestGenerator() { testCases = generateTestCases(); }
+
+  ~TestGenerator() {
+    if (testCases) {
+      for (auto testCase : *testCases) {
+        delete testCase;
+      }
+      delete testCases;
+      testCases = nullptr;
+    }
+  }
+
+  [[nodiscard]] std::vector<org::simple::test::AbstractValueTestCase *>
+  getTestCases() const {
+    return *testCases;
+  }
+};
+
+} // namespace
+
+BOOST_AUTO_TEST_SUITE(org_simple_core_bounds)
+TestGenerator TEST_GENERATOR;
+
+BOOST_DATA_TEST_CASE(sample, TEST_GENERATOR.getTestCases()) { sample->test(); }
+
+BOOST_AUTO_TEST_SUITE_END()

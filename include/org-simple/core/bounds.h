@@ -47,7 +47,7 @@ template <typename T, typename V>
     }
   } else { // T is signed
     if constexpr (std::is_unsigned_v<V>) {
-      return v <= static_cast<V>(std::numeric_limits<T>::max) &&
+      return v <= static_cast<V>(std::numeric_limits<T>::max()) &&
              static_cast<T>(v) >= min && static_cast<T>(v) <= max;
     }
     else {
@@ -76,7 +76,7 @@ template <typename T, typename V>
     }
   } else { // T is signed
     if constexpr (std::is_unsigned_v<V>) {
-      return v <= static_cast<V>(std::numeric_limits<T>::max) &&
+      return v <= static_cast<V>(std::numeric_limits<T>::max()) &&
              static_cast<T>(v) > min && static_cast<T>(v) < max;
     }
     else {

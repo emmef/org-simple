@@ -101,9 +101,10 @@ struct SizeValidator {
         is_valid_size_type<size>(),
         "org::simple::core::SizeValidator::Type: size_type must be unsigned "
         "and must not be able to contain larger values than size_t.");
-
-    static constexpr size size_value = 0;
-    static constexpr bool bool_value = false;
+    struct Values {
+      size size_value = 0;
+      bool bool_value = false;
+    };
   };
 
   template <typename size, size limit> struct Limit : public Type<size> {
@@ -174,7 +175,7 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
    */
   template <typename T>
   static constexpr auto value(T value) noexcept
-      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+      -> decltype(SizeValidator::TypeCheck<T>::Values::bool_value) {
     return value > 0 && value <= max;
   }
 
@@ -184,8 +185,8 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
    */
 
   template <typename T>
-  static constexpr auto index(size_type value) noexcept
-      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+  static constexpr auto index(T value) noexcept
+      -> decltype(SizeValidator::TypeCheck<T>::Values::bool_value) {
     return value <= max_index;
   }
 
@@ -196,7 +197,7 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
    */
   template <typename T>
   static constexpr auto sum(T v1, T v2) noexcept
-      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+      -> decltype(SizeValidator::TypeCheck<T>::Values::bool_value) {
     return v1 > 0 ? v1 <= max && max - v1 >= v2 : v2 > 0 && v2 <= max;
   }
 
@@ -207,7 +208,7 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
    */
   template <typename T>
   static constexpr auto product(T v1, T v2) noexcept
-      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+      -> decltype(SizeValidator::TypeCheck<T>::Values::bool_value) {
     return v1 > 0 && v2 > 0 && max / v1 >= v2;
   }
 
@@ -217,26 +218,16 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
    */
   template <typename T>
   static constexpr auto mask(T mask) noexcept
-      -> decltype(SizeValidator::TypeCheck<T>::bool_value) {
+      -> decltype(SizeValidator::TypeCheck<T>::Values::bool_value) {
     return mask <= max_mask && Bits<size_type>::fill(mask) == mask;
   }
 
   /**
    * Returns v if #value(v) is true, throws std::range_error otherwise.
    */
-  static constexpr size_type valid_value(size_type v) {
-    if (value(v)) {
-      return v;
-    }
-    throw std::range_error("org::simple::core::SizeMetricBase: Size value "
-                           "must be positive and cannot exceed max.");
-  }
-
-  /**
-   * Returns v if #value(v) is true, throws std::range_error otherwise.
-   */
-  template <typename src_size_type>
-  static constexpr size_type valid_value(src_size_type v) {
+  template <typename T>
+  static constexpr auto valid_value(T v)
+  -> decltype(SizeValidator::TypeCheck<T>::Values::size_value) {
     if (value(v)) {
       return static_cast<size_type>(v);
     }
@@ -247,8 +238,10 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
   /**
    * Returns v if #index(v) is true, throws std::range_error otherwise.
    */
-  static constexpr size_type valid_index(size_type v) {
-    if (index(v)) {
+  template <typename T>
+  static constexpr auto valid_index(T v)
+  -> decltype(SizeValidator::TypeCheck<T>::Values::size_value) {
+    if (index<T>(v)) {
       return v;
     }
     throw std::range_error("org::simple::core::SizeMetricBase: Index "
@@ -259,7 +252,9 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
    * Returns the sum (v1 + v2) if #sum(v1, v2) is true, throws
    * std::invalid_argument otherwise.
    */
-  static constexpr size_type valid_sum(size_type v1, size_type v2) {
+  template <typename T>
+  static constexpr auto valid_sum(T v1, T v2)
+  -> decltype(SizeValidator::TypeCheck<T>::Values::size_value) {
     if (sum(v1, v2)) {
       return v1 + v2;
     }
@@ -272,7 +267,9 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
    * Returns the product (v1 * v2) if #product(v1, v2) is true, throws
    * std::invalid_argument otherwise.
    */
-  static constexpr size_type valid_product(size_type v1, size_type v2) {
+  template <typename T>
+  static constexpr auto valid_product(T v1, T v2)
+  -> decltype(SizeValidator::TypeCheck<T>::Values::size_value) {
     if (product(v1, v2)) {
       return v1 * v2;
     }
@@ -284,7 +281,9 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
   /**
    * Returns v if #mask(v) is true, throws std::invalid_argument otherwise.
    */
-  static constexpr size_type valid_mask(size_type v) {
+  template <typename T>
+  static constexpr auto valid_mask(T v)
+  -> decltype(SizeValidator::TypeCheck<T>::Values::size_value) {
     if (mask(v)) {
       return v;
     }
@@ -302,8 +301,9 @@ struct SizeMetricBase : public SizeValidator::Type<size> {
    * @param element_size The size of each element in units.
    * @return the maximum number of elements, that can be zero.
    */
-  static constexpr size_type max_element_count(size_type element_size) {
-    return max / std::max(size_type(1), element_size);
+  template <typename T>
+  static constexpr size_type max_element_count(T element_size) {
+    return max / valid_value(element_size);
   }
 };
 
