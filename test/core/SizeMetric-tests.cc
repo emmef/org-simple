@@ -264,10 +264,12 @@ BOOST_AUTO_TEST_CASE(sizeTestcaseToBeMovedToSeparateSizeTestCasesModule) {
   BOOST_CHECK_EQUAL(SUM, (size_t)(size + SIZE2));
   BOOST_CHECK_EQUAL(SUM, (size_t)(size + SIZE2));
   BOOST_CHECK_EQUAL(SUM, (SizeType(SIZE1) + SIZE2).value());
+  BOOST_CHECK_EQUAL(SUM, SIZE2 + SizeType(SIZE1));
 
   typedef Size<SizeMetricWithLimit<size_t, 100>> Limited;
   BOOST_CHECK_EQUAL(SUM, (Limited(SIZE1) + SIZE2).value());
   BOOST_CHECK_THROW(Limited(SIZE1) * SIZE2, std::invalid_argument);
+  std::cout << "Sizeof SizeType = " << sizeof(SizeType) << std::endl;
 }
 
 TestGenerator TEST_GENERATOR;

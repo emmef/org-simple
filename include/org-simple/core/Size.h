@@ -177,10 +177,16 @@ template <typename Metric> struct ValidSizeMetric {
 
   typedef typename metric::check check;
   static_assert(requires { check::valid_value(size_type(1)); });
-  static_assert(requires { check::valid_index(size_type(0)); });
-  static_assert(requires { check::valid_mask(size_type(1)); });
   static_assert(requires { check::valid_sum(size_type(1), size_type(0)); });
   static_assert(requires { check::valid_product(size_type(1), size_type(1)); });
+  static_assert(
+      std::is_same_v<size_type(size_type),
+                     decltype(check::template valid_value<size_type>)>);
+  static_assert(std::is_same_v<size_type(size_type, size_type),
+                               decltype(check::template valid_sum<size_type>)>);
+  static_assert(
+      std::is_same_v<size_type(size_type, size_type),
+                     decltype(check::template valid_product<size_type>)>);
 };
 
 template <class Metric, typename size, size element_size>
@@ -502,15 +508,35 @@ private:
   size_type value_;
 };
 
-template <class T, typename A> Size<T> operator+(Size<T> size, A other) {
+template <class T, typename A> static Size<T> operator+(Size<T> size, A other) {
   size += other;
   return size;
 }
 
-template <class T, typename A> Size<T> operator*(Size<T> size, A other) {
+template <class T, typename A> static Size<T> operator*(Size<T> size, A other) {
   size *= other;
   return size;
 }
+
+template <class T, typename A>
+static auto operator+(A other, Size<T> size)
+    -> decltype(SizeValue<A>::Values::size_value) {
+  size += other;
+  return size.value();
+}
+
+template <class T, typename A> static auto operator*(A other, Size<T> size)
+-> decltype(SizeValue<A>::Values::size_value) {
+  size *= other;
+  return size;
+}
+
+typedef SizeMetric<size_t> SizeTMetric;
+typedef Size<SizeTMetric> SizeType;
+typedef SizeMetric<unsigned> IntSizeTMetric;
+typedef Size<IntSizeTMetric> IntSizeType;
+typedef SizeMetric<unsigned short> ShortSizeTMetric;
+typedef Size<ShortSizeTMetric> ShortSizeType;
 
 } // namespace org::simple::core
 
