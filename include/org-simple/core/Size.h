@@ -127,8 +127,10 @@ struct SizeValidator {
     static constexpr size max = size(1) << size_bits_used;
   };
 
-  template <typename T, typename size_type>
-  struct Metric : public Type<size_type> {
+  template <typename T>
+  struct Metric {
+    static_assert(is_valid_size_type<typename T::size_type>());
+    typedef typename T::size_type size_type;
     static_assert(std::is_same_v<typename T::size_type, size_type>);
     static_assert(std::is_same_v<decltype(T::max), const size_type>);
     static_assert(std::is_same_v<decltype(T::max_index), const size_type>);
@@ -348,7 +350,7 @@ struct SizeMetricWithBitLimit {
 };
 
 template <class Metric, typename size, size element_size>
-struct ElementSizeMetric : private SizeValidator::Metric<Metric, size> {
+struct ElementSizeMetric : private SizeValidator::Metric<Metric> {
   static_assert(element_size > 0 && element_size <= Metric::max,
                 "org::simple::core::ArrayMetric: element_size must be positive "
                 "and cannot exceed Metric::max");
@@ -365,6 +367,8 @@ struct ElementSizeMetric : private SizeValidator::Metric<Metric, size> {
   template <size_type group_size>
   using Elements = typename check::template Elements<group_size>;
 };
+
+
 
 } // namespace org::simple::core
 

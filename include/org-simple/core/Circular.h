@@ -35,7 +35,7 @@ template <WrappingType wrappingType, class SizeMetric> struct WrappedBase;
 
 template <class SizeMetric>
 struct WrappedBase<WrappingType::BIT_MASK, SizeMetric>
-    : public SizeValidator::Metric<SizeMetric, typename SizeMetric::size_type> {
+    : public SizeValidator::Metric<SizeMetric> {
 
   typedef SizeMetric metric;
   typedef typename metric::size_type size_type;
@@ -87,7 +87,7 @@ private:
 
 template <class SizeMetric>
 struct WrappedBase<WrappingType::MODULO, SizeMetric>
-    : public SizeValidator::Metric<SizeMetric, typename SizeMetric::size_type> {
+    : public SizeValidator::Metric<SizeMetric> {
 
   typedef SizeMetric metric;
   typedef typename metric::size_type size_type;
