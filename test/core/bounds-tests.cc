@@ -140,6 +140,15 @@ std::vector<org::simple::test::AbstractValueTestCase *> *generateTestCases() {
     testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
     testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
     testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
   }
 
   for (unsigned short t : unsigned_arbitrary) {
@@ -156,6 +165,15 @@ std::vector<org::simple::test::AbstractValueTestCase *> *generateTestCases() {
     testCases->push_back(WithinTests::createWithinExcl(t, I_MIN2, I_MAX2));
     testCases->push_back(WithinTests::createWithin(t, I_MIN3, I_MAX3));
     testCases->push_back(WithinTests::createWithinExcl(t, I_MIN3, I_MAX3));
+
+    testCases->push_back(WithinTests::createWithin(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_LO, F_HI));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN1, F_MAX1));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN2, F_MAX2));
+    testCases->push_back(WithinTests::createWithin(t, F_MIN3, F_MAX3));
+    testCases->push_back(WithinTests::createWithinExcl(t, F_MIN3, F_MAX3));
   }
 
   std::vector<signed short> signed_limits = generateTestValues(I_LO, I_HI);
