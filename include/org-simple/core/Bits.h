@@ -108,7 +108,7 @@ public:
    * @return the bit mask that includes index.
    */
   static constexpr size_type bit_mask_not_exceeding(size_type index) noexcept {
-    return index < 2 ? 1 : fill(index) == index ? index : fill(index) >> 1;
+    return index < 2 ? 0 : fill(index) == index ? index : fill(index) >> 1;
   }
 
   /**
