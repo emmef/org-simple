@@ -7,11 +7,10 @@
 
 namespace {
 
-using SizeMetric = org::simple::core::SizeMetric<size_t>;
+using SizeMetric = org::simple::core::SizeValue<size_t>;
 
 using Metric =
-    org::simple::core::WrappedIndex<org::simple::core::WrappingType::BIT_MASK,
-                                    SizeMetric>;
+    org::simple::core::WrappedIndex<org::simple::core::WrappingType::BIT_MASK>;
 
 constexpr size_t requestedSize = 13;
 constexpr size_t properSize = 16;

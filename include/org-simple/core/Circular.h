@@ -31,16 +31,16 @@ enum class WrappingType { BIT_MASK, MODULO };
 
 namespace base {
 
-template <WrappingType wrappingType, class SizeMetric> struct WrappedBase;
+template <WrappingType wrappingType, typename size_type = size_t,
+          size_type size_limit = std::numeric_limits<size_type>::max()>
+struct WrappedBase;
 
-template <class SizeMetric>
-struct WrappedBase<WrappingType::BIT_MASK, SizeMetric> {
+template <typename size_type, size_type size_limit>
+struct WrappedBase<WrappingType::BIT_MASK, size_type, size_limit> {
 
-  typedef typename ValidSizeMetric<SizeMetric>::metric metric;
-  typedef typename metric::size_type size_type;
+  typedef SizeValue<size_type, size_limit> metric;
 
-  explicit WrappedBase(size_type elements)
-      : mask_(valid_mask(elements)) {}
+  explicit WrappedBase(size_type elements) : mask_(valid_mask(elements)) {}
 
   size_type size() const noexcept { return mask_ + 1; }
 
@@ -66,13 +66,11 @@ struct WrappedBase<WrappingType::BIT_MASK, SizeMetric> {
     return wrapped(index + mask_ + 1 - delta & mask_);
   }
 
-  void set_element_count(size_type elements) {
-    mask_ = valid_mask(elements);
-  }
+  void set_element_count(size_type elements) { mask_ = valid_mask(elements); }
 
 protected:
   static size_type valid_mask(size_type elements) {
-    return Bits<size_type>::fill(metric::check::valid_value(elements) - 1);
+    return Bits<size_type>::fill(metric::Valid::value(elements) - 1);
   }
 
   [[nodiscard]] inline size_type
@@ -84,14 +82,13 @@ private:
   size_type mask_;
 };
 
-template <class SizeMetric>
-struct WrappedBase<WrappingType::MODULO, SizeMetric> {
+template <typename size_type, size_type size_limit>
+struct WrappedBase<WrappingType::MODULO, size_type, size_limit> {
 
-  typedef typename ValidSizeMetric<SizeMetric>::metric metric;
-  typedef typename metric::size_type size_type;
+  typedef SizeValue<size_type, size_limit> metric;
 
   explicit WrappedBase(size_type elements)
-      : size_(metric::check::valid_value(elements)) {}
+      : size_(metric::Valid::value(elements)) {}
 
   size_type size() const noexcept { return size_; }
 
@@ -155,12 +152,11 @@ private:
  * The model can be applied in circular buffers and the like.
  * @see core::simple::Size<element_size, size_type, max_size_bits>.
  */
-template <WrappingType wrappingType, class SizeMetric>
-struct WrappedIndex : public base::WrappedBase<wrappingType, SizeMetric> {
+template <WrappingType wrappingType, typename size_type = size_t, size_type size_limit = std::numeric_limits<size_type>::max()>
+struct WrappedIndex : public base::WrappedBase<wrappingType, size_type, size_limit> {
 
-  typedef base::WrappedBase<wrappingType, SizeMetric> Super;
+  typedef base::WrappedBase<wrappingType, size_type, size_limit> Super;
   typedef typename Super::metric metric;
-  typedef typename metric::size_type size_type;
 
   static constexpr size_type max_element_count = metric::max;
 
