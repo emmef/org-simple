@@ -23,17 +23,42 @@
 
 #include <stdexcept>
 
+#ifdef ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED
+#define ORG_SIMPLE_INDEX_SAFE_NOEXCEPT noexcept
+#else
+#define ORG_SIMPLE_INDEX_SAFE_NOEXCEPT
+#endif
+
+#ifdef ORG_SIMPLE_INDEX_POLICY_FORCE_UNSAFE_CHECKED
+#define ORG_SIMPLE_INDEX_UNSAFE_NOEXCEPT
+#else
+#define ORG_SIMPLE_INDEX_UNSAFE_NOEXCEPT noexcept
+#endif
+
+#ifdef ORG_SIMPLE_DEREFERENCE_SAFE_UNCHECKED
+#define ORG_SIMPLE_DEREFERENCE_SAFE_NOEXCEPT noexcept
+#else
+#define ORG_SIMPLE_DEREFERENCE_SAFE_NOEXCEPT
+#endif
+
+#ifdef ORG_SIMPLE_DEREFERENCE_UNSAFE_CHECKED
+#define ORG_SIMPLE_DEREFERENCE_UNSAFE_NOEXCEPT
+#else
+#define ORG_SIMPLE_DEREFERENCE_UNSAFE_NOEXCEPT noexcept
+#endif
+
 namespace org::simple::core {
+
 struct Index {
 
   template <typename S> [[nodiscard]] static S checked(S index, S size) {
     if (index < size) {
       return index;
     }
-    throw std::out_of_range("IndexPolicy::index out of range");
+    throw std::out_of_range("Index::checked(index): index out of range");
   }
 
-  template <typename S> [[nodiscard]] static S unchecked(S index, S) {
+  template <typename S> [[nodiscard]] static S unchecked(S index, S) noexcept {
     return index;
   }
 
@@ -41,7 +66,8 @@ struct Index {
    * Returns checked index, or unchecked if
    * ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED is defined.
    */
-  template <typename S> [[nodiscard]] static S safe(S index, S size) {
+  template <typename S>
+  [[nodiscard]] static S safe(S index, S size) ORG_SIMPLE_INDEX_SAFE_NOEXCEPT {
 #ifndef ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED
     return checked(index, size);
 #else
@@ -53,7 +79,9 @@ struct Index {
    * Returns unchecked index, or checked if
    * ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED is defined.
    */
-  template <typename S> [[nodiscard]] static S unsafe(S index, S size) {
+  template <typename S>
+  [[nodiscard]] static S unsafe(S index,
+                                S size) ORG_SIMPLE_INDEX_UNSAFE_NOEXCEPT {
 #ifndef ORG_SIMPLE_INDEX_POLICY_FORCE_UNSAFE_CHECKED
     return unchecked(index, size);
 #else
@@ -66,10 +94,12 @@ struct Index {
       if (index <= size) {
         return index;
       }
-      throw std::out_of_range("IndexPolicy::offset out of range");
+      throw std::out_of_range(
+          "Index::Inclusive::checked(index): index out of range");
     }
 
-    template <typename S> [[nodiscard]] static S unchecked(S index, S) {
+    template <typename S>
+    [[nodiscard]] static S unchecked(S index, S) noexcept {
       return index;
     }
 
@@ -77,7 +107,9 @@ struct Index {
      * Returns checked index, or unchecked if
      * ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED is defined.
      */
-    template <typename S> [[nodiscard]] static S safe(S index, S size) {
+    template <typename S>
+    [[nodiscard]] static S safe(S index,
+                                S size) ORG_SIMPLE_INDEX_SAFE_NOEXCEPT {
 #ifndef ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED
       return checked(index, size);
 #else
@@ -89,7 +121,9 @@ struct Index {
      * Returns unchecked index, or checked if
      * ORG_SIMPLE_INDEX_POLICY_FORCE_SAFE_UNCHECKED is defined.
      */
-    template <typename S> [[nodiscard]] static S unsafe(S index, S size) {
+    template <typename S>
+    [[nodiscard]] static S unsafe(S index,
+                                  S size) ORG_SIMPLE_INDEX_UNSAFE_NOEXCEPT {
 #ifndef ORG_SIMPLE_INDEX_POLICY_FORCE_UNSAFE_CHECKED
       return unchecked(index, size);
 #else
@@ -97,6 +131,42 @@ struct Index {
 #endif
     }
   };
+};
+
+struct Dereference {
+
+  template <typename T> [[nodiscard]] static T *checked(T *ptr) {
+    if (ptr) {
+      return ptr;
+    }
+    throw std::invalid_argument("Dereferece::checked(ptr): nullptr.");
+  }
+
+  template <typename T> [[nodiscard]] static T *unchecked(T *ptr) noexcept {
+    if (ptr) {
+      return ptr;
+    }
+    throw std::invalid_argument("Dereferece::checked(ptr): nullptr.");
+  }
+
+  template <typename T>
+  [[nodiscard]] static T *safe(T *ptr) ORG_SIMPLE_DEREFERENCE_SAFE_NOEXCEPT {
+#ifdef ORG_SIMPLE_DEREFERENCE_SAFE_UNCHECKED
+    return unchecked(ptr);
+#else
+    return checked(ptr);
+#endif
+  }
+
+  template <typename T>
+  [[nodiscard]] static T *
+  unsafe(T *ptr) ORG_SIMPLE_DEREFERENCE_UNSAFE_NOEXCEPT {
+#ifdef ORG_SIMPLE_DEREFERENCE_UNSAFE_CHECKED
+    return checked(ptr);
+#else
+    return unchecked(ptr);
+#endif
+  }
 };
 
 } // namespace org::simple::core
