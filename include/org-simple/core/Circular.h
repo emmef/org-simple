@@ -40,7 +40,8 @@ struct WrappedBase<WrappingType::BIT_MASK, size_type, size_limit> {
 
   typedef SizeValue<size_type, size_limit> metric;
 
-  explicit WrappedBase(size_type elements) : mask_(valid_mask(elements)) {}
+  explicit WrappedBase(size_type elements)
+      : mask_(metric::Valid::mask_for_elements(elements)) {}
 
   size_type size() const noexcept { return mask_ + 1; }
 
@@ -56,23 +57,21 @@ struct WrappedBase<WrappingType::BIT_MASK, size_type, size_limit> {
     return wrapped(index - 1);
   }
 
-  [[nodiscard]] size_type unsafe_add(size_type index,
+  [[nodiscard]] inline size_type unsafe_add(size_type index,
                                      size_type delta) const noexcept {
     return wrapped(index + delta);
   }
 
-  [[nodiscard]] size_type unsafe_sub(size_type index,
+  [[nodiscard]] inline size_type unsafe_sub(size_type index,
                                      size_type delta) const noexcept {
     return wrapped(index + mask_ + 1 - delta & mask_);
   }
 
-  void set_element_count(size_type elements) { mask_ = valid_mask(elements); }
-
-protected:
-  static size_type valid_mask(size_type elements) {
-    return Bits<size_type>::fill(metric::Valid::value(elements) - 1);
+  void set_element_count(size_type elements) {
+    mask_ = metric::Valid::mask_for_elements(elements);
   }
 
+protected:
   [[nodiscard]] inline size_type
   safe_parameter(size_type parameter) const noexcept {
     return parameter;
@@ -115,7 +114,7 @@ struct WrappedBase<WrappingType::MODULO, size_type, size_limit> {
   }
 
   void set_element_count(size_type elements) {
-    size_ = valid_element_count(elements);
+    size_ = metric::Valid::value(elements);
   }
 
 protected:
@@ -152,8 +151,10 @@ private:
  * The model can be applied in circular buffers and the like.
  * @see core::simple::Size<element_size, size_type, max_size_bits>.
  */
-template <WrappingType wrappingType, typename size_type = size_t, size_type size_limit = std::numeric_limits<size_type>::max()>
-struct WrappedIndex : public base::WrappedBase<wrappingType, size_type, size_limit> {
+template <WrappingType wrappingType, typename size_type = size_t,
+          size_type size_limit = std::numeric_limits<size_type>::max()>
+struct WrappedIndex
+    : public base::WrappedBase<wrappingType, size_type, size_limit> {
 
   typedef base::WrappedBase<wrappingType, size_type, size_limit> Super;
   typedef typename Super::metric metric;
