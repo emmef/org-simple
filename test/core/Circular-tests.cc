@@ -7,10 +7,10 @@
 
 namespace {
 
-using SizeMetric = org::simple::core::SizeValue<size_t>;
+using SizeMetric = org::simple::core::SizeValue;
 
 using Metric =
-    org::simple::core::WrappedIndex<org::simple::core::WrappingType::BIT_MASK>;
+    org::simple::core::Circular::Metric<org::simple::core::WrappingType::BIT_MASK>;
 
 constexpr size_t requestedSize = 13;
 constexpr size_t properSize = 16;
@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_SUITE(org_simple_circular)
 
 BOOST_AUTO_TEST_CASE(testProperSize) {
   checkExpectedAndActual("Proper circular size for 13", properSize,
-                         metric.size());
+                         metric.elements());
 }
 
 BOOST_AUTO_TEST_CASE(testAddNoWrap) {
@@ -215,35 +215,35 @@ BOOST_AUTO_TEST_CASE(testRoundtripWithPrevious) {
 
 BOOST_AUTO_TEST_CASE(testMetricSetSizeOneSmaller) {
   Metric m(requestedSize);
-  auto oldSize = m.size();
-  m.set_element_count(properSize - 1);
-  BOOST_CHECK_MESSAGE(m.size() == oldSize,
+  auto oldSize = m.elements();
+  m.set_elements(properSize - 1);
+  BOOST_CHECK_MESSAGE(m.elements() == oldSize,
                       "Setting size one below current size yields same size");
 }
 
 BOOST_AUTO_TEST_CASE(testMetricSetSizeSame) {
   Metric m(requestedSize);
-  auto oldSize = m.size();
-  m.set_element_count(properSize);
-  BOOST_CHECK_EQUAL(m.size(), oldSize);
-  BOOST_CHECK_MESSAGE(m.size() == oldSize,
+  auto oldSize = m.elements();
+  m.set_elements(properSize);
+  BOOST_CHECK_EQUAL(m.elements(), oldSize);
+  BOOST_CHECK_MESSAGE(m.elements() == oldSize,
                       "Setting size to same value should not change anything");
 }
 
 BOOST_AUTO_TEST_CASE(testMetricSetSizeOneBigger) {
   Metric m(requestedSize);
-  auto oldSize = m.size();
-  m.set_element_count(properSize + 1);
-  BOOST_CHECK_MESSAGE(m.size() == 2 * oldSize,
+  auto oldSize = m.elements();
+  m.set_elements(properSize + 1);
+  BOOST_CHECK_MESSAGE(m.elements() == 2 * oldSize,
                       "Setting size one above yields twice as big size");
 }
 
 BOOST_AUTO_TEST_CASE(testMetricSetSizeHalf) {
   Metric m(requestedSize);
-  auto oldSize = m.size();
-  m.set_element_count(properSize / 2);
-  BOOST_CHECK_EQUAL(m.size(), oldSize / 2);
-  BOOST_CHECK_MESSAGE(m.size() == oldSize / 2,
+  auto oldSize = m.elements();
+  m.set_elements(properSize / 2);
+  BOOST_CHECK_EQUAL(m.elements(), oldSize / 2);
+  BOOST_CHECK_MESSAGE(m.elements() == oldSize / 2,
                       "Setting size to half, yields half size");
 }
 

@@ -29,182 +29,362 @@ namespace org::simple::core {
 
 enum class WrappingType { BIT_MASK, MODULO };
 
-namespace base {
-
 template <WrappingType wrappingType, typename size_type = size_t,
           size_type size_limit = std::numeric_limits<size_type>::max()>
-struct WrappedBase;
+struct CircularAlgoBase;
 
 template <typename size_type, size_type size_limit>
-struct WrappedBase<WrappingType::BIT_MASK, size_type, size_limit> {
+struct CircularAlgoBase<WrappingType::BIT_MASK, size_type, size_limit> {
+  typedef SizeValueBase<size_type, size_limit> size_metric;
 
-  typedef SizeValue<size_type, size_limit> metric;
+  static constexpr size_type elements(size_t mask) noexcept { return mask + 1; }
 
-  explicit WrappedBase(size_type elements)
-      : mask_(metric::Valid::mask_for_elements(elements)) {}
-
-  size_type size() const noexcept { return mask_ + 1; }
-
-  [[nodiscard]] inline size_type wrapped(size_type to_wrap) const noexcept {
-    return to_wrap & mask_;
+  [[nodiscard]] static constexpr size_t value_for_elements(size_type elements) {
+    return size_metric::Valid::mask_for_elements(elements);
   }
 
-  [[nodiscard]] inline size_type unsafe_inc(size_type index) const noexcept {
-    return wrapped(index + 1);
+  static constexpr size_type elements_for_allocation(size_t elements) noexcept {
+    return elements(value_for_elements(elements));
   }
 
-  [[nodiscard]] inline size_type unsafe_dec(size_type index) const noexcept {
-    return wrapped(index - 1);
+  [[nodiscard]] static constexpr size_t is_valid_elements(size_type elements) {
+    return size_metric::IsValid::value(elements);
   }
 
-  [[nodiscard]] inline size_type unsafe_add(size_type index,
-                                     size_type delta) const noexcept {
-    return wrapped(index + delta);
+  [[nodiscard]] static constexpr size_type wrapped(size_type to_wrap,
+                                                   size_t mask) noexcept {
+    return to_wrap & mask;
   }
 
-  [[nodiscard]] inline size_type unsafe_sub(size_type index,
-                                     size_type delta) const noexcept {
-    return wrapped(index + mask_ + 1 - delta & mask_);
+  [[nodiscard]] static constexpr size_type unsafe_inc(size_type index,
+                                                      size_t mask) noexcept {
+    return wrapped(index + 1, mask);
   }
 
-  void set_element_count(size_type elements) {
-    mask_ = metric::Valid::mask_for_elements(elements);
+  [[nodiscard]] static constexpr size_type inc(size_type index,
+                                               size_t mask) noexcept {
+    return unsafe_inc(index, mask);
   }
 
-protected:
-  [[nodiscard]] inline size_type
-  safe_parameter(size_type parameter) const noexcept {
-    return parameter;
+  [[nodiscard]] static constexpr size_type unsafe_dec(size_type index,
+                                                      size_t mask) noexcept {
+    return wrapped(index - 1, mask);
   }
 
-private:
-  size_type mask_;
+  [[nodiscard]] static constexpr size_type dec(size_type index,
+                                               size_t mask) noexcept {
+    return unsafe_dec(index, mask);
+  }
+
+  [[nodiscard]] static constexpr size_type
+  unsafe_add(size_type index, size_type delta, size_t mask) noexcept {
+    return wrapped(index + delta, mask);
+  }
+
+  [[nodiscard]] static constexpr size_type add(size_type index, size_type delta,
+                                               size_t mask) noexcept {
+    return unsafe_add(index, delta, mask);
+  }
+
+  [[nodiscard]] static constexpr size_type
+  unsafe_sub(size_type index, size_type delta, size_t mask) noexcept {
+    return wrapped(index - delta, mask);
+  }
+
+  [[nodiscard]] static constexpr size_type sub(size_type index, size_type delta,
+                                               size_t mask) noexcept {
+    return unsafe_sub(index, delta, mask);
+  }
+
+  [[nodiscard]] static constexpr size_type
+  unsafe_diff(size_type hi, size_type lo, size_t mask) noexcept {
+    return (hi > lo ? hi : hi + mask + 1) - lo;
+  }
+
+  [[nodiscard]] static constexpr size_type diff(size_type hi, size_type lo,
+                                                size_t mask) noexcept {
+    return unsafe_diff(hi, lo, mask);
+  }
 };
 
 template <typename size_type, size_type size_limit>
-struct WrappedBase<WrappingType::MODULO, size_type, size_limit> {
+struct CircularAlgoBase<WrappingType::MODULO, size_type, size_limit> {
 
-  typedef SizeValue<size_type, size_limit> metric;
+  typedef SizeValueBase<size_type, size_limit> size_metric;
 
-  explicit WrappedBase(size_type elements)
-      : size_(metric::Valid::value(elements)) {}
+  static constexpr size_type elements(size_t size) noexcept { return size; }
 
-  size_type size() const noexcept { return size_; }
-
-  [[nodiscard]] inline size_type wrapped(size_type to_wrap) const noexcept {
-    return to_wrap % size_;
+  [[nodiscard]] static constexpr size_t value_for_elements(size_type elements) {
+    return size_metric::Valid::value(elements);
   }
 
-  [[nodiscard]] size_type unsafe_inc(size_type index) const noexcept {
-    return wrapped(index + 1);
+  static constexpr size_type elements_for_allocation(size_t elements) noexcept {
+    return elements(value_for_elements(elements));
   }
 
-  [[nodiscard]] size_type unsafe_dec(size_type index) const noexcept {
-    return wrapped(size_ + index - 1);
+  [[nodiscard]] static constexpr size_t is_valid_elements(size_type elements) {
+    return size_metric::IsValid::value(elements);
   }
 
-  [[nodiscard]] size_type unsafe_add(size_type index,
-                                     size_type delta) const noexcept {
-    return wrapped(index + delta);
+  [[nodiscard]] static constexpr size_type wrapped(size_type to_wrap,
+                                                   size_t size) noexcept {
+    return to_wrap % size;
   }
 
-  [[nodiscard]] size_type unsafe_sub(size_type index,
-                                     size_type delta) const noexcept {
-    return wrapped(index + size_ - delta);
+  [[nodiscard]] static constexpr size_type unsafe_inc(size_type index,
+                                                      size_t size) noexcept {
+    return wrapped(index + 1, size);
   }
 
-  void set_element_count(size_type elements) {
-    size_ = metric::Valid::value(elements);
+  [[nodiscard]] static constexpr size_type inc(size_type index,
+                                               size_t size) noexcept {
+    return unsafe_inc(wrapped(index, size), size);
   }
 
-protected:
-  [[nodiscard]] inline size_type
-  safe_parameter(size_type parameter) const noexcept {
-    return parameter % size_;
+  [[nodiscard]] static constexpr size_type unsafe_dec(size_type index,
+                                                      size_t size) noexcept {
+    return wrapped(size + index - 1, size);
   }
 
-  [[nodiscard]] static size_type
-  allocation_for_valid_elements(size_type elements) noexcept {
-    return elements;
+  [[nodiscard]] static constexpr size_type dec(size_type index,
+                                               size_t size) noexcept {
+    return unsafe_dec(wrapped(index, size), size);
   }
 
-private:
-  size_type size_;
+  [[nodiscard]] static constexpr size_type
+  unsafe_add(size_type index, size_type delta, size_t size) noexcept {
+    return wrapped(index + delta, size);
+  }
 
-  [[nodiscard]] static size_t valid_element_count(size_type elements) {
-    if (is_valid_element_count(elements)) {
-      return elements;
+  [[nodiscard]] static constexpr size_type add(size_type index, size_type delta,
+                                               size_t size) noexcept {
+    return unsafe_add(wrapped(index, size), wrapped(delta, size), size);
+  }
+
+  [[nodiscard]] static constexpr size_type
+  unsafe_sub(size_type index, size_type delta, size_t size) noexcept {
+    return wrapped(index + size - delta, size);
+  }
+
+  [[nodiscard]] static constexpr size_type sub(size_type index, size_type delta,
+                                               size_t size) noexcept {
+    return unsafe_sub(wrapped(index, size), wrapped(delta, size), size);
+  }
+
+  [[nodiscard]] static constexpr size_type
+  unsafe_diff(size_type hi, size_type lo, size_t size) noexcept {
+    return (hi > lo ? hi : hi + size) - lo;
+  }
+
+  [[nodiscard]] static constexpr size_type diff(size_type hi, size_type lo,
+                                                size_t size) noexcept {
+    return unsafe_diff(wrapped(hi, size), wrapped(lo, size));
+  }
+};
+
+template <typename size_type = size_t,
+    size_type size_limit = std::numeric_limits<size_type>::max()>
+struct CircularBase {
+
+  template <WrappingType wrappingType>
+  struct Metric {
+    typedef CircularAlgoBase<wrappingType, size_type, size_limit> circular;
+
+    [[nodiscard]] static constexpr size_t value_for_elements(size_type elements) {
+      return circular::value_for_elements(elements);
     }
-    throw std::invalid_argument(
-        "WrappedIndex(MODULO): number of elements must be non-zero and not "
-        "greater than WrappedIndex::max_element_count.");
-  }
+
+    Metric(size_t elements) : value_(value_for_elements(elements)) {}
+
+    size_type elements() const noexcept { return circular::elements(value_); }
+
+    [[nodiscard]] size_type wrapped(size_type to_wrap) const noexcept {
+      return circular::wrapped(to_wrap, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_inc(size_type index) const noexcept {
+      return circular::unsafe_inc(index, value_);
+    }
+
+    [[nodiscard]] size_type inc(size_type index) const noexcept {
+      return circular::inc(index, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_dec(size_type index) const noexcept {
+      return circular::unsafe_dec(index, value_);
+    }
+
+    [[nodiscard]] size_type dec(size_type index) const noexcept {
+      return circular::dec(index, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_add(size_type index,
+                                       size_type delta) const noexcept {
+      return circular::unsafe_add(index, delta, value_);
+    }
+
+    [[nodiscard]] size_type add(size_type index, size_type delta) const noexcept {
+      return circular::add(index, delta, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_sub(size_type index,
+                                       size_type delta) const noexcept {
+      return circular::unsafe_sub(index, delta, value_);
+    }
+
+    [[nodiscard]] size_type sub(size_type index, size_type delta) const noexcept {
+      return circular::sub(index, delta, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_diff(size_type hi,
+                                        size_type lo) const noexcept {
+      return circular::unsafe_diff(hi, lo, value_);
+    }
+
+    [[nodiscard]] size_type diff(size_type hi, size_type lo) const noexcept {
+      return circular::diff(hi, lo, value_);
+    }
+
+    size_t set_elements(size_t element_count) {
+      value_ = value_for_elements(element_count);
+      return elements();
+    }
+
+  private:
+    size_type value_;
+  };
+
+  template <WrappingType wrappingType, size_type ELEMENTS>
+  struct FixedMetric {
+    typedef CircularAlgoBase<wrappingType, size_type,
+        std::numeric_limits<size_type>::max()>
+        circular;
+
+    static_assert(circular::is_valid_elements(ELEMENTS));
+    static constexpr size_type VALUE = circular::value_for_elements(ELEMENTS);
+
+    static constexpr size_type elements() noexcept {
+      return circular::elements(VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type wrapped(size_type to_wrap) noexcept {
+      return circular::wrapped(to_wrap, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type
+    unsafe_inc(size_type index) noexcept {
+      return circular::unsafe_inc(index, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type inc(size_type index) noexcept {
+      return circular::inc(index, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type
+    unsafe_dec(size_type index) noexcept {
+      return circular::unsafe_dec(index, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type dec(size_type index) noexcept {
+      return circular::dec(index, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type
+    unsafe_add(size_type index, size_type delta) noexcept {
+      return circular::unsafe_add(index, delta, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type add(size_type index,
+                                                 size_type delta) noexcept {
+      return circular::add(index, delta, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type
+    unsafe_sub(size_type index, size_type delta) noexcept {
+      return circular::unsafe_sub(index, delta, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type sub(size_type index,
+                                                 size_type delta) noexcept {
+      return circular::sub(index, delta, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type unsafe_diff(size_type hi,
+                                                         size_type lo) noexcept {
+      return circular::unsafe_diff(hi, lo, VALUE);
+    }
+
+    [[nodiscard]] static constexpr size_type diff(size_type hi,
+                                                  size_type lo) noexcept {
+      return circular::diff(hi, lo, VALUE);
+    }
+  };
+
+  template <WrappingType wrappingType, size_type ELEMENTS>
+  struct FixedMetricInstance {
+    typedef CircularAlgoBase<wrappingType, size_type,
+        std::numeric_limits<size_type>::max()>
+        circular;
+
+    static_assert(circular::is_valid_elements(ELEMENTS));
+    static constexpr size_type value_ = circular::value_for_elements(ELEMENTS);
+
+    size_type elements() const noexcept { return circular::elements(value_); }
+
+    [[nodiscard]] size_type wrapped(size_type to_wrap) const noexcept {
+      return circular::wrapped(to_wrap, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_inc(size_type index) const noexcept {
+      return circular::unsafe_inc(index, value_);
+    }
+
+    [[nodiscard]] size_type inc(size_type index) const noexcept {
+      return circular::inc(index, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_dec(size_type index) const noexcept {
+      return circular::unsafe_dec(index, value_);
+    }
+
+    [[nodiscard]] size_type dec(size_type index) const noexcept {
+      return circular::dec(index, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_add(size_type index,
+                                       size_type delta) const noexcept {
+      return circular::unsafe_add(index, delta, value_);
+    }
+
+    [[nodiscard]] size_type add(size_type index, size_type delta) const noexcept {
+      return circular::add(index, delta, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_sub(size_type index,
+                                       size_type delta) const noexcept {
+      return circular::unsafe_sub(index, delta, value_);
+    }
+
+    [[nodiscard]] size_type sub(size_type index, size_type delta) const noexcept {
+      return circular::sub(index, delta, value_);
+    }
+
+    [[nodiscard]] size_type unsafe_diff(size_type hi,
+                                        size_type lo) const noexcept {
+      return circular::unsafe_diff(hi, lo, value_);
+    }
+
+    [[nodiscard]] size_type diff(size_type hi, size_type lo) const noexcept {
+      return circular::diff(hi, lo, value_);
+    }
+  };
 };
 
-} // namespace base
-
-/**
- * Specifies a circular indexing model to address elements of size element_size
- * with indices of size_type and an optional limited number of addressing bits
- * max_size_bits.
- *
- * The model can be applied in circular buffers and the like.
- * @see core::simple::Size<element_size, size_type, max_size_bits>.
- */
-template <WrappingType wrappingType, typename size_type = size_t,
-          size_type size_limit = std::numeric_limits<size_type>::max()>
-struct WrappedIndex
-    : public base::WrappedBase<wrappingType, size_type, size_limit> {
-
-  typedef base::WrappedBase<wrappingType, size_type, size_limit> Super;
-  typedef typename Super::metric metric;
-
-  static constexpr size_type max_element_count = metric::max;
-
-  /**
-   * @return true if the minimum element count can be represented by this
-   * wrapped index model type and false otherwise.
-   */
-  [[nodiscard]] static bool
-  is_valid_element_count(size_type elements) noexcept {
-    return Super::is_valid_element_count(elements);
-  }
-
-  [[nodiscard]] static size_type
-  get_allocation_size_for(size_type elements) noexcept {
-    return is_valid_element_count(elements)
-               ? Super::allocation_for_valid_elements((elements))
-               : 0;
-  }
-
-  /**
-   * Creates a circular indexing model that can address at least element_count
-   * elements; or throws std::invalid_argument if the element_count is less than
-   * two or too big to be represented because of size constraints.
-   * @param element_count the minimum number of elements that should be
-   * addressable.
-   * @return a proper circular mask or zero if that is not possible.
-   */
-  explicit WrappedIndex(size_t element_count) : Super(element_count) {}
-
-  [[nodiscard]] inline size_type inc(size_type index) const noexcept {
-    return Super::unsafe_inc(Super::safe_parameter(index));
-  }
-
-  [[nodiscard]] inline size_type dec(size_type index) const noexcept {
-    return Super::unsafe_dec(Super::safe_parameter(index));
-  }
-
-  [[nodiscard]] size_type add(size_type index, size_type delta) const noexcept {
-    return Super::unsafe_add(Super::safe_parameter(index),
-                             Super::safe_parameter(delta));
-  }
-
-  [[nodiscard]] size_type sub(size_type index, size_type delta) const noexcept {
-    return Super::unsafe_sub(Super::safe_parameter(index),
-                             Super::safe_parameter(delta));
-  }
-};
+template <WrappingType type>
+using CircularAlgo = CircularAlgoBase<type, size_t>;
+typedef CircularAlgoBase<WrappingType::BIT_MASK, size_t> CircularMasked;
+typedef CircularAlgoBase<WrappingType::MODULO, size_t> CircularModulo;
+typedef CircularBase<size_t> Circular;
 
 } // namespace org::simple::core
 
