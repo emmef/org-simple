@@ -32,11 +32,11 @@
 namespace org::simple::core {
 
 /**
- * Returns whether @p size_type is a valid size value type. A valid size value
+ * Returns whether @p unsigned_type is a valid size value type. A valid size value
  * type is  unsigned and its maximum value cannot exceed the maximum value of
  * size_t.
  * @tparam size_type The type to be checked for validity.
- * @return @c true if @p size_type is a valid size value type.
+ * @return @c true if @p unsigned_type is a valid size value type.
  */
 template <typename size_type> static constexpr bool is_valid_size_type() {
   return std::is_unsigned_v<size_type> &&
@@ -63,13 +63,13 @@ static constexpr auto size_type_max()
 }
 
 template <typename size_type>
-static constexpr auto is_valid_value(size_type value)
+static constexpr auto is_valid_size_value(size_type value)
     -> decltype(TypeCheckSize<size_type>::bool_value) {
   return is_between(value, size_type(1), size_type_max<size_type>());
 }
 
 template <typename value_type, typename limit_type>
-static constexpr auto is_valid_value(value_type value, limit_type size_limit)
+static constexpr auto is_valid_size_value(value_type value, limit_type size_limit)
     -> decltype(TypeCheckSize<limit_type>::bool_value) {
   return is_between(value, limit_type(1), size_limit);
 }
@@ -81,19 +81,19 @@ static constexpr auto size_type_max_index()
 }
 
 template <typename size_type>
-static constexpr auto is_valid_index(size_type index)
+static constexpr auto is_valid_index_value(size_type index)
     -> decltype(TypeCheckSize<size_type>::bool_value) {
   return is_between(index, size_type(0), size_type_max_index<size_type>());
 }
 
 template <typename index_type, typename limit_type>
-static constexpr auto is_valid_index(index_type index, limit_type size_limit)
+static constexpr auto is_valid_index_value(index_type index, limit_type size_limit)
     -> decltype(TypeCheckSize<limit_type>::bool_value) {
   return is_between(index, limit_type(0), size_limit > 0 ? size_limit - 1 : 0);
 }
 
 template <typename size_type>
-static constexpr auto get_max_index(size_type size_limit)
+static constexpr auto get_max_index_value(size_type size_limit)
     -> decltype(TypeCheckSize<size_type>::size_value) {
   return size_limit > 0 ? size_limit - 1 : 0;
 }
@@ -134,7 +134,7 @@ static constexpr auto get_size_for_size_bits()
 
 template <typename size_type = size_t,
           size_type SIZE_LIMIT = std::numeric_limits<size_type>::max()>
-struct SizeValue {
+struct SizeValueBase {
   typedef TypeCheckSize<size_type> Base;
   static_assert(
       SIZE_LIMIT > 0,
@@ -162,7 +162,7 @@ struct SizeValue {
   }
 
   template <size_type element_size>
-  using Elements = SizeValue<size_type, max_element_count(element_size)>;
+  using Elements = SizeValueBase<size_type, max_element_count(element_size)>;
 
   template <size_type v1, size_type v2> static constexpr size_type times() {
     static_assert(v1 * v2 >= v1);
@@ -390,6 +390,8 @@ struct SizeValue {
     }
   };
 };
+
+typedef SizeValueBase<size_t> SizeValue;
 
 } // namespace org::simple::core
 
