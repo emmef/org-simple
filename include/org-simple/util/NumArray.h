@@ -81,15 +81,15 @@ template <typename T, size_t ELEMENTS> struct NumArray {
 
   // Access
 
-  T &operator[](size_t i) ORG_SIMPLE_INDEX_SAFE_NOEXCEPT {
+  T &operator[](size_t i) {
     return x[core::Index::safe(i, ELEMENTS)];
   }
 
-  const T &operator[](size_t i) const ORG_SIMPLE_INDEX_SAFE_NOEXCEPT {
+  const T &operator[](size_t i) const {
     return x[core::Index::safe(i, ELEMENTS)];
   }
 
-  NumArray &operator<<(const T *source) ORG_SIMPLE_DEREFERENCE_SAFE_NOEXCEPT {
+  NumArray &operator<<(const T *source) {
     const T *src = core::Dereference::safe(source);
     for (size_t i = 0; i < ELEMENTS; i++) {
       x[i] += src[i];
@@ -97,7 +97,7 @@ template <typename T, size_t ELEMENTS> struct NumArray {
     return *this;
   }
 
-  void operator>>(const T *destination) ORG_SIMPLE_DEREFERENCE_SAFE_NOEXCEPT {
+  void operator>>(const T *destination) {
     const T *dst = core::Dereference::safe(destination);
     for (size_t i = 0; i < ELEMENTS; i++) {
       dst[i] += x[i];
