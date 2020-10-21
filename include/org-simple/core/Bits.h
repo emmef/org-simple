@@ -29,21 +29,21 @@ namespace org::simple::core {
 
 /**
  * Defines various bit-related operations for a size-like type.
- * @tparam size_type An integral, unsigned type.
+ * @tparam unsigned_type An integral, unsigned type.
  */
-template <typename size_type = size_t> class Bits {
-  static_assert(std::is_integral_v<size_type> && !std::is_signed_v<size_type>,
+template <typename unsigned_type = size_t> class Bits {
+  static_assert(std::is_integral_v<unsigned_type> && !std::is_signed_v<unsigned_type>,
                 "Power2:: Type must be an integral, unsigned type");
 
-  template <int N> static constexpr size_type fillN(size_type n) noexcept {
+  template <int N> static constexpr unsigned_type fillN(unsigned_type n) noexcept {
     return N < 2 ? n : fillN<N / 2>(n) | (fillN<N / 2>(n) >> (N / 2));
   };
 
 public:
   /**
-   * Returns the number of bits for the chosen size_type.
+   * Returns the number of bits for the chosen unsigned_type.
    */
-  static constexpr unsigned size_type_bits = 8 * sizeof(size_type);
+  static constexpr unsigned type_bits = 8 * sizeof(unsigned_type);
 
   /**
    * Fill all bits that are less significant than the most significant bit.
@@ -51,8 +51,8 @@ public:
    * @return value with all bits set that are less significant than the most
    * significant bit.
    */
-  static constexpr size_type fill(size_type value) noexcept {
-    return fillN<8 * sizeof(size_type)>(value);
+  static constexpr unsigned_type fill(unsigned_type value) noexcept {
+    return fillN<8 * sizeof(unsigned_type)>(value);
   };
 
   /**
@@ -60,9 +60,9 @@ public:
    * zero. The number of the least significant bit is zero.
    * @return the number of the most significant bit set, or -1 if value is zero.
    */
-  static constexpr int most_significant(size_type value) noexcept {
-    int bit = sizeof(size_type) * 8 - 1;
-    while (bit >= 0 && (value & (size_type(1) << bit)) == 0) {
+  static constexpr int most_significant(unsigned_type value) noexcept {
+    int bit = sizeof(unsigned_type) * 8 - 1;
+    while (bit >= 0 && (value & (unsigned_type(1) << bit)) == 0) {
       bit--;
     }
     return bit;
@@ -75,9 +75,9 @@ public:
    * the second most significant bit.
    * @return the number of the most significant bit set, or -1 if value is zero.
    */
-  static constexpr int most_significant_single(size_type value) noexcept {
-    int bit = sizeof(size_type) * 8 - 1;
-    while (bit >= 0 && (value & (size_type(1) << bit)) == 0) {
+  static constexpr int most_significant_single(unsigned_type value) noexcept {
+    int bit = sizeof(unsigned_type) * 8 - 1;
+    while (bit >= 0 && (value & (unsigned_type(1) << bit)) == 0) {
       bit--;
     }
     if (bit < 1) {
@@ -85,7 +85,7 @@ public:
     }
     int lower_bit = bit - 1;
     while (lower_bit >= 0) {
-      if (value & (size_type(1) << lower_bit)) {
+      if (value & (unsigned_type(1) << lower_bit)) {
         return -lower_bit - 1;
       }
       lower_bit--;
@@ -98,7 +98,8 @@ public:
    * specified index. The minimum returned mask is 1.
    * @return the bit mask that includes index.
    */
-  static constexpr size_type bit_mask_including(size_type index) noexcept {
+  static constexpr unsigned_type
+  bit_mask_including(unsigned_type index) noexcept {
     return index < 2 ? 1 : fill(index);
   }
 
@@ -107,18 +108,20 @@ public:
    * the specified index. The minimum returned mask is 1.
    * @return the bit mask that includes index.
    */
-  static constexpr size_type bit_mask_not_exceeding(size_type index) noexcept {
+  static constexpr unsigned_type
+  bit_mask_not_exceeding(unsigned_type index) noexcept {
     return index < 2 ? 0 : fill(index) == index ? index : fill(index) >> 1;
   }
 
   /**
    * Returns the maximum size that corresponds with the number of bits or the
-   * maximum value of size_type if that is smaller.
+   * maximum value of unsigned_type if that is smaller.
    * @return the maximum size
    */
-  static constexpr size_type max_value_for_bits(unsigned size_bits) noexcept {
-    return size_bits >= size_type_bits ? std::numeric_limits<size_type>::max()
-                                       : size_type(1) << size_bits;
+  static constexpr unsigned_type
+  max_value_for_bits(unsigned size_bits) noexcept {
+    return size_bits >= type_bits ? std::numeric_limits<unsigned_type>::max()
+                                       : unsigned_type(1) << size_bits;
   }
 };
 

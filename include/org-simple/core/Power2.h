@@ -24,28 +24,29 @@
 #include <org-simple/core/Bits.h>
 
 namespace org::simple::core {
-template <typename size_type = size_t> struct Power2For {
+template <typename unsigned_type = size_t> struct Power2For {
 
   /**
    * @return true if value is a power of two, false otherwise.
    */
-  static constexpr bool is(const size_type value) noexcept {
+  static constexpr bool is(const unsigned_type value) noexcept {
     return value >= 2 && is_minus_one(value - 1);
   }
 
   /**
    * @return true if value is a power of two minus one, false otherwise.
    */
-  static constexpr bool is_minus_one(const size_type value) noexcept {
-    return value != 0 && Bits<size_type>::fill(value) == value;
+  static constexpr bool is_minus_one(const unsigned_type value) noexcept {
+    return value != 0 && Bits<unsigned_type>::fill(value) == value;
   }
 
   /**
    * @return value if it is a power of two, the next greater power of
-   * two if that fits inside size_type and zero otherwise.
+   * two if that fits inside unsigned_type and zero otherwise.
    */
-  static constexpr size_type same_or_bigger(const size_type value) noexcept {
-    return value <= 2 ? 2 : Bits<size_type>::fill(value - 1) + 1;
+  static constexpr unsigned_type
+  same_or_bigger(const unsigned_type value) noexcept {
+    return value <= 2 ? 2 : Bits<unsigned_type>::fill(value - 1) + 1;
   }
 
   /**
@@ -58,9 +59,9 @@ template <typename size_type = size_t> struct Power2For {
    * power of two.
    * @return the aligned value
    */
-  static constexpr size_type get_aligned_with(size_type value,
-                                              size_type power_of_two) {
-    size_type filled = Bits<size_type>::fill(power_of_two >> 1);
+  static constexpr unsigned_type get_aligned_with(unsigned_type value,
+                                                  unsigned_type power_of_two) {
+    unsigned_type filled = Bits<unsigned_type>::fill(power_of_two >> 1);
     return (value + filled) & ~filled;
   }
 
@@ -73,8 +74,8 @@ template <typename size_type = size_t> struct Power2For {
    * @return True of the value is aligned: a multiple of the provided power of
    * two.
    */
-  static constexpr bool is_aligned_with(const size_type value,
-                                        const size_type power_of_two) {
+  static constexpr bool is_aligned_with(const unsigned_type value,
+                                        const unsigned_type power_of_two) {
     return value == get_aligned_with(value, power_of_two);
   }
 };
@@ -99,7 +100,7 @@ struct Power2 {
 
   /**
    * @return value if it is a power of two, the next greater power of
-   * two if that fits inside size_type and zero otherwise.
+   * two if that fits inside unsigned_type and zero otherwise.
    */
   template <typename size_type>
   static constexpr size_type same_or_bigger(const size_type value) noexcept {
