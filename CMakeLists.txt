@@ -25,14 +25,14 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost REQUIRED COMPONENTS unit_test_framework)
 find_package(Threads)
 
-set(PROJECT_HEADERS include/org-simple/core/attributes.h include/org-simple/core/debug.h include/org-simple/core/Bits.h include/org-simple/core/Power2.h include/org-simple/core/bounds.h include/org-simple/core/Index.h include/org-simple/core/Circular.h include/org-simple/util/Reference.h include/org-simple/util/Timeout.h include/org-simple/util/FakeClock.h include/org-simple/util/NumArray.h)
-set(PROJECT_SRC src/org-simple/placeholder.cc)
-set(PROJECT_TESTS test/test-helper.h test/test.cc test/util/OwnedReference.h test/util/OwnedReference.cc test/util/OwnedReference-tests.cc test/core/bounds-tests.cc test/core/Power2-tests.cc test/core/Circular-tests.cc test/core/Bits-tests.cc test/util/Timeout-tests.cc test/util/Reference-tests.cc test/util/RefCount-tests.cc test/core/Index-tests.cc test/boost-unit-tests.h test/util/FakeClock-tests.cc test/core/SizeMetric-tests.cc)
+set(PROJECT_HEADERS include/org-simple/core/attributes.h include/org-simple/core/debug.h include/org-simple/core/Bits.h include/org-simple/core/Power2.h include/org-simple/core/bounds.h include/org-simple/core/Index.h include/org-simple/core/Circular.h include/org-simple/util/Reference.h include/org-simple/util/Timeout.h include/org-simple/util/FakeClock.h include/org-simple/util/NumArray.h include/org-simple/util/BaseArray.h include/org-simple/util/NumArray.h)
+set(PROJECT_SRC ${PROJECT_HEADERS} src/org-simple/placeholder.cc)
+set(PROJECT_TESTS test/test-helper.h test/test.cc test/util/OwnedReference.h test/util/OwnedReference.cc test/util/OwnedReference-tests.cc test/core/bounds-tests.cc test/core/Power2-tests.cc test/core/Circular-tests.cc test/core/Bits-tests.cc test/util/Timeout-tests.cc test/util/Reference-tests.cc test/util/RefCount-tests.cc test/core/Index-tests.cc test/boost-unit-tests.h test/util/FakeClock-tests.cc test/core/SizeMetric-tests.cc test/util/BaseArray-tests.cc test/util/NumArray-tests.cc)
 
 # Create the library
 
 # Define library library
-add_library(${PROJECT_NAME} SHARED ${PROJECT_SRC} ${PROJECT_HEADERS})
+add_library(${PROJECT_NAME} SHARED ${PROJECT_SRC})
 
 # Requires C++17 or higher
 target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_17)
