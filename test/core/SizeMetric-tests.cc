@@ -267,6 +267,7 @@ BOOST_AUTO_TEST_CASE(sizeTestcaseToBeMovedToSeparateSizeTestCasesModule) {
 
 TestGenerator TEST_GENERATOR;
 
-BOOST_DATA_TEST_CASE(sample, TEST_GENERATOR.getTestCases()) { sample->test(); }
+BOOST_DATA_TEST_CASE(sample, TEST_GENERATOR.getTestCases()) {
+  sample->test(); }
 
 BOOST_AUTO_TEST_SUITE_END()

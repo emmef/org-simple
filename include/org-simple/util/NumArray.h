@@ -28,6 +28,9 @@
 
 namespace org::simple::util {
 
+template <typename T, size_t ELEMENTS, class S> struct BaseNumArray;
+
+
 namespace concepts {
 
 template <typename T> struct BaseIsComplexType : public std::false_type {};
@@ -49,36 +52,36 @@ concept NumberIsR2LAssignable = (ComplexNumber<L> && Number<R>) ||
 
 template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   static_assert(concepts::Number<T>);
-  static_assert(concepts::BaseArrayConstSizeImpl<T, S>);
+  static_assert(IsBaseArrayConstSize<S, T>);
 
   template <typename X>
   static constexpr bool SameSizeArray =
-      concepts::BaseArrayConstSizeImpl<T, X> &&X::constSize() == ELEMENTS;
+      IsBaseArrayConstSize<T, X> &&X::constSize() == ELEMENTS;
 
   template <typename X>
   static constexpr bool NotSmallerArray =
-      concepts::BaseArrayConstSizeImpl<T, X> &&X::constSize() >= ELEMENTS;
+      IsBaseArrayConstSize<T, X> &&X::constSize() >= ELEMENTS;
 
   template <typename X>
-  static constexpr bool BiggerArray = concepts::BaseArrayConstSizeImpl<T, X> &&
+  static constexpr bool BiggerArray = IsBaseArrayConstSize<T, X> &&
                                       X::constSize() > ELEMENTS;
 
   template <typename X>
   static constexpr bool NotBiggerArray =
-      concepts::BaseArrayConstSizeImpl<T, X> &&X::constSize() <= ELEMENTS;
+      IsBaseArrayConstSize<T, X> &&X::constSize() <= ELEMENTS;
 
   template <typename X>
-  static constexpr bool SmallerArray = concepts::BaseArrayConstSizeImpl<T, X> &&
+  static constexpr bool SmallerArray = IsBaseArrayConstSize<T, X> &&
                                        X::constSize() < ELEMENTS;
 
   template <typename X, size_t START, size_t SRC_ELEM>
   static constexpr bool
-      ValidForGraftArray = concepts::BaseArrayConstSizeImpl<T, X> &&
+      ValidForGraftArray = IsBaseArrayConstSize<T, X> &&
                            (START + SRC_ELEM <= ELEMENTS);
 
   template <typename X>
   static constexpr bool ValidForCrossProductArray =
-      concepts::BaseArrayConstSizeImpl<T, X> &&ELEMENTS == X::constSize() == 3;
+      IsBaseArrayConstSize<T, X> &&ELEMENTS == X::constSize() == 3;
 
   BaseNumArray() = default;
   BaseNumArray(const BaseNumArray &) = default;
@@ -90,10 +93,10 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
       if (i == ELEMENTS) {
         return;
       }
-      this->operator[](i++) = v;
+      this->data(i++) = v;
     }
     while (i < ELEMENTS) {
-      this->operator[](i++) = 0;
+      this->data(i++) = 0;
     }
   }
 
@@ -102,10 +105,10 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
                    &values) requires concepts::NumberIsR2LAssignable<T, R> {
     size_t i = 0;
     for (auto v : values) {
-      this->operator[](i++) = v;
+      this->data(i++) = v;
     }
     while (i < ELEMENTS) {
-      this->operator[](i++) = 0;
+      this->data(i++) = 0;
     }
   }
 
@@ -114,19 +117,19 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   void zero() noexcept {
     for (size_t i = 0; i < this->size(); i++) {
-      this->operator[](i) = 0;
+      this->data(i) = 0;
     }
   }
 
   void fill(T v) noexcept {
     for (size_t i = 0; i < ELEMENTS; i++) {
-      this->operator[](i) = v;
+      this->data(i) = v;
     }
   }
 
   BaseNumArray &plus(T v) noexcept {
     for (size_t i = 0; i < ELEMENTS; i++) {
-      this->operator[](i) += v;
+      this->data(i) += v;
     }
     return *this;
   }
@@ -134,7 +137,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray &operator<<(const T *source) {
     const T *src = core::Dereference::safe(source);
     for (size_t i = 0; i < ELEMENTS; i++) {
-      this->operator[](i) += src[i];
+      this->data(i) += src[i];
     }
     return *this;
   }
@@ -142,7 +145,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   void operator>>(const T *destination) {
     const T *dst = core::Dereference::safe(destination);
     for (size_t i = 0; i < ELEMENTS; i++) {
-      dst[i] += this->operator[](i);
+      dst[i] += this->data(i);
     }
   }
 
@@ -150,7 +153,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   requires NotSmallerArray<Array> BaseNumArray &
   operator<<(const Array &source) noexcept {
     for (size_t i = 0; i < ELEMENTS; i++) {
-      this->operator[](i) += source[i];
+      this->data(i) += source[i];
     }
     return *this;
   }
@@ -159,10 +162,10 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   requires SmallerArray<X> BaseNumArray &operator<<(const X &source) noexcept {
     size_t i;
     for (i = 0; i < X::constSize(); i++) {
-      this->operator[](i) += source[i];
+      this->data(i) += source[i];
     }
     for (; i < ELEMENTS; i++) {
-      this->operator[](i) = 0;
+      this->data(i) = 0;
     }
     return *this;
   }
@@ -171,7 +174,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   requires ValidForGraftArray<Array, START, SRC_ELEM> BaseNumArray &
   graft(const Array &source) noexcept {
     for (size_t src = 0, dst = START; src <= SRC_ELEM; src++, dst++) {
-      this->operator[](dst) = source[src];
+      this->data(dst) = source[src];
     }
     return *this;
   }
@@ -181,7 +184,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray operator-() const noexcept {
     BaseNumArray r;
     for (size_t i = 0; i < ELEMENTS; i++) {
-      r[i] = -this->operator[](i);
+      r[i] = -this->data(i);
     }
     return r;
   }
@@ -190,7 +193,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   BaseNumArray &operator+=(const BaseNumArray &o) noexcept {
     for (size_t i = 0; i < ELEMENTS; i++) {
-      this->operator[](i) += o[i];
+      this->data(i) += o[i];
     }
     return *this;
   }
@@ -199,7 +202,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray &operator+=(const Array &o) noexcept
       requires SameSizeArray<Array> {
     for (size_t i = 0; i < ELEMENTS; i++) {
-      this->operator[](i) += o[i];
+      this->data(i) += o[i];
     }
     return *this;
   }
@@ -232,7 +235,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   BaseNumArray &operator-=(const BaseNumArray &o) noexcept {
     for (size_t i = 0; i < ELEMENTS; i++) {
-      this->operator[](i) -= o[i];
+      this->data(i) -= o[i];
     }
     return *this;
   }
@@ -247,7 +250,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   BaseNumArray &operator*=(T v) noexcept {
     for (size_t i = 0; i < ELEMENTS; i++) {
-      this->operator[](i) *= v;
+      this->data(i) *= v;
     }
     return *this;
   }
@@ -255,7 +258,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray operator*(T v) const noexcept {
     BaseNumArray r;
     for (size_t i = 0; i < ELEMENTS; i++) {
-      r[i] = this->operator[](i) * v;
+      r[i] = this->data(i) * v;
     }
     return r;
   }
@@ -273,7 +276,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   BaseNumArray &operator/=(T v) noexcept {
     for (size_t i = 0; i < ELEMENTS; i++) {
-      this->operator[](i) /= v;
+      this->data(i) /= v;
     }
     return *this;
   }
@@ -281,7 +284,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray operator/(T v) const noexcept {
     BaseNumArray r;
     for (size_t i = 0; i < ELEMENTS; i++) {
-      r[i] = this->operator[](i) / v;
+      r[i] = this->data(i) / v;
     }
     return r;
   }
@@ -289,9 +292,9 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   // Multiply with array
 
   T in_product(const BaseNumArray &o) const noexcept {
-    T sum = this->operator[](0) * o[0];
+    T sum = this->data(0) * o[0];
     for (size_t i = 0; i < ELEMENTS; i++) {
-      sum += this->operator[](i) * o[i];
+      sum += this->data(i) * o[i];
     }
     return sum;
   }
@@ -302,9 +305,9 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   requires ValidForCrossProductArray<Array>
       BaseNumArray cross_product(const Array &o) const noexcept {
     BaseNumArray r;
-    r[0] = this->operator[](1) * o[2] - this->operator[](2) * o[1];
-    r[1] = this->operator[](2) * o[0] - this->operator[](0) * o[2];
-    r[2] = this->operator[](0) * o[1] - this->operator[](1) * o[0];
+    r[0] = this->data(1) * o[2] - this->data(2) * o[1];
+    r[1] = this->data(2) * o[0] - this->data(0) * o[2];
+    r[2] = this->data(0) * o[1] - this->data(1) * o[0];
     return r;
   }
 };
