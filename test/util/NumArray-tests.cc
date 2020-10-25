@@ -87,11 +87,11 @@ BOOST_AUTO_TEST_CASE(testNumArrayrangeVar) {
 
 
 BOOST_AUTO_TEST_CASE(testConstSize) {
-  BOOST_CHECK_EQUAL(SIZE, Numa::constSize());
+  BOOST_CHECK_EQUAL(SIZE, Numa::size());
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstSize) {
-  BOOST_CHECK_EQUAL(SIZE, Array10::constSize());
+  BOOST_CHECK_EQUAL(SIZE, Array10::size());
 }
 
 BOOST_AUTO_TEST_CASE(testSize) {

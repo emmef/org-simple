@@ -22,8 +22,9 @@
  */
 
 #include <cstddef>
-#include <org-simple/core/Index.h>
 #include <org-simple/core/Size.h>
+#include <org-simple/core/Index.h>
+#include <org-simple/core/ClassTraits.h>
 #include <stdexcept>
 
 namespace org::simple::util {
@@ -36,6 +37,9 @@ template <typename T> class ArraySlice;
 template <typename T> class ArrayHeap;
 
 namespace helper {
+
+ORG_SIMPLE_ABOUT_CLASS_FUNCTION(array, size);
+
 
 template <typename Array, typename Value> class AboutBaseArrayBase;
 
@@ -71,39 +75,6 @@ public:
 template <typename Array> class BaseArrayDeductAboutBase<Array, true> {
 public:
   typedef AboutBaseArrayBase<Array, typename Array::value_type> About;
-};
-
-template <typename T> class BaseArrayHasConstSizeFunction {
-
-  template <typename A>
-  static constexpr bool hasConstSizeSubst(decltype(A::constSize())) {
-    return true;
-  }
-
-  template <typename A> static constexpr bool hasConstSizeSubst(...) {
-    return false;
-  }
-  static constexpr bool hasConstSizeTestWithValue(size_t v) {
-    return hasConstSizeSubst<T>(v);
-  }
-
-public:
-  static constexpr bool value = hasConstSizeTestWithValue(0);
-};
-
-template <typename T,
-          bool hasConstSize = BaseArrayHasConstSizeFunction<T>::value>
-struct BaseArrayHasConstSize {
-  static constexpr bool value = false;
-};
-
-template <typename T> class BaseArrayHasConstSize<T, true> {
-  static constexpr bool test(size_t sz) {
-    return T::constSize() == sz && std::is_constant_evaluated();
-  }
-
-public:
-  static constexpr bool value = test(T::constSize());
 };
 
 template <typename Array> struct BaseArrayStaticWrapper {
@@ -150,28 +121,16 @@ template <typename Array, typename Value> class AboutBaseArrayBase {
     return hasArrayOperatorSubst<Array>(v);
   }
 
-  // Checking for size() member, returning a size_t.
-
-  template <typename A>
-  static constexpr bool hasSizeSubst(decltype(std::declval<A>().size())) {
-    return true;
-  }
-  template <typename A> static constexpr bool hasSizeSubst(...) {
-    return false;
-  }
-  static constexpr bool hasSizeTestWithValue(size_t v) {
-    return hasSizeSubst<Array>(v);
-  }
-
 public:
   typedef Value value_type;
+  typedef about_array_function_size<Array, size_t> AboutSize;
   static constexpr bool hasUnsafeData =
       hasUnsafeDataSubstWithValue(static_cast<Value *>(0));
   static constexpr bool hasArrayOperator =
       hasArrayOperatorTestWithValue(static_cast<Value *>(0));
 
-  static constexpr bool size = hasSizeTestWithValue(0);
-  static constexpr bool constSize = helper::BaseArrayHasConstSize<Array>::value;
+  static constexpr bool size = AboutSize ::exists;
+  static constexpr bool constSize = AboutSize::is_constexpr;
 };
 
 } // namespace helper
@@ -192,8 +151,15 @@ public:
   static constexpr bool isBaseArrayConstSize =
       (hasUnsafeData || hasArrayOperator) && constSize;
 
-  template <typename T>
-  static constexpr bool canAssignTo = std::is_assignable_v<T, value_type>;
+  template <typename TargetType>
+  static constexpr bool isAssignable = std::is_convertible_v<TargetType, value_type>;
+
+  template <typename TargetType>
+  static constexpr bool isSourceArray =
+      isBaseArray && isAssignable<TargetType>;
+  template <typename TargetType>
+  static constexpr bool isSourceArrayConstSize =
+      isBaseArrayConstSize &&isAssignable<TargetType>;
 };
 
 template <typename Array>
@@ -202,12 +168,10 @@ template <typename Array>
 concept IsBaseArrayConstSize = AboutBaseArray<Array>::isBaseArrayConstSize;
 
 template <typename Array, typename T>
-concept IsCompatibleBaseArray = AboutBaseArray<Array>::isBaseArray
-    &&AboutBaseArray<Array>::template canAssignTo<T>;
+concept IsSourceArray = AboutBaseArray<Array>::template isSourceArray<T>;
 template <typename Array, typename T>
-concept IsCompatibleBaseArrayConstSize =
-    AboutBaseArray<Array>::isBaseArrayConstSize
-        &&AboutBaseArray<Array>::template canAssignTo<T>;
+concept IsSourceArrayConstSize =
+    AboutBaseArray<Array>::template isBaseArrayConstSize<T>;
 
 template <typename Array,
           typename Value = typename AboutBaseArray<Array>::value_type,
@@ -225,7 +189,7 @@ public:
   using helper::BaseArrayStaticWrapper<Array>::at;
 
   const Value &operator[](size_t index) { return at(array_, index); }
-  static constexpr size_t size() { return Array::constSize(); }
+  static constexpr size_t size() { return Array::size(); }
 };
 
 template <typename Array, typename Value>
@@ -235,7 +199,6 @@ class BaseArrayWrapper<Array, Value, false>
 
 public:
   BaseArrayWrapper(const Array &array) : array_(array){};
-  using helper::BaseArrayStaticWrapper<Array>::Has;
   using helper::BaseArrayStaticWrapper<Array>::at;
 
   const Value &operator[](size_t index) { return at(array_, index); }
@@ -286,7 +249,7 @@ public:
    * @return \c true if copying was successful, \c false otherwise.
    */
   template <typename Array>
-  requires IsBaseArray<Array> bool copy(size_t dest, const Array &source) {
+  requires IsSourceArray<Array, T> bool copy(size_t dest, const Array &source) {
     BaseArrayWrapper<Array, T> wrapper(source);
     if (dest >= this->size() || this->size() - dest < wrapper.size()) {
       return false;
@@ -427,7 +390,7 @@ protected:
     return static_cast<const S *>(this)->virtualConstData();
   }
   static constexpr size_t checked_index(size_t index) {
-    if (index < constSize()) {
+    if (index < size()) {
       return index;
     }
     throw std::out_of_range("BaseArrayCOnstSize::checked_index(index)");
@@ -441,10 +404,10 @@ public:
   typedef typename Super::SizeMetric SizeMetric;
   friend Super;
 
-  static constexpr size_t constSize() noexcept { return S::virtualConstSize(); }
+  static constexpr size_t size() noexcept { return S::virtualConstSize(); }
 
   template <size_t START, size_t END>
-  static constexpr bool ValidRange = (END < constSize()) && (START <= END);
+  static constexpr bool ValidRange = (END < size()) && (START <= END);
 
   /**
    * Copies the array \c source to position \c DEST and returns \c true if that
@@ -457,9 +420,9 @@ public:
    */
   template <size_t DEST, typename Array>
   requires IsBaseArrayConstSize<Array> void copy(const Array &source) {
-    static_assert((DEST < constSize()) &&
-                  (constSize() - DEST >= Array::constSize()));
-    const size_t end = DEST + Array::constSize();
+    static_assert((DEST < size()) &&
+                  (size() - DEST >= Array::size()));
+    const size_t end = DEST + Array::size();
     for (size_t src = 0, dst = DEST; dst < end; src++, dst++) {
       this->data(dst) = BaseArrayWrapper<Array, T>::at(source, src);
     }
@@ -483,9 +446,9 @@ public:
    */
   template <size_t DEST, typename Array>
   requires IsBaseArrayConstSize<Array> void move(Array &source) {
-    static_assert((DEST < constSize()) &&
-                  (constSize() - DEST >= Array::constSize()));
-    const size_t end = DEST + Array::constSize();
+    static_assert((DEST < size()) &&
+                  (size() - DEST >= Array::size()));
+    const size_t end = DEST + Array::size();
     for (size_t src = 0, dst = DEST; dst < end; src++, dst++) {
       this->data(dst) = std::move(BaseArrayWrapper<Array, T>::at(source, src));
     }
@@ -511,9 +474,9 @@ public:
    */
   template <size_t DEST, size_t START, size_t END, typename Array>
   requires IsBaseArrayConstSize<Array> void copy_range(Array &source) {
-    static_assert((END < Array::constSize()) && (START <= END) &&
-                  (DEST < constSize()) &&
-                  (constSize() - DEST >= (END + 1 - START)));
+    static_assert((END < Array::size()) && (START <= END) &&
+                  (DEST < size()) &&
+                  (size() - DEST >= (END + 1 - START)));
     const size_t last = DEST + (END - START);
     for (size_t src = START, dst = DEST; dst <= last; src++, dst++) {
       this->data(dst) = BaseArrayWrapper<Array, T>::at(source, src);
@@ -523,8 +486,7 @@ public:
    * @see BaseArray.copy_range(dest, source, start, end)
    */
   template <typename Array>
-  requires IsBaseArray<Array> &&
-      std::is_assignable_v<T, typename Array::value_type> bool
+  requires IsBaseArray<Array> bool
       copy_range(size_t dest, const Array &source, size_t start, size_t end) {
     return Super::copy_range(dest, source, start, end);
   }
@@ -543,9 +505,9 @@ public:
    */
   template <size_t DEST, size_t START, size_t END, typename Array>
   requires IsBaseArrayConstSize<Array> void move_range(Array &source) {
-    static_assert((END < Array::constSize()) && (START <= END) &&
-                  (DEST < constSize()) &&
-                  (constSize() - DEST >= (END + 1 - START)));
+    static_assert((END < Array::size()) && (START <= END) &&
+                  (DEST < size()) &&
+                  (size() - DEST >= (END + 1 - START)));
     const size_t last = DEST + (END - START);
     for (size_t src = START, dst = DEST; dst <= last; src++, dst++) {
       this->data(dst) = std::move(BaseArrayWrapper<Array, T>::at(source, src));

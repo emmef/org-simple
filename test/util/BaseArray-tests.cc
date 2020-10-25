@@ -45,13 +45,38 @@ void fillWithHundred(Array &array) {
 }
 struct A {};
 
+template <typename Array,
+    bool hasValueType = helper::BaseArrayHasValueType<Array>::value>
+class ValueType {
+  class Dummy {};
+
+public:
+  typedef void type;
+};
+
+template <typename Array> class ValueType<Array, true> {
+public:
+  typedef typename Array::value_type type;
+};
+
+
 } // namespace
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_BaseArray)
 
 
 BOOST_AUTO_TEST_CASE(testArray10HasValueType) {
-  BOOST_CHECK(helper::BaseArrayHasValueType<Array10>::value);
+  typedef helper::BaseArrayHasValueType<Array10> base;
+  typedef ValueType<Array10> value;
+  typedef AboutBaseArray<Array10> About;
+  std::cout << "Array::value_type=" << typeid(value::type).name() << std::endl;
+  std::cout << "AboutBaseArray<Array10>::value_type=" << typeid(About::value_type).name() << std::endl;
+  std::cout << "helper::BaseArrayDeductAboutBase<Array10>::About::value_type=" << typeid(helper::BaseArrayDeductAboutBase<Array10>::About::value_type).name() << std::endl;
+
+  BOOST_CHECK(About::isAssignable<double>);
+  BOOST_CHECK(About::isAssignable<double>);
+  BOOST_CHECK((std::is_convertible_v<double, double>));
+  BOOST_CHECK(base::value);
 }
 
 BOOST_AUTO_TEST_CASE(testArray10IsBaseArray) {
@@ -64,7 +89,7 @@ BOOST_AUTO_TEST_CASE(testArray10Size10) {
 }
 
 BOOST_AUTO_TEST_CASE(testArray10COnstSize10) {
-  BOOST_CHECK_EQUAL(10u, Array10::constSize());
+  BOOST_CHECK_EQUAL(10u, Array10::size());
 }
 
 BOOST_AUTO_TEST_CASE(testArray10HasConstSizeAndAccess) {
@@ -111,7 +136,7 @@ BOOST_AUTO_TEST_CASE(testArray10SetAndGetValuesViaWrapper) {
   Array10 array10;
   fillWithIndex<Array10>(array10);
   BaseArrayWrapper<Array10> wrapper(array10);
-  BOOST_CHECK_EQUAL(Array10::constSize(), wrapper.size());
+  BOOST_CHECK_EQUAL(Array10::size(), wrapper.size());
   for (size_t i = 0; i < wrapper.size(); i++) {
     BOOST_CHECK_EQUAL(size_t { i }, wrapper[i]);
   }

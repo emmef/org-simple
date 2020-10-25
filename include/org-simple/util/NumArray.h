@@ -56,23 +56,23 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   template <typename X>
   static constexpr bool SameSizeArray =
-      IsBaseArrayConstSize<T> && X::constSize() == ELEMENTS;
+      IsBaseArrayConstSize<T> && X::size() == ELEMENTS;
 
   template <typename X>
   static constexpr bool NotSmallerArray =
-      IsBaseArrayConstSize<T> && X::constSize() >= ELEMENTS;
+      IsBaseArrayConstSize<T> && X::size() >= ELEMENTS;
 
   template <typename X>
   static constexpr bool BiggerArray = IsBaseArrayConstSize<T> &&
-                                      X::constSize() > ELEMENTS;
+                                      X::size() > ELEMENTS;
 
   template <typename X>
   static constexpr bool NotBiggerArray =
-      IsBaseArrayConstSize<T> && X::constSize() <= ELEMENTS;
+      IsBaseArrayConstSize<T> && X::size() <= ELEMENTS;
 
   template <typename X>
   static constexpr bool SmallerArray = IsBaseArrayConstSize<T> &&
-                                       X::constSize() < ELEMENTS;
+                                       X::size() < ELEMENTS;
 
   template <size_t START, size_t SRC_ELEM>
   static constexpr bool
@@ -81,7 +81,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   template <typename X>
   static constexpr bool ValidForCrossProductArray =
-      IsBaseArrayConstSize<T> &&ELEMENTS == X::constSize() == 3;
+      IsBaseArrayConstSize<T> &&ELEMENTS == X::size() == 3;
 
   BaseNumArray() = default;
   BaseNumArray(const BaseNumArray &) = default;
