@@ -28,7 +28,7 @@
 
 namespace org::simple::util {
 
-template <typename Array, typename Value> class AboutBaseArray;
+template <typename Array> class AboutBaseArray;
 template <typename T, class S> class BaseArray;
 template <typename T, class S> class BaseArrayConstSize;
 template <typename T, size_t S> class ArrayInline;
@@ -36,6 +36,42 @@ template <typename T> class ArraySlice;
 template <typename T> class ArrayHeap;
 
 namespace helper {
+
+template <typename Array, typename Value> class AboutBaseArrayBase;
+
+template <typename T> class BaseArrayHasValueType {
+
+  template <typename A>
+  static constexpr bool
+  hasValueTypeSubst(std::add_pointer_t<typename A::value_type>()) {
+    return true;
+  }
+
+  template <typename A> static constexpr bool hasValueTypeSubst(...) {
+    return false;
+  }
+
+  static constexpr bool hasValueTypeTestWithValue(size_t v) {
+    return hasValueTypeSubst<T>(v);
+  }
+
+public:
+  static constexpr bool value = hasValueTypeSubst<T>(nullptr);
+};
+
+template <typename Array,
+          bool hasValueType = BaseArrayHasValueType<Array>::value>
+class BaseArrayDeductAboutBase {
+  class Dummy {};
+
+public:
+  typedef AboutBaseArrayBase<Dummy, void> About;
+};
+
+template <typename Array> class BaseArrayDeductAboutBase<Array, true> {
+public:
+  typedef AboutBaseArrayBase<Array, typename Array::value_type> About;
+};
 
 template <typename T> class BaseArrayHasConstSizeFunction {
 
@@ -70,10 +106,11 @@ public:
   static constexpr bool value = test(T::constSize());
 };
 
-template <typename Array, typename Value> struct BaseArrayStaticWrapper {
-  typedef AboutBaseArray<Array, Value> About;
+template <typename Array> struct BaseArrayStaticWrapper {
+  typedef AboutBaseArray<Array> About;
 
-  static const Value &at(const Array &array, size_t index) {
+  static const typename About::value_type &at(const Array &array,
+                                              size_t index) {
     if constexpr (About::hasUnsafeData) {
       return array.hasUnsafeData()[index];
     } else {
@@ -82,9 +119,7 @@ template <typename Array, typename Value> struct BaseArrayStaticWrapper {
   }
 };
 
-} // namespace helper
-
-template <typename Array, typename Value> class AboutBaseArray {
+template <typename Array, typename Value> class AboutBaseArrayBase {
 
   // Checking for unsafeData() member, returning T*.
 
@@ -129,6 +164,7 @@ template <typename Array, typename Value> class AboutBaseArray {
   }
 
 public:
+  typedef Value value_type;
   static constexpr bool hasUnsafeData =
       hasUnsafeDataSubstWithValue(static_cast<Value *>(0));
   static constexpr bool hasArrayOperator =
@@ -136,6 +172,20 @@ public:
 
   static constexpr bool size = hasSizeTestWithValue(0);
   static constexpr bool constSize = helper::BaseArrayHasConstSize<Array>::value;
+};
+
+} // namespace helper
+
+template <typename Array>
+class AboutBaseArray : public helper::BaseArrayDeductAboutBase<Array> {
+  using Super = typename helper::BaseArrayDeductAboutBase<Array>;
+
+public:
+  typedef typename Super::About::value_type value_type;
+  static constexpr bool hasUnsafeData = Super::About::hasUnsafeData;
+  static constexpr bool hasArrayOperator = Super::About::hasArrayOperator;
+  static constexpr bool size = Super::About::size;
+  static constexpr bool constSize = Super::About::constSize;
 
   static constexpr bool isBaseArray =
       (hasUnsafeData || hasArrayOperator) && size;
@@ -144,25 +194,24 @@ public:
 };
 
 template <typename Array, typename Value>
-concept IsBaseArray = AboutBaseArray<Array, Value>::isBaseArray;
+concept IsBaseArray = AboutBaseArray<Array>::isBaseArray;
 template <typename Array, typename Value>
-concept IsBaseArrayConstSize =
-    AboutBaseArray<Array, Value>::isBaseArrayConstSize;
+concept IsBaseArrayConstSize = AboutBaseArray<Array>::isBaseArrayConstSize;
 
-template <typename Array, typename Value,
-          bool hasConstSize =
-              AboutBaseArray<Array, Value>::isBaseArrayConstSize>
+template <typename Array,
+          typename Value = typename AboutBaseArray<Array>::value_type,
+          bool hasConstSize = AboutBaseArray<Array>::isBaseArrayConstSize>
 class BaseArrayWrapper;
 
 template <typename Array, typename Value>
 class BaseArrayWrapper<Array, Value, true>
-    : public helper::BaseArrayStaticWrapper<Array, Value> {
+    : public helper::BaseArrayStaticWrapper<Array> {
   const Array &array_;
 
 public:
   BaseArrayWrapper(const Array &array) : array_(array){};
-  typedef typename helper::BaseArrayStaticWrapper<Array, Value>::About About;
-  using helper::BaseArrayStaticWrapper<Array, Value>::at;
+  typedef typename helper::BaseArrayStaticWrapper<Array>::About About;
+  using helper::BaseArrayStaticWrapper<Array>::at;
 
   const Value &operator[](size_t index) { return at(array_, index); }
   static constexpr size_t size() { return Array::constSize(); }
@@ -170,13 +219,13 @@ public:
 
 template <typename Array, typename Value>
 class BaseArrayWrapper<Array, Value, false>
-    : public helper::BaseArrayStaticWrapper<Array, Value> {
+    : public helper::BaseArrayStaticWrapper<Array> {
   const Array &array_;
 
 public:
   BaseArrayWrapper(const Array &array) : array_(array){};
-  using helper::BaseArrayStaticWrapper<Array, Value>::Has;
-  using helper::BaseArrayStaticWrapper<Array, Value>::at;
+  using helper::BaseArrayStaticWrapper<Array>::Has;
+  using helper::BaseArrayStaticWrapper<Array>::at;
 
   const Value &operator[](size_t index) { return at(array_, index); }
   size_t size() const { return array_.size(); }
@@ -185,12 +234,8 @@ public:
 template <typename T, class S> class BaseArray {
 protected:
   T *data() noexcept { return static_cast<S *>(this)->virtualData(); }
-  T &data(size_t index) noexcept {
-    return data()[index];
-  }
-  const T &data(size_t index) const noexcept {
-    return unsafeData()[index];
-  }
+  T &data(size_t index) noexcept { return data()[index]; }
+  const T &data(size_t index) const noexcept { return unsafeData()[index]; }
   size_t checked_index(size_t index) const {
     if (index < size()) {
       return index;
@@ -199,6 +244,7 @@ protected:
   }
 
 public:
+  typedef T value_type;
   const T *unsafeData() const noexcept {
     return static_cast<const S *>(this)->virtualConstData();
   }
@@ -379,6 +425,7 @@ protected:
   size_t virtualSize() const noexcept { return S::virtualConstSize(); }
 
 public:
+  typedef T value_type;
   typedef BaseArray<T, BaseArrayConstSize<T, S>> Super;
   typedef typename Super::SizeMetric SizeMetric;
   friend Super;
@@ -429,8 +476,7 @@ public:
                   (constSize() - DEST >= Array::constSize()));
     const size_t end = DEST + Array::constSize();
     for (size_t src = 0, dst = DEST; dst < end; src++, dst++) {
-      this->data(dst) =
-          std::move(BaseArrayWrapper<Array, T>::at(source, src));
+      this->data(dst) = std::move(BaseArrayWrapper<Array, T>::at(source, src));
     }
   }
   /**
@@ -490,8 +536,7 @@ public:
                   (constSize() - DEST >= (END + 1 - START)));
     const size_t last = DEST + (END - START);
     for (size_t src = START, dst = DEST; dst <= last; src++, dst++) {
-      this->data(dst) =
-          std::move(BaseArrayWrapper<Array, T>::at(source, src));
+      this->data(dst) = std::move(BaseArrayWrapper<Array, T>::at(source, src));
     }
   }
   /**
@@ -566,6 +611,7 @@ class ArrayInline : public BaseArrayConstSize<T, ArrayInline<T, S>> {
   static constexpr size_t virtualConstSize() noexcept { return S; }
 
 public:
+  typedef T value_type;
   typedef BaseArrayConstSize<T, ArrayInline<T, S>> Super;
   typedef typename Super::SizeMetric SizeMetric;
   friend Super;
@@ -590,6 +636,7 @@ protected:
   const T *data() const noexcept { return Super::data(); }
 
 public:
+  typedef T value_type;
   typedef BaseArrayConstSize<T, ArrayConstAlloc<T, S>> Super;
   typedef typename Super::SizeMetric SizeMetric;
   friend Super;
@@ -626,6 +673,7 @@ protected:
   const T *data() const noexcept { return Super::data(); }
 
 public:
+  typedef T value_type;
   typedef BaseArrayConstSize<T, ArrayConstRef<T, S>> Super;
   typedef typename Super::SizeMetric SizeMetric;
   friend Super;
@@ -649,6 +697,7 @@ protected:
   const T *data() const noexcept { return Super::data(); }
 
 public:
+  typedef T value_type;
   typedef BaseArray<T, ArraySlice<T>> Super;
   typedef typename Super::SizeMetric SizeMetric;
   friend Super;
@@ -674,6 +723,7 @@ protected:
   const T *data() const noexcept { return Super::data(); }
 
 public:
+  typedef T value_type;
   typedef BaseArray<T, ArraySlice<T>> Super;
   typedef typename Super::SizeMetric SizeMetric;
   friend Super;
