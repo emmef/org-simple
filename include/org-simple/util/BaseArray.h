@@ -191,12 +191,23 @@ public:
       (hasUnsafeData || hasArrayOperator) && size;
   static constexpr bool isBaseArrayConstSize =
       (hasUnsafeData || hasArrayOperator) && constSize;
+
+  template <typename T>
+  static constexpr bool canAssignTo = std::is_assignable_v<T, value_type>;
 };
 
-template <typename Array, typename Value>
+template <typename Array>
 concept IsBaseArray = AboutBaseArray<Array>::isBaseArray;
-template <typename Array, typename Value>
+template <typename Array>
 concept IsBaseArrayConstSize = AboutBaseArray<Array>::isBaseArrayConstSize;
+
+template <typename Array, typename T>
+concept IsCompatibleBaseArray = AboutBaseArray<Array>::isBaseArray
+    &&AboutBaseArray<Array>::template canAssignTo<T>;
+template <typename Array, typename T>
+concept IsCompatibleBaseArrayConstSize =
+    AboutBaseArray<Array>::isBaseArrayConstSize
+        &&AboutBaseArray<Array>::template canAssignTo<T>;
 
 template <typename Array,
           typename Value = typename AboutBaseArray<Array>::value_type,
@@ -275,7 +286,7 @@ public:
    * @return \c true if copying was successful, \c false otherwise.
    */
   template <typename Array>
-  requires IsBaseArray<Array, T> bool copy(size_t dest, const Array &source) {
+  requires IsBaseArray<Array> bool copy(size_t dest, const Array &source) {
     BaseArrayWrapper<Array, T> wrapper(source);
     if (dest >= this->size() || this->size() - dest < wrapper.size()) {
       return false;
@@ -297,7 +308,7 @@ public:
    * @return \c true if moving was successful, \c false otherwise.
    */
   template <typename Array>
-  requires IsBaseArray<Array, T> bool move(size_t dest, Array &source) {
+  requires IsBaseArray<Array> bool move(size_t dest, Array &source) {
     BaseArrayWrapper<Array, T> wrapper(source);
     if (dest >= this->size() || this->size() - dest < wrapper.size()) {
       return false;
@@ -323,8 +334,8 @@ public:
    * @return \c true if copying was successful, \c false otherwise.
    */
   template <typename Array>
-  requires IsBaseArray<Array, T> bool
-  copy_range(size_t dest, const Array &source, size_t start, size_t end) {
+  requires IsBaseArray<Array> bool copy_range(size_t dest, const Array &source,
+                                              size_t start, size_t end) {
     BaseArrayWrapper<Array, T> wrapper(source);
     if (end >= wrapper.size() || end < start || dest >= this->size()) {
       return false;
@@ -353,8 +364,8 @@ public:
    * @return \c true if moving was successful, \c false otherwise.
    */
   template <typename Array>
-  requires IsBaseArray<Array, T> bool move_range(size_t dest, Array &source,
-                                                 size_t start, size_t end) {
+  requires IsBaseArray<Array> bool move_range(size_t dest, Array &source,
+                                              size_t start, size_t end) {
     BaseArrayWrapper<Array, T> wrapper(source);
     if (end >= wrapper.size() || end < start || dest >= this->size()) {
       return false;
@@ -445,7 +456,7 @@ public:
    * @return \c true if copying was successful, \c false otherwise.
    */
   template <size_t DEST, typename Array>
-  requires IsBaseArrayConstSize<Array, T> void copy(const Array &source) {
+  requires IsBaseArrayConstSize<Array> void copy(const Array &source) {
     static_assert((DEST < constSize()) &&
                   (constSize() - DEST >= Array::constSize()));
     const size_t end = DEST + Array::constSize();
@@ -457,7 +468,7 @@ public:
    * @see BaseArray.copy(dest, source)
    */
   template <typename Array>
-  requires IsBaseArray<Array, T> bool copy(size_t dest, const Array &source) {
+  requires IsBaseArray<Array> bool copy(size_t dest, const Array &source) {
     return Super::copy(dest, source);
   }
 
@@ -471,7 +482,7 @@ public:
    * @return \c true if moving was successful, \c false otherwise.
    */
   template <size_t DEST, typename Array>
-  requires IsBaseArrayConstSize<Array, T> void move(Array &source) {
+  requires IsBaseArrayConstSize<Array> void move(Array &source) {
     static_assert((DEST < constSize()) &&
                   (constSize() - DEST >= Array::constSize()));
     const size_t end = DEST + Array::constSize();
@@ -483,7 +494,7 @@ public:
    * @see BaseArray.move(dest, source)
    */
   template <typename Array>
-  requires IsBaseArray<Array, T> bool move(size_t dest, const Array &source) {
+  requires IsBaseArray<Array> bool move(size_t dest, const Array &source) {
     return Super::move(dest, source);
   }
   /**
@@ -499,7 +510,7 @@ public:
    * @param source The source array.
    */
   template <size_t DEST, size_t START, size_t END, typename Array>
-  requires IsBaseArrayConstSize<Array, T> void copy_range(Array &source) {
+  requires IsBaseArrayConstSize<Array> void copy_range(Array &source) {
     static_assert((END < Array::constSize()) && (START <= END) &&
                   (DEST < constSize()) &&
                   (constSize() - DEST >= (END + 1 - START)));
@@ -512,8 +523,9 @@ public:
    * @see BaseArray.copy_range(dest, source, start, end)
    */
   template <typename Array>
-  requires IsBaseArray<Array, T> bool
-  copy_range(size_t dest, const Array &source, size_t start, size_t end) {
+  requires IsBaseArray<Array> &&
+      std::is_assignable_v<T, typename Array::value_type> bool
+      copy_range(size_t dest, const Array &source, size_t start, size_t end) {
     return Super::copy_range(dest, source, start, end);
   }
 
@@ -530,7 +542,7 @@ public:
    * @param source The source array.
    */
   template <size_t DEST, size_t START, size_t END, typename Array>
-  requires IsBaseArrayConstSize<Array, T> void move_range(Array &source) {
+  requires IsBaseArrayConstSize<Array> void move_range(Array &source) {
     static_assert((END < Array::constSize()) && (START <= END) &&
                   (DEST < constSize()) &&
                   (constSize() - DEST >= (END + 1 - START)));
@@ -543,8 +555,8 @@ public:
    * @see BaseArray.move_range(dest, source, start, end)
    */
   template <typename Array>
-  requires IsBaseArray<Array, T> bool
-  move_range(size_t dest, const Array &source, size_t start, size_t end) {
+  requires IsBaseArray<Array> bool move_range(size_t dest, const Array &source,
+                                              size_t start, size_t end) {
     return Super::move_range(dest, source, start, end);
   }
 

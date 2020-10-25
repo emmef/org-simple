@@ -10,12 +10,12 @@ using namespace org::simple::core;
 
 namespace {
 
-constexpr size_t SIZE = 10;
-constexpr size_t SMALLER = 8;
-constexpr size_t BIGGER = 12;
-typedef NumArray<double, SIZE> Numa10;
-typedef NumArray<double, SMALLER> Numa8;
-typedef NumArray<double, BIGGER> Numa12;
+constexpr size_t SIZE = 8;
+constexpr size_t SMALLER = 4;
+constexpr size_t BIGGER = 16;
+typedef NumArray<double, SIZE> Numa;
+typedef NumArray<double, SMALLER> NumaSmall;
+typedef NumArray<double, BIGGER> NumaBig;
 typedef ArrayInline<double, SIZE> Array10;
 
 }
@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_SUITE(org_simple_util_NumArray)
 //}
 
 BOOST_AUTO_TEST_CASE(testSetGet) {
-  Numa10 array;
+  Numa array;
   static constexpr size_t index = 4;
   double old = array[index];
   double newValue = fabs(old) > 1e-6 ? old / 2 : old + 1.0;
@@ -37,19 +37,19 @@ BOOST_AUTO_TEST_CASE(testSetGet) {
 }
 
 BOOST_AUTO_TEST_CASE(testNumArraySizeOverhead) {
-  Numa10 array;
+  Numa array;
   BOOST_CHECK_EQUAL(sizeof(array), sizeof(double) * SIZE);
 }
 
 BOOST_AUTO_TEST_CASE(testNumArrayInitListExactSize) {
-  Numa10 array {0,1,2,3,4,5,6,7,8,9};
+  Numa array {0,1,2,3,4,5,6,7,8,9};
   for (size_t i = 0; i < array.size(); i++) {
     BOOST_CHECK_EQUAL(i, array[i]);
   }
 }
 
 BOOST_AUTO_TEST_CASE(testNumArrayInitListPartial) {
-  Numa10 array {0,1,2,3,4,5,6};
+  Numa array {0,1,2,3,4,5,6};
   size_t i = 0;
   for (; i <= 6; i++) {
     BOOST_CHECK_EQUAL(i, array[i]);
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(testNumArrayInitListPartial) {
 }
 
 BOOST_AUTO_TEST_CASE(testNumArrayInitListLarger) {
-  Numa10 array {0,1,2,3,4,5,6,7,8,9,10,11,12};
+  Numa array {0,1,2,3,4,5,6,7,8,9,10,11,12};
   size_t i = 0;
   for (; i < array.size(); i++) {
     BOOST_CHECK_EQUAL(i, array[i]);
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(testNumArrayInitListLarger) {
 }
 
 BOOST_AUTO_TEST_CASE(testNumArrayrangeConst) {
-  Numa10 source {0,1,2,3,4,5,6,7,8,9};
+  NumaBig source {0,1,2,3,4,5,6,7,8,9};
   auto array = source.range_copy<3, 5>();
   BOOST_CHECK_EQUAL(3, array.size());
   for (size_t i = 0; i < array.size(); i++) {
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(testNumArrayrangeConst) {
 }
 
 BOOST_AUTO_TEST_CASE(testNumArrayrangeVar) {
-  Numa10 source {0,1,2,3,4,5,6,7,8,9};
+  Numa source {0,1,2,3,4,5,6,7,8,9};
   auto array = source.range_copy(3, 5);
   BOOST_CHECK_EQUAL(3, array.size());
   for (size_t i = 0; i < array.size(); i++) {
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(testNumArrayrangeVar) {
 
 
 BOOST_AUTO_TEST_CASE(testConstSize) {
-  BOOST_CHECK_EQUAL(SIZE, Numa10::constSize());
+  BOOST_CHECK_EQUAL(SIZE, Numa::constSize());
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstSize) {
@@ -95,8 +95,17 @@ BOOST_AUTO_TEST_CASE(testArrayConstSize) {
 }
 
 BOOST_AUTO_TEST_CASE(testSize) {
-  Numa10 array;
+  Numa array;
   BOOST_CHECK_EQUAL(SIZE, array.size());
+}
+
+BOOST_AUTO_TEST_CASE(testAdd) {
+  NumaSmall array {0,1,2,3};
+  auto sum = array + array;
+
+  for (size_t i = 0; i < array.size(); i++) {
+    BOOST_CHECK_EQUAL(i * 2, sum[i]);
+  }
 }
 
 //BOOST_AUTO_TEST_CASE(testShiftLargerArrayIn) {

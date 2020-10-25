@@ -52,36 +52,36 @@ concept NumberIsR2LAssignable = (ComplexNumber<L> && Number<R>) ||
 
 template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   static_assert(concepts::Number<T>);
-  static_assert(IsBaseArrayConstSize<S, T>);
+  static_assert(IsBaseArrayConstSize<S>);
 
   template <typename X>
   static constexpr bool SameSizeArray =
-      IsBaseArrayConstSize<T, X> &&X::constSize() == ELEMENTS;
+      IsBaseArrayConstSize<T> && X::constSize() == ELEMENTS;
 
   template <typename X>
   static constexpr bool NotSmallerArray =
-      IsBaseArrayConstSize<T, X> &&X::constSize() >= ELEMENTS;
+      IsBaseArrayConstSize<T> && X::constSize() >= ELEMENTS;
 
   template <typename X>
-  static constexpr bool BiggerArray = IsBaseArrayConstSize<T, X> &&
+  static constexpr bool BiggerArray = IsBaseArrayConstSize<T> &&
                                       X::constSize() > ELEMENTS;
 
   template <typename X>
   static constexpr bool NotBiggerArray =
-      IsBaseArrayConstSize<T, X> &&X::constSize() <= ELEMENTS;
+      IsBaseArrayConstSize<T> && X::constSize() <= ELEMENTS;
 
   template <typename X>
-  static constexpr bool SmallerArray = IsBaseArrayConstSize<T, X> &&
+  static constexpr bool SmallerArray = IsBaseArrayConstSize<T> &&
                                        X::constSize() < ELEMENTS;
 
-  template <typename X, size_t START, size_t SRC_ELEM>
+  template <size_t START, size_t SRC_ELEM>
   static constexpr bool
-      ValidForGraftArray = IsBaseArrayConstSize<T, X> &&
+      ValidForGraftArray = IsBaseArrayConstSize<T> &&
                            (START + SRC_ELEM <= ELEMENTS);
 
   template <typename X>
   static constexpr bool ValidForCrossProductArray =
-      IsBaseArrayConstSize<T, X> &&ELEMENTS == X::constSize() == 3;
+      IsBaseArrayConstSize<T> &&ELEMENTS == X::constSize() == 3;
 
   BaseNumArray() = default;
   BaseNumArray(const BaseNumArray &) = default;
@@ -213,7 +213,9 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
     return r;
   }
 
-  template <class Array> BaseNumArray operator+(const Array &o) const noexcept {
+  template <class Array>
+  requires IsBaseArray<Array>
+  BaseNumArray operator+(const Array &o) const noexcept {
     BaseNumArray r = *this;
     r += o;
     return r;
