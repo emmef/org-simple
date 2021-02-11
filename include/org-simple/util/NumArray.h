@@ -171,7 +171,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   }
 
   template <typename Array, size_t START, size_t SRC_ELEM>
-  requires ValidForGraftArray<Array, START, SRC_ELEM> BaseNumArray &
+  requires ValidForGraftArray<START, SRC_ELEM> BaseNumArray &
   graft(const Array &source) noexcept {
     for (size_t src = 0, dst = START; src <= SRC_ELEM; src++, dst++) {
       this->data(dst) = source[src];

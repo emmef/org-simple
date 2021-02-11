@@ -196,7 +196,6 @@ struct AboutSizeFunction<Array, true> {
   static constexpr bool has_static = std::is_same_v<size_t, decltype(Array::size())>;
   static constexpr bool has = has_static || HasSizeFunction<Array>::value;
   static constexpr size_t value = has_static ? size_t(Array::size()) : 0;
-
 };
 
 
