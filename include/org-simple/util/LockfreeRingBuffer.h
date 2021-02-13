@@ -41,8 +41,8 @@ struct LockFreeRingBuffer {
     size_t size() const noexcept { return write_at - read_at; }
     bool empty() const noexcept { return size() == 0; }
     bool full() const noexcept { return size() == capacity(); }
-    size_t reads() const noexcept { return read_at; }
-    size_t writes() const noexcept { return write_at; }
+    size_t read_ptr() const noexcept { return read_at; }
+    size_t write_ptr() const noexcept { return write_at; }
 
     /**
      * Pushes \c value on the queue, which fails if the queue is full.
@@ -74,7 +74,11 @@ struct LockFreeRingBuffer {
       if (elements == 0) {
         // Buffer is EMPTY, so no read can happen and resetting counters
         // can be done without a race condition
-        wr = rd = 0;
+        data[Metric::wrapped(0)] = value;
+        std::atomic_thread_fence(std::memory_order_release);
+        write_at = 1;
+        read_at = 0;
+        return true;
       } else if (elements >= capacity()) {
         return false;
       }
@@ -100,7 +104,11 @@ struct LockFreeRingBuffer {
         // Buffer is EMPTY, so no read can happen and resetting counters
         // can be done without a race condition
         total += wr;
-        wr = rd = 0;
+        data[Metric::wrapped(0)] = value;
+        std::atomic_thread_fence(std::memory_order_release);
+        write_at = 1;
+        read_at = 0;
+        return true;
       } else if (elements >= capacity()) {
         return false;
       }
@@ -141,8 +149,8 @@ struct LockFreeRingBuffer {
     size_t size() const noexcept { return write_at - read_at; }
     bool empty() const noexcept { return size() == 0; }
     bool full() const noexcept { return size() == capacity(); }
-    size_t reads() const noexcept { return read_at; }
-    size_t writes() const noexcept { return write_at; }
+    size_t read_ptr() const noexcept { return read_at; }
+    size_t write_ptr() const noexcept { return write_at; }
 
     /**
      * Pushes \c value on the queue, which fails if the queue is full.
@@ -174,7 +182,11 @@ struct LockFreeRingBuffer {
       if (elements == 0) {
         // Buffer is EMPTY, so no read can happen and resetting counters
         // can be done without a race condition
-        wr = rd = 0;
+        data[metric.wrapped(0)] = value;
+        std::atomic_thread_fence(std::memory_order_release);
+        write_at = 1;
+        read_at = 0;
+        return true;
       } else if (elements >= capacity()) {
         return false;
       }
@@ -200,7 +212,11 @@ struct LockFreeRingBuffer {
         // Buffer is EMPTY, so no read can happen and resetting counters
         // can be done without a race condition
         total += wr;
-        wr = rd = 0;
+        data[metric.wrapped(0)] = value;
+        std::atomic_thread_fence(std::memory_order_release);
+        write_at = 1;
+        read_at = 0;
+        return true;
       } else if (elements >= capacity()) {
         return false;
       }
@@ -252,8 +268,8 @@ struct LockFreeRingBuffer {
     size_t size() const noexcept { return base.size(); }
     bool empty() const noexcept { return base.empty(); }
     bool full() const noexcept { return base.full(); }
-    size_t reads() const noexcept { return base.reads(); }
-    size_t writes() const noexcept { return base.writes(); }
+    size_t read_ptr() const noexcept { return base.read_ptr(); }
+    size_t write_ptr() const noexcept { return base.write_ptr(); }
 
     /**
      * Pushes \c value on the queue, which fails if the queue is full.
@@ -321,8 +337,8 @@ struct LockFreeRingBuffer {
     size_t size() const noexcept { return base.size(); }
     bool empty() const noexcept { return base.empty(); }
     bool full() const noexcept { return base.full(); }
-    size_t reads() const noexcept { return base.reads(); }
-    size_t writes() const noexcept { return base.writes(); }
+    size_t read_ptr() const noexcept { return base.read_ptr(); }
+    size_t write_ptr() const noexcept { return base.write_ptr(); }
 
     /**
      * Pushes \c value on the queue, which fails if the queue is full.
