@@ -67,11 +67,11 @@ BOOST_AUTO_TEST_SUITE(org_simple_util_BaseArray)
 
 BOOST_AUTO_TEST_CASE(testArray10HasValueType) {
   typedef helper::BaseArrayHasValueType<Array10> base;
-  typedef ValueType<Array10> value;
+//  typedef ValueType<Array10> value;
   typedef AboutBaseArray<Array10> About;
-  std::cout << "Array::value_type=" << typeid(value::type).name() << std::endl;
-  std::cout << "AboutBaseArray<Array10>::value_type=" << typeid(About::value_type).name() << std::endl;
-  std::cout << "helper::BaseArrayDeductAboutBase<Array10>::About::value_type=" << typeid(helper::BaseArrayDeductAboutBase<Array10>::About::value_type).name() << std::endl;
+//  std::cout << "Array::value_type=" << typeid(value::type).name() << std::endl;
+//  std::cout << "AboutBaseArray<Array10>::value_type=" << typeid(About::value_type).name() << std::endl;
+//  std::cout << "helper::BaseArrayDeductAboutBase<Array10>::About::value_type=" << typeid(helper::BaseArrayDeductAboutBase<Array10>::About::value_type).name() << std::endl;
 
   BOOST_CHECK(About::isAssignable<double>);
   BOOST_CHECK(About::isAssignable<double>);
