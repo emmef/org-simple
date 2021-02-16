@@ -271,6 +271,9 @@ struct LockFreeRingBuffer {
     size_t read_ptr() const noexcept { return base.read_ptr(); }
     size_t write_ptr() const noexcept { return base.write_ptr(); }
 
+    void zero() noexcept {
+      std::memset(data, 0, sizeof(data));
+    }
     /**
      * Pushes \c value on the queue, which fails if the queue is full.
      *
