@@ -23,6 +23,7 @@
 
 #include <complex>
 #include <org-simple/core/Index.h>
+#include <org-simple/core/Numbers.h>
 #include <org-simple/util/BaseArray.h>
 #include <type_traits>
 
@@ -33,25 +34,16 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray;
 
 namespace concepts {
 
-template <typename T> struct BaseIsComplexType : public std::false_type {};
-
-template <typename T>
-struct BaseIsComplexType<std::complex<T>> : public std::true_type {};
-
-template <typename T> concept ComplexNumber = BaseIsComplexType<T>::value;
-
-template <typename T> concept RealNumber = std::is_arithmetic_v<T>;
-
-template <typename T> concept Number = (RealNumber<T> || ComplexNumber<T>);
+using namespace org::simple::core;
 
 template <typename L, typename R>
-concept NumberIsR2LAssignable = (ComplexNumber<L> && Number<R>) ||
-                                (RealNumber<L> && RealNumber<R>);
+concept NumberIsR2LAssignable = (is_complex_v<L> && is_number<R>) ||
+                                (std::is_arithmetic_v<L> && std::is_arithmetic_v<R>);
 
 } // namespace concepts
 
 template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
-  static_assert(concepts::Number<T>);
+  static_assert(org::simple::core::is_number<T>);
   static_assert(IsBaseArrayConstSize<S>);
 
   template <typename X>
@@ -142,7 +134,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
     return *this;
   }
 
-  void operator>>(const T *destination) {
+  void operator>>(T *destination) {
     const T *dst = core::Dereference::safe(destination);
     for (size_t i = 0; i < ELEMENTS; i++) {
       dst[i] += this->data(i);
@@ -248,6 +240,26 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
     return r;
   }
 
+  template <class Array>
+  requires IsBaseArray<Array>
+  BaseNumArray operator-(const Array &o) const noexcept {
+    BaseNumArray r = *this;
+    r -= o;
+    return r;
+  }
+
+  friend BaseNumArray &operator-(const BaseNumArray &o,
+                                 BaseNumArray &&a) noexcept {
+    a -= o;
+    return a;
+  }
+
+  template <class Array>
+  friend BaseNumArray &operator-(const Array &o, BaseNumArray &&a) noexcept {
+    a += o;
+    return a;
+  }
+
   // Multiply by scalar
 
   BaseNumArray &operator*=(T v) noexcept {
@@ -291,17 +303,38 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
     return r;
   }
 
+  friend BaseNumArray operator/(T v, const BaseNumArray &a) noexcept {
+    return a / v;
+  }
+
+  friend BaseNumArray &operator/(T v, BaseNumArray &&a) noexcept {
+    a /= v;
+    return a;
+  }
+
   // Multiply with array
 
-  T in_product(const BaseNumArray &o) const noexcept {
-    T sum = this->data(0) * o[0];
+  // Dot product
+
+  T dot(const BaseNumArray &o) const noexcept {
+    T sum = 0;
     for (size_t i = 0; i < ELEMENTS; i++) {
-      sum += this->data(i) * o[i];
+      sum +=
+          org::simple::core::Numbers::times_conj(this->data(i), o[i]);
     }
     return sum;
   }
 
-  T self() const noexcept { return in(*this); }
+  // Squared absolute value (norm)
+
+  typename org::simple::core::Complex<T>::real_type
+  norm() const noexcept {
+    typename org::simple::core::Complex<T>::value_type sum = 0;
+    for (size_t i = 0; i < ELEMENTS; i++) {
+      sum += org::simple::core::Numbers::norm(this->data(i));
+    }
+    return sum;
+  }
 
   template <typename Array>
   requires ValidForCrossProductArray<Array>

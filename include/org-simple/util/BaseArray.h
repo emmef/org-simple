@@ -22,9 +22,10 @@
  */
 
 #include <cstddef>
-#include <org-simple/core/Size.h>
-#include <org-simple/core/Index.h>
+#include <org-simple/core/Align.h>
 #include <org-simple/core/ClassTraits.h>
+#include <org-simple/core/Index.h>
+#include <org-simple/core/Size.h>
 #include <stdexcept>
 
 namespace org::simple::util {
@@ -32,7 +33,7 @@ namespace org::simple::util {
 template <typename Array> class AboutBaseArray;
 template <typename T, class S> class BaseArray;
 template <typename T, class S> class BaseArrayConstSize;
-template <typename T, size_t S> class ArrayInline;
+template <typename T, size_t S, size_t A = 0> class ArrayInline;
 template <typename T> class ArraySlice;
 template <typename T> class ArrayHeap;
 
@@ -227,16 +228,16 @@ public:
     return static_cast<const S *>(this)->virtualSize();
   }
   // Unchecked non-const access to element
-  T &operator[](size_t index) noexcept { return data()[index]; }
+  T &operator[](size_t index) noexcept { return data(index); }
   // Unchecked const access to element
   const T &operator[](size_t index) const noexcept {
-    return unsafeData()[index];
+    return data(index);
   }
   // Checked non-const access to element
-  T &at(size_t index) noexcept { return data()[checked_index(index)]; }
+  T &at(size_t index) noexcept { return data(checked_index(index)); }
   // Checked const access to element
   const T &at(size_t index) const noexcept {
-    return unsafeData()[checked_index(index)];
+    return data(checked_index(index));
   }
 
   /**
@@ -576,9 +577,9 @@ public:
   }
 };
 
-template <typename T, size_t S>
-class ArrayInline : public BaseArrayConstSize<T, ArrayInline<T, S>> {
-  T data_[S];
+template <typename T, size_t S, size_t A>
+class ArrayInline : public BaseArrayConstSize<T, ArrayInline<T, S, A>> {
+  alignas(org::simple::core::Alignment<T>::get_valid(A)) T data_[S];
 
   T *virtualData() noexcept { return &data_[0]; }
   const T *virtualConstData() const noexcept { return &data_[0]; }
@@ -596,18 +597,17 @@ public:
   ArrayInline(ArrayInline &&) = default;
 };
 
-template <typename T, size_t S>
-class ArrayConstAlloc : public BaseArrayConstSize<T, ArrayConstAlloc<T, S>> {
+template <typename T, size_t S, size_t A = 0>
+class ArrayConstAlloc : public BaseArrayConstSize<T, ArrayConstAlloc<T, S, A>> {
+  struct DataStruct {
+    alignas(org::simple::core::Alignment<T>::get_valid(A)) T data_[S];
+  };
 
-  T *data_;
+  DataStruct *data_;
 
   static constexpr size_t virtualConstSize() noexcept { return S; }
-  T *virtualData() noexcept { return data_; }
-  const T *virtualConstData() const noexcept { return data_; }
-
-protected:
-  T *data() noexcept { return Super::data(); }
-  const T *data() const noexcept { return Super::data(); }
+  T *virtualData() noexcept { return data_->data_; }
+  const T *virtualConstData() const noexcept { return data_->data_; }
 
 public:
   typedef T value_type;
@@ -617,7 +617,7 @@ public:
   ArrayConstAlloc() : data_(new T[Super::SizeMetric::Valid::value(S)]) {}
 
   ArrayConstAlloc(const ArrayConstAlloc &source)
-      : data_(new T[Super::SizeMetric::Valid::value(S)]) {
+      : data_(new DataStruct) {
     for (size_t i = 0; i < Super::constSize(); i++) {
       data_[i] = source.data_[i];
     }
@@ -627,7 +627,7 @@ public:
     source.data_ = nullptr;
   }
   ~ArrayConstAlloc() {
-    delete[] data_;
+    delete data_;
     data_ = nullptr;
   }
   static_assert(SizeMetric::IsValid::value(S));
