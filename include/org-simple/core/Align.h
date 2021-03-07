@@ -131,9 +131,9 @@ public:
       data_ = alloc_;
     } else {
       alloc_ = new T[Valid::sum(count, ALIGN - MAX_ALIGN), MAX_ALIGN];
-      size_t alloc_offs = alloc_ - nullptr;
+      size_t alloc_offs = (const char *)alloc_ - (const char *)nullptr;
       size_t diff = align_with(alloc_offs, ALIGN) - alloc_offs;
-      data_ = alloc_ + diff;
+      data_ = (T *)((const char *)alloc_ + diff);
     }
     capacity_ = Valid::value(count);
   }
