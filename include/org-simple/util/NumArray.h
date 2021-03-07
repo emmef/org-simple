@@ -29,8 +29,7 @@
 
 namespace org::simple::util {
 
-template <typename T, size_t ELEMENTS, class S> struct BaseNumArray;
-
+template <typename T, class S> struct BaseNumArray;
 
 namespace concepts {
 
@@ -38,41 +37,50 @@ using namespace org::simple::core;
 
 template <typename L, typename R>
 concept NumberIsR2LAssignable = (is_complex_v<L> && is_number<R>) ||
-                                (std::is_arithmetic_v<L> && std::is_arithmetic_v<R>);
+                                (std::is_arithmetic_v<L> &&
+                                 std::is_arithmetic_v<R>);
 
 } // namespace concepts
 
-template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
-  static_assert(org::simple::core::is_number<T>);
+template <typename T, class S> struct BaseNumArray : public S {
   static_assert(BaseArrayTest<S>::value);
   static_assert(BaseArrayTest<S>::FIXED_CAPACITY != 0);
 
+  static_assert(org::simple::core::is_number<T>);
+  static_assert(BaseArrayTest<S>::value);
+
+  typedef S Super;
+  typedef typename Super::data_type data_type;
+  typedef typename Super::Size Size;
+  using Super::FIXED_CAPACITY;
+
   template <typename X>
   static constexpr bool SameSizeArray =
-      BaseArrayTest<X>::FIXED_CAPACITY == ELEMENTS;
+      BaseArrayTest<X>::FIXED_CAPACITY == FIXED_CAPACITY;
 
   template <typename X>
   static constexpr bool NotSmallerArray =
-      BaseArrayTest<X>::FIXED_CAPACITY >= ELEMENTS;
+      BaseArrayTest<X>::FIXED_CAPACITY >= FIXED_CAPACITY;
 
   template <typename X>
-  static constexpr bool BiggerArray = BaseArrayTest<X>::FIXED_CAPACITY > ELEMENTS;
+  static constexpr bool BiggerArray =
+      BaseArrayTest<X>::FIXED_CAPACITY > FIXED_CAPACITY;
 
   template <typename X>
   static constexpr bool NotBiggerArray =
-      BaseArrayTest<X>::FIXED_CAPACITY <= ELEMENTS;
+      BaseArrayTest<X>::FIXED_CAPACITY <= FIXED_CAPACITY;
 
   template <typename X>
   static constexpr bool SmallerArray =
-      BaseArrayTest<X>::FIXED_CAPACITY < ELEMENTS;
+      BaseArrayTest<X>::FIXED_CAPACITY < FIXED_CAPACITY;
 
   template <size_t START, size_t SRC_ELEM>
-  static constexpr bool
-      ValidForGraftArray = (START + SRC_ELEM <= ELEMENTS);
+  static constexpr bool ValidForGraftArray = (START + SRC_ELEM <=
+                                              FIXED_CAPACITY);
 
   template <typename X>
   static constexpr bool ValidForCrossProductArray =
-      ELEMENTS == BaseArrayTest<X>::FIXED_CAPACITY && ELEMENTS == 3;
+      FIXED_CAPACITY == BaseArrayTest<X>::FIXED_CAPACITY &&FIXED_CAPACITY == 3;
 
   BaseNumArray() = default;
   BaseNumArray(const BaseNumArray &) = default;
@@ -82,13 +90,13 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
     size_t i = 0;
     auto data = this->begin();
     for (auto v : values) {
-      if (i == ELEMENTS) {
+      if (i == FIXED_CAPACITY) {
         return;
       }
-      data[i++]= v;
+      data[i++] = v;
     }
-    while (i < ELEMENTS) {
-      data[i++]= 0;
+    while (i < FIXED_CAPACITY) {
+      data[i++] = 0;
     }
   }
 
@@ -98,34 +106,34 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
     size_t i = 0;
     auto data = this->begin();
     for (auto v : values) {
-      data[i++]= v;
+      data[i++] = v;
     }
-    while (i < ELEMENTS) {
-      data[i++]= 0;
+    while (i < FIXED_CAPACITY) {
+      data[i++] = 0;
     }
   }
 
   typedef T value_type;
-  static constexpr size_t elements = ELEMENTS;
+  static constexpr size_t elements = FIXED_CAPACITY;
 
   void zero() noexcept {
     auto data = this->begin();
     for (size_t i = 0; i < this->capacity(); i++) {
-      data[i]= 0;
+      data[i] = 0;
     }
   }
 
   void fill(T v) noexcept {
     auto data = this->begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] = v;
     }
   }
 
   BaseNumArray &plus(T v) noexcept {
     auto data = this->begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      data[i]+= v;
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      data[i] += v;
     }
     return *this;
   }
@@ -133,16 +141,16 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray &operator<<(const T *source) {
     const T *src = core::Dereference::safe(source);
     auto data = this->begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      data[i]+= src[i];
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      data[i] += src[i];
     }
     return *this;
   }
 
   void operator>>(T *destination) {
     const T *dst = core::Dereference::safe(destination);
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      dst[i] += this->data(i);
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      dst[i] += this->data_(i);
     }
   }
 
@@ -151,8 +159,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   operator<<(const Array &source) noexcept {
     auto data = this->begin();
     auto o = source.begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      data[i]+= o[i];
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      data[i] += o[i];
     }
     return *this;
   }
@@ -163,10 +171,10 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
     auto data = this->begin();
     auto o = source.begin();
     for (i = 0; i < X::constSize(); i++) {
-      data[i]+= o[i];
+      data[i] += o[i];
     }
-    for (; i < ELEMENTS; i++) {
-      data[i]= 0;
+    for (; i < FIXED_CAPACITY; i++) {
+      data[i] = 0;
     }
     return *this;
   }
@@ -178,7 +186,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
     auto o = source.begin();
 
     for (size_t src = 0, dst = START; src <= SRC_ELEM; src++, dst++) {
-      data[dst]= o[src];
+      data[dst] = o[src];
     }
     return *this;
   }
@@ -188,7 +196,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray operator-() const noexcept {
     BaseNumArray r;
     auto data = this->begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       r[i] = -data[i];
     }
     return r;
@@ -198,8 +206,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   BaseNumArray &operator+=(const BaseNumArray &o) noexcept {
     auto data = this->begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      data[i]+= o[i];
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      data[i] += o[i];
     }
     return *this;
   }
@@ -209,8 +217,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
       requires SameSizeArray<Array> {
     auto data = this->begin();
     auto o = source.begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      data[i]+= o[i];
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      data[i] += o[i];
     }
     return *this;
   }
@@ -222,8 +230,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   }
 
   template <class Array>
-  requires BaseArrayTest<Array>::value
-  BaseNumArray operator+(const Array &o) const noexcept {
+  requires BaseArrayTest<Array>::value BaseNumArray
+  operator+(const Array &o) const noexcept {
     BaseNumArray r = *this;
     r += o;
     return r;
@@ -246,8 +254,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray &operator-=(const BaseNumArray &source) noexcept {
     auto data = this->begin();
     auto o = source.begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      data[i]-= o[i];
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      data[i] -= o[i];
     }
     return *this;
   }
@@ -259,8 +267,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   }
 
   template <class Array>
-  requires BaseArrayTest<Array>::value
-  BaseNumArray operator-(const Array &o) const noexcept {
+  requires BaseArrayTest<Array>::value BaseNumArray
+  operator-(const Array &o) const noexcept {
     BaseNumArray r = *this;
     r -= o;
     return r;
@@ -282,8 +290,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   BaseNumArray &operator*=(T v) noexcept {
     auto data = this->begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      data[i]*= v;
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      data[i] *= v;
     }
     return *this;
   }
@@ -291,8 +299,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray operator*(T v) const noexcept {
     BaseNumArray r;
     auto data = this->begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      r[i] = data[i]* v;
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      r[i] = data[i] * v;
     }
     return r;
   }
@@ -310,8 +318,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   BaseNumArray &operator/=(T v) noexcept {
     auto data = this->begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      data[i]/= v;
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      data[i] /= v;
     }
     return *this;
   }
@@ -319,8 +327,8 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   BaseNumArray operator/(T v) const noexcept {
     auto data = this->begin();
     BaseNumArray r;
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      r[i] = data[i]/ v;
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      r[i] = data[i] / v;
     }
     return r;
   }
@@ -338,13 +346,32 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   // Dot product
 
-  T dot(const BaseNumArray &other) const noexcept {
+  template <class Array>
+  requires ArrayCompatible<Array, T> T dot(const Array &other) const noexcept {
+    auto v1 = this->begin();
+    auto v2 = other.begin();
+
+    static constexpr bool v1Complex = org::simple::core::Complex<T>::value;
+    static constexpr bool v2Complex = org::simple::core::Complex<
+        typename BaseArrayTest<Array>::data_type>::value;
+
+    if constexpr (v1Complex) {
+      T sum = 0;
+      for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+        sum += std::conj(v1[i]) * v2[i];
+      }
+      return sum;
+    }
+    if constexpr (v2Complex) {
+      T sum = 0;
+      for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+        sum += v1[i] * v2[i].real();
+      }
+      return sum.real();
+    }
     T sum = 0;
-    auto data = this->begin();
-    auto o = other.begin();
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      sum +=
-          org::simple::core::Numbers::times_conj(this->data(i), o[i]);
+    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+      sum += v1[i] * v2[i];
     }
     return sum;
   }
@@ -353,11 +380,21 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
 
   typename org::simple::core::Complex<T>::real_type
   squared_absolute() const noexcept {
-    typename org::simple::core::Complex<T>::value_type sum = 0;
-    for (size_t i = 0; i < ELEMENTS; i++) {
-      sum += org::simple::core::Numbers::squared_absolute(this->data(i));
+    if constexpr (org::simple::core::Complex<T>::value) {
+      typename org::simple::core::Complex<T>::value_type sum = 0;
+      const T * p = this->begin();
+      for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+        sum += std::norm(p[i]);
+      }
+      return sum;
+    } else {
+      T sum = 0;
+      const T *p = this->begin();
+      for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+        sum += p[i] * p[i];
+      }
+      return sum;
     }
-    return sum;
   }
 
   template <typename Array>
@@ -366,15 +403,15 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
     BaseNumArray r;
     auto data = this->begin();
     auto o = source.begin();
-    r[0] = data[1]* o[2] - data[2]* o[1];
-    r[1] = data[2]* o[0] - data[0]* o[2];
-    r[2] = data[0]* o[1] - data[1]* o[0];
+    r[0] = data[1] * o[2] - data[2] * o[1];
+    r[1] = data[2] * o[0] - data[0] * o[2];
+    r[2] = data[0] * o[1] - data[1] * o[0];
     return r;
   }
 };
 
 template <typename T, size_t N>
-using NumArray = BaseNumArray<T, N, ArrayInline<T, N>>;
+using NumArray = BaseNumArray<T, ArrayInline<T, N>>;
 
 } // namespace org::simple::util
 
