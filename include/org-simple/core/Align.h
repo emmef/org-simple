@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <org-simple/core/Power2.h>
+#include <org-simple/core/Size.h>
 
 namespace org::simple::core {
 
@@ -102,6 +103,55 @@ template <typename T> struct Alignment {
 
   static constexpr size_t aligned(size_t offset) {
     return align_with_unchecked(offset, alignof(T));
+  }
+};
+
+template <typename T, size_t ALIGNAS> class AlignedAlloc {
+  static constexpr size_t ALIGN = Alignment<T>::get_valid(ALIGNAS);
+
+  T *alloc_;
+  T *data_;
+  size_t capacity_;
+
+  void disown() {
+    alloc_ = nullptr;
+    data_ = nullptr;
+    capacity_ = 0;
+  }
+
+public:
+  AlignedAlloc(size_t count) {
+    typedef typename SizeValue::Elements<sizeof(T)>::Valid Valid;
+    static constexpr size_t MAX_ALIGN = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+    if constexpr (ALIGN == 0) {
+      alloc_ = new T[Valid::value(count)];
+      data_ = alloc_;
+    } else if constexpr (ALIGN <= MAX_ALIGN) {
+      alloc_ = new T[Valid::value(count), ALIGN];
+      data_ = alloc_;
+    } else {
+      alloc_ = new T[Valid::sum(count, ALIGN - MAX_ALIGN), MAX_ALIGN];
+      size_t alloc_offs = alloc_ - nullptr;
+      size_t diff = align_with(alloc_offs, ALIGN) - alloc_offs;
+      data_ = alloc_ + diff;
+    }
+    capacity_ = Valid::value(count);
+  }
+
+  AlignedAlloc(AlignedAlloc &&source)
+      : alloc_(source.alloc_), data_(source.data_),
+        capacity_(source.capacity_) {
+    source.disown();
+  }
+
+  T *data() const noexcept { return data_; }
+  size_t capacity() const noexcept { return capacity_; }
+
+  ~AlignedAlloc() {
+    if (alloc_) {
+      delete[] alloc_;
+      disown();
+    }
   }
 };
 
