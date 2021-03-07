@@ -16,6 +16,14 @@ static constexpr size_t SIZE = 10;
 typedef ArrayInline<value, SIZE> Array10;
 typedef ArraySlice<value> Slice;
 
+class TestA {
+
+};
+
+class TestB : public TestA {
+
+};
+
 template <typename Array>
 void fillWithIndex(Array &array) {
   for (size_t i = 0; i < array.capacity(); i++) {
@@ -62,6 +70,19 @@ BOOST_AUTO_TEST_CASE(testArray10Size10) {
 BOOST_AUTO_TEST_CASE(testArray10COnstSize10) {
   BOOST_CHECK_EQUAL(10u, Array10::FIXED_CAPACITY);
 }
+
+BOOST_AUTO_TEST_CASE(testCompatibility) {
+  typedef ArraySlice<TestA*> ASlice;
+  typedef ArraySlice<TestB*> BSlice;
+  typedef BaseArrayTest<ASlice> ATest;
+  typedef BaseArrayTest<BSlice> BTest;
+
+  BOOST_CHECK_EQUAL(true, ATest::compatible<ATest::data_type>());
+  BOOST_CHECK_EQUAL(true, BTest::compatible<BTest::data_type>());
+  BOOST_CHECK_EQUAL(true, BTest::compatible<ATest::data_type>());
+  BOOST_CHECK_EQUAL(false, ATest::compatible<BTest::data_type>());
+}
+
 
 BOOST_AUTO_TEST_CASE(testArray10SetAndGetValues) {
   Array10 array;

@@ -48,7 +48,8 @@ public:
   static constexpr bool value = try_subst(static_cast<const T *>(nullptr));
 };
 
-template <class T, bool = BaseArrayTestHelper<T>::value> struct BaseArrayTest {
+template <class T, bool = BaseArrayTestHelper<T>::value> class BaseArrayTest {
+public:
   static constexpr size_t FIXED_CAPACITY = 0;
   static constexpr size_t ALIGNAS = 0;
   static constexpr bool value = false;
@@ -59,14 +60,16 @@ template <class T, bool = BaseArrayTestHelper<T>::value> struct BaseArrayTest {
   }
 };
 
-template <class T> struct BaseArrayTest<T, true> {
+template <class T> class BaseArrayTest<T, true> {
+
+public:
   static constexpr size_t FIXED_CAPACITY = T::FIXED_CAPACITY;
   static constexpr size_t ALIGNAS = T::ALIGNAS;
   static constexpr bool value = true;
   using data_type = typename T::data_type;
 
   template <typename Target> static constexpr bool compatible() {
-    return true; // std::is_assignable_v<data_type, Target>;
+    return std::is_nothrow_convertible_v<data_type , Target>;
   }
 };
 
