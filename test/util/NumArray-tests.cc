@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE(testNumArraySizeOverhead) {
 
 BOOST_AUTO_TEST_CASE(testNumArrayInitListExactSize) {
   Numa array {0,1,2,3,4,5,6,7,8,9};
-  for (size_t i = 0; i < array.size(); i++) {
+  for (size_t i = 0; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(i, array[i]);
   }
 }
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(testNumArrayInitListPartial) {
   for (; i <= 6; i++) {
     BOOST_CHECK_EQUAL(i, array[i]);
   }
-  for (; i < array.size(); i++) {
+  for (; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(0, array[i]);
   }
 }
@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(testNumArrayInitListPartial) {
 BOOST_AUTO_TEST_CASE(testNumArrayInitListLarger) {
   Numa array {0,1,2,3,4,5,6,7,8,9,10,11,12};
   size_t i = 0;
-  for (; i < array.size(); i++) {
+  for (; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(i, array[i]);
   }
 }
@@ -70,8 +70,8 @@ BOOST_AUTO_TEST_CASE(testNumArrayInitListLarger) {
 BOOST_AUTO_TEST_CASE(testNumArrayrangeConst) {
   NumaBig source {0,1,2,3,4,5,6,7,8,9};
   auto array = source.range_copy<3, 5>();
-  BOOST_CHECK_EQUAL(3, array.size());
-  for (size_t i = 0; i < array.size(); i++) {
+  BOOST_CHECK_EQUAL(3, array.capacity());
+  for (size_t i = 0; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(i + 3, array[i]);
   }
 }
@@ -79,31 +79,31 @@ BOOST_AUTO_TEST_CASE(testNumArrayrangeConst) {
 BOOST_AUTO_TEST_CASE(testNumArrayrangeVar) {
   Numa source {0,1,2,3,4,5,6,7,8,9};
   auto array = source.range_copy(3, 5);
-  BOOST_CHECK_EQUAL(3, array.size());
-  for (size_t i = 0; i < array.size(); i++) {
+  BOOST_CHECK_EQUAL(3, array.capacity());
+  for (size_t i = 0; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(i + 3, array[i]);
   }
 }
 
 
 BOOST_AUTO_TEST_CASE(testConstSize) {
-  BOOST_CHECK_EQUAL(SIZE, Numa::size());
+  BOOST_CHECK_EQUAL(SIZE, Numa::FIXED_CAPACITY);
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstSize) {
-  BOOST_CHECK_EQUAL(SIZE, Array10::size());
+  BOOST_CHECK_EQUAL(SIZE, Array10::FIXED_CAPACITY);
 }
 
 BOOST_AUTO_TEST_CASE(testSize) {
   Numa array;
-  BOOST_CHECK_EQUAL(SIZE, array.size());
+  BOOST_CHECK_EQUAL(SIZE, array.capacity());
 }
 
 BOOST_AUTO_TEST_CASE(testAdd) {
   NumaSmall array {0,1,2,3};
   auto sum = array + array;
 
-  for (size_t i = 0; i < array.size(); i++) {
+  for (size_t i = 0; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(i * 2, sum[i]);
   }
 }

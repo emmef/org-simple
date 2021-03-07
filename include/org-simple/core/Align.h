@@ -88,7 +88,7 @@ template <typename T> struct Alignment {
    * Returns if the specified alignment is ideal for an array of elements of the
    * type parameter \c T.
    * This means that the specified alignment, a positive power of two, is equal
-   * to or bigger than the alignment of \c T and smaller than the size of \c,
+   * to or bigger than the alignment of \c T and smaller than the size of \c T,
    * which is always a multiple of the alignment of \c T. This way, the first
    * element will be aligned correctly as well as all consecutive elements in
    * the array.

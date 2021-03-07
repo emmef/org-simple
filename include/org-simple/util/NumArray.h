@@ -44,36 +44,35 @@ concept NumberIsR2LAssignable = (is_complex_v<L> && is_number<R>) ||
 
 template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   static_assert(org::simple::core::is_number<T>);
-  static_assert(IsBaseArrayConstSize<S>);
+  static_assert(BaseArrayTest<S>::value);
+  static_assert(BaseArrayTest<S>::FIXED_CAPACITY != 0);
 
   template <typename X>
   static constexpr bool SameSizeArray =
-      IsBaseArrayConstSize<T> && X::size() == ELEMENTS;
+      BaseArrayTest<X>::FIXED_CAPACITY == ELEMENTS;
 
   template <typename X>
   static constexpr bool NotSmallerArray =
-      IsBaseArrayConstSize<T> && X::size() >= ELEMENTS;
+      BaseArrayTest<X>::FIXED_CAPACITY >= ELEMENTS;
 
   template <typename X>
-  static constexpr bool BiggerArray = IsBaseArrayConstSize<T> &&
-                                      X::size() > ELEMENTS;
+  static constexpr bool BiggerArray = BaseArrayTest<X>::FIXED_CAPACITY > ELEMENTS;
 
   template <typename X>
   static constexpr bool NotBiggerArray =
-      IsBaseArrayConstSize<T> && X::size() <= ELEMENTS;
+      BaseArrayTest<X>::FIXED_CAPACITY <= ELEMENTS;
 
   template <typename X>
-  static constexpr bool SmallerArray = IsBaseArrayConstSize<T> &&
-                                       X::size() < ELEMENTS;
+  static constexpr bool SmallerArray =
+      BaseArrayTest<X>::FIXED_CAPACITY < ELEMENTS;
 
   template <size_t START, size_t SRC_ELEM>
   static constexpr bool
-      ValidForGraftArray = IsBaseArrayConstSize<T> &&
-                           (START + SRC_ELEM <= ELEMENTS);
+      ValidForGraftArray = (START + SRC_ELEM <= ELEMENTS);
 
   template <typename X>
   static constexpr bool ValidForCrossProductArray =
-      IsBaseArrayConstSize<T> &&ELEMENTS == X::size() == 3;
+      ELEMENTS == BaseArrayTest<X>::FIXED_CAPACITY && ELEMENTS == 3;
 
   BaseNumArray() = default;
   BaseNumArray(const BaseNumArray &) = default;
@@ -108,7 +107,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   static constexpr size_t elements = ELEMENTS;
 
   void zero() noexcept {
-    for (size_t i = 0; i < this->size(); i++) {
+    for (size_t i = 0; i < this->capacity(); i++) {
       this->data(i) = 0;
     }
   }
@@ -206,7 +205,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   }
 
   template <class Array>
-  requires IsBaseArray<Array>
+  requires BaseArrayTest<Array>::value
   BaseNumArray operator+(const Array &o) const noexcept {
     BaseNumArray r = *this;
     r += o;
@@ -241,7 +240,7 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   }
 
   template <class Array>
-  requires IsBaseArray<Array>
+  requires BaseArrayTest<Array>::value
   BaseNumArray operator-(const Array &o) const noexcept {
     BaseNumArray r = *this;
     r -= o;

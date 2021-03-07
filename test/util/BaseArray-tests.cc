@@ -12,96 +12,63 @@ using namespace org::simple::util;
 namespace {
 
 typedef double value;
-constexpr size_t SIZE = 10;
+static constexpr size_t SIZE = 10;
 typedef ArrayInline<value, SIZE> Array10;
 typedef ArraySlice<value> Slice;
 
 template <typename Array>
 void fillWithIndex(Array &array) {
-  for (size_t i = 0; i < array.size(); i++) {
-    array[i] = static_cast<typename AboutBaseArray<Array>::value_type>(i);
+  for (size_t i = 0; i < array.capacity(); i++) {
+    array[i] = static_cast<typename Array::data_type>(i);
   }
 }
 
 template <typename Array>
 void fillWithZero(Array &array) {
-  for (size_t i = 0; i < array.size(); i++) {
-    array[i] = static_cast<typename AboutBaseArray<Array>::value_type>(0);
+  for (size_t i = 0; i < array.capacity(); i++) {
+    array[i] = static_cast<typename Array::data_type>(0);
   }
 }
 
 template <typename Array>
 void fillWithOne(Array &array) {
-  for (size_t i = 0; i < array.size(); i++) {
-    array[i] = static_cast<typename AboutBaseArray<Array>::value_type>(1);
+  for (size_t i = 0; i < array.capacity(); i++) {
+    array[i] = static_cast<typename Array::data_type>(1);
   }
 }
 
 template <typename Array>
 void fillWithHundred(Array &array) {
-  for (size_t i = 0; i < array.size(); i++) {
-    array[i] = static_cast<typename AboutBaseArray<Array>::value_type>(100);
+  for (size_t i = 0; i < array.capacity(); i++) {
+    array[i] = static_cast<typename Array::data_type>(100);
   }
 }
 struct A {};
-
-template <typename Array,
-    bool hasValueType = helper::BaseArrayHasValueType<Array>::value>
-class ValueType {
-  class Dummy {};
-
-public:
-  typedef void type;
-};
-
-template <typename Array> class ValueType<Array, true> {
-public:
-  typedef typename Array::value_type type;
-};
-
 
 } // namespace
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_BaseArray)
 
 
-BOOST_AUTO_TEST_CASE(testArray10HasValueType) {
-  typedef helper::BaseArrayHasValueType<Array10> base;
-//  typedef ValueType<Array10> value;
-  typedef AboutBaseArray<Array10> About;
-//  std::cout << "Array::value_type=" << typeid(value::type).name() << std::endl;
-//  std::cout << "AboutBaseArray<Array10>::value_type=" << typeid(About::value_type).name() << std::endl;
-//  std::cout << "helper::BaseArrayDeductAboutBase<Array10>::About::value_type=" << typeid(helper::BaseArrayDeductAboutBase<Array10>::About::value_type).name() << std::endl;
-
-  BOOST_CHECK(About::isAssignable<double>);
-  BOOST_CHECK(About::isAssignable<double>);
-  BOOST_CHECK((std::is_convertible_v<double, double>));
-  BOOST_CHECK(base::value);
-}
-
 BOOST_AUTO_TEST_CASE(testArray10IsBaseArray) {
-  BOOST_CHECK((AboutBaseArray<Array10>::isBaseArray));
+  BOOST_CHECK((BaseArrayTest<Array10>::value));
 }
 
 BOOST_AUTO_TEST_CASE(testArray10Size10) {
   Array10 array10;
-  BOOST_CHECK_EQUAL(10u, array10.size());
+  BOOST_CHECK_EQUAL(10u, array10.capacity());
 }
 
 BOOST_AUTO_TEST_CASE(testArray10COnstSize10) {
-  BOOST_CHECK_EQUAL(10u, Array10::size());
-}
-
-BOOST_AUTO_TEST_CASE(testArray10HasConstSizeAndAccess) {
-  BOOST_CHECK((AboutBaseArray<Array10>::isBaseArrayConstSize));
+  BOOST_CHECK_EQUAL(10u, Array10::FIXED_CAPACITY);
 }
 
 BOOST_AUTO_TEST_CASE(testArray10SetAndGetValues) {
   Array10 array;
-  for (size_t i = 0; i < array.size(); i++) {
+  for (size_t i = 0; i < array.capacity(); i++) {
     array[i] = i;
   }
-  for (size_t i = 0; i < array.size(); i++) {
+  for (size_t i = 0; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t { i }, array[i]);
   }
 }
@@ -109,7 +76,7 @@ BOOST_AUTO_TEST_CASE(testArray10SetAndGetValues) {
 BOOST_AUTO_TEST_CASE(testFillWithIndexes) {
   Array10 array;
   fillWithIndex<Array10>(array);
-  for (size_t i = 0; i < array.size(); i++) {
+  for (size_t i = 0; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t { i }, array[i]);
   }
 }
@@ -118,7 +85,7 @@ BOOST_AUTO_TEST_CASE(testFillWithOne) {
   Array10 array;
   fillWithZero<Array10>(array);
   fillWithOne<Array10>(array);
-  for (size_t i = 0; i < array.size(); i++) {
+  for (size_t i = 0; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t { 1 }, array[i]);
   }
 }
@@ -127,18 +94,8 @@ BOOST_AUTO_TEST_CASE(testFillWithZero) {
   Array10 array;
   fillWithOne<Array10>(array);
   fillWithZero<Array10>(array);
-  for (size_t i = 0; i < array.size(); i++) {
+  for (size_t i = 0; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t { 0 }, array[i]);
-  }
-}
-
-BOOST_AUTO_TEST_CASE(testArray10SetAndGetValuesViaWrapper) {
-  Array10 array10;
-  fillWithIndex<Array10>(array10);
-  BaseArrayWrapper<Array10> wrapper(array10);
-  BOOST_CHECK_EQUAL(Array10::size(), wrapper.size());
-  for (size_t i = 0; i < wrapper.size(); i++) {
-    BOOST_CHECK_EQUAL(size_t { i }, wrapper[i]);
   }
 }
 
@@ -149,7 +106,7 @@ BOOST_AUTO_TEST_CASE(testArray10TestCopy) {
   fillWithZero<Array10>(destination);
   BOOST_CHECK(destination.copy(0,source));
 
-  for (size_t i = 0; i < destination.size(); i++) {
+  for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t { i }, destination[i]);
   }
 }
@@ -167,10 +124,10 @@ BOOST_AUTO_TEST_CASE(testArray10TestCopyArray5At0) {
   fillWithIndex<ArrayInline<double, 5>>(source);
   BOOST_CHECK(destination.copy(0, source));
   size_t i = 0;
-  for (; i < source.size(); i++) {
+  for (; i < source.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t { i }, destination[i]);
   }
-  for (; i < destination.size(); i++) {
+  for (; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t { 0 }, destination[i]);
   }
 }
@@ -182,10 +139,10 @@ BOOST_AUTO_TEST_CASE(testArray10TestStaticCopyArray5At0) {
   fillWithIndex<ArrayInline<double, 5>>(source);
   destination.copy<0>(source);
   size_t i = 0;
-  for (; i < source.size(); i++) {
+  for (; i < source.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t { i }, destination[i]);
   }
-  for (; i < destination.size(); i++) {
+  for (; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t { 0 }, destination[i]);
   }
 }
@@ -200,7 +157,7 @@ BOOST_AUTO_TEST_CASE(testArray10TestCopyArray5At5) {
   for (; i < 5; i++) {
     BOOST_CHECK_EQUAL(size_t { 0 }, destination[i]);
   }
-  for (size_t value = 0; i < destination.size(); i++, value++) {
+  for (size_t value = 0; i < destination.capacity(); i++, value++) {
     BOOST_CHECK_EQUAL(value, destination[i]);
   }
 }
@@ -215,7 +172,7 @@ BOOST_AUTO_TEST_CASE(testArray10TestStaticCopyArray5At5) {
   for (; i < 5; i++) {
     BOOST_CHECK_EQUAL(size_t { 0 }, destination[i]);
   }
-  for (size_t value = 0; i < destination.size(); i++, value++) {
+  for (size_t value = 0; i < destination.capacity(); i++, value++) {
     BOOST_CHECK_EQUAL(value, destination[i]);
   }
 }
@@ -239,7 +196,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyRangeFailEndIsSizeMustFail) {
   Array10 destination;
   fillWithZero<Array10>(destination);
   Array10 source;
-  BOOST_CHECK(!destination.copy_range(0, source, 4, source.size()));
+  BOOST_CHECK(!destination.copy_range(0, source, 4, source.capacity()));
 }
 
 BOOST_AUTO_TEST_CASE(testArray10CopyRange4to6at0) {
@@ -249,7 +206,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyRange4to6at0) {
   fillWithIndex<Array10>(source);
   BOOST_CHECK(destination.copy_range(0, source, 4, 6));
   double expected[] = {4,5,6,0,0,0,0,0,0,0};
-  for (size_t i = 0; i < destination.size(); i++) {
+  for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
   }
 }
@@ -261,7 +218,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyStaticRange4to6at0) {
   fillWithIndex<Array10>(source);
   destination.copy_range<0,4,6>(source);
   double expected[] = {4,5,6,0,0,0,0,0,0,0};
-  for (size_t i = 0; i < destination.size(); i++) {
+  for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
   }
 }
@@ -273,7 +230,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyRange4to6at3) {
   fillWithIndex<Array10>(source);
   BOOST_CHECK(destination.copy_range(3, source, 4, 6));
   double expected[] = {0,0,0,4,5,6,0,0,0,0};
-  for (size_t i = 0; i < destination.size(); i++) {
+  for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
   }
 }
@@ -285,7 +242,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyStaticRange4to6at3) {
   fillWithIndex<Array10>(source);
   destination.copy_range<3, 4, 6>(source);
   double expected[] = {0,0,0,4,5,6,0,0,0,0};
-  for (size_t i = 0; i < destination.size(); i++) {
+  for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
   }
 }
@@ -297,7 +254,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyRange4to6at7) {
   fillWithIndex<Array10>(source);
   BOOST_CHECK(destination.copy_range(7, source, 4, 6));
   double expected[] = {0,0,0,0,0,0,0,4,5,6};
-  for (size_t i = 0; i < destination.size(); i++) {
+  for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
   }
 }
@@ -309,7 +266,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyStaticRange4to6at7) {
   fillWithIndex<Array10>(source);
   destination.copy_range<7, 4, 6>(source);
   double expected[] = {0,0,0,0,0,0,0,4,5,6};
-  for (size_t i = 0; i < destination.size(); i++) {
+  for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
   }
 }
@@ -318,7 +275,7 @@ BOOST_AUTO_TEST_CASE(testArrayRangeCopy4To6) {
   Array10 source;
   fillWithIndex<Array10>(source);
   auto slice = source.range_copy(4, 6);
-  size_t size = slice.size();
+  size_t size = slice.capacity();
   BOOST_CHECK_EQUAL(3, size);
   for (size_t i = 0, x = 4; i < size; i++, x++) {
     BOOST_CHECK_EQUAL(x, slice[i]);
@@ -329,7 +286,7 @@ BOOST_AUTO_TEST_CASE(testArrayStaticRangeCopy4To6) {
   Array10 source;
   fillWithIndex<Array10>(source);
   auto slice = source.range_copy<4, 6>();
-  size_t size = slice.size();
+  size_t size = slice.capacity();
   BOOST_CHECK_EQUAL(3, size);
   for (size_t i = 0, x = 4; i < size; i++, x++) {
     BOOST_CHECK_EQUAL(x, slice[i]);
@@ -337,7 +294,39 @@ BOOST_AUTO_TEST_CASE(testArrayStaticRangeCopy4To6) {
 }
 
 BOOST_AUTO_TEST_CASE(testSliceIsBaseArray) {
-  BOOST_CHECK((AboutBaseArray<Slice>::isBaseArray));
+  BOOST_CHECK((BaseArrayTest<Slice>::value));
+}
+
+
+template <typename T>
+static constexpr size_t effective_alignment(size_t A) {
+  return org::simple::core::Alignment<T>::is_valid(A) ? A : 0;
+}
+
+BOOST_AUTO_TEST_CASE(testTestArrayBase) {
+  using Fix = ArrayInline<int, 4, 7>;
+  BOOST_CHECK_EQUAL(true, BaseArrayTest<Fix>::value);
+  BOOST_CHECK_EQUAL(true, BaseArrayTest<Fix::Super>::value);
+  BOOST_CHECK_EQUAL(false, BaseArrayTest<A>::value);
+  BOOST_CHECK_EQUAL( sizeof(int) * 4, sizeof(Fix));
+}
+
+BOOST_AUTO_TEST_CASE(testArrayBaseCopy) {
+  using Fix4 = ArrayInline<int, 4, 0>;
+  using Fix42 = ArrayInline<int, 4, 0>;
+
+  Fix4 fix4;
+  Fix42  fix42;
+
+  fix4[0] = 1;
+  fix4[1] = 3;
+  fix4[2] = 5;
+  fix4[3] = 7;
+  fix42.assign(fix4);
+  BOOST_CHECK_EQUAL(fix4[0], fix42[0]);
+  BOOST_CHECK_EQUAL(fix4[1], fix42[1]);
+  BOOST_CHECK_EQUAL(fix4[2], fix42[2]);
+  BOOST_CHECK_EQUAL(fix4[3], fix42[3]);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

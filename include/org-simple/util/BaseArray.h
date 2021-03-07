@@ -23,263 +23,282 @@
 
 #include <cstddef>
 #include <org-simple/core/Align.h>
-#include <org-simple/core/ClassTraits.h>
 #include <org-simple/core/Index.h>
 #include <org-simple/core/Size.h>
 #include <stdexcept>
 
 namespace org::simple::util {
 
-template <typename Array> class AboutBaseArray;
-template <typename T, class S> class BaseArray;
-template <typename T, class S> class BaseArrayConstSize;
-template <typename T, size_t S, size_t A = 0> class ArrayInline;
+template <typename T, size_t S, size_t A, typename C> class BaseArray;
 template <typename T> class ArraySlice;
 template <typename T> class ArrayHeap;
 
-namespace helper {
+template <class T> class BaseArrayTestHelper {
 
-ORG_SIMPLE_ABOUT_CLASS_FUNCTION(array, size);
-
-
-template <typename Array, typename Value> class AboutBaseArrayBase;
-
-template <typename T> class BaseArrayHasValueType {
-
-  template <typename A>
-  static constexpr bool
-  hasValueTypeSubst(std::add_pointer_t<typename A::value_type>()) {
+  template <typename T1, size_t S1, size_t A1, typename C1>
+  static constexpr bool try_subst(const BaseArray<T1, S1, A1, C1> *) {
     return true;
   }
 
-  template <typename A> static constexpr bool hasValueTypeSubst(...) {
+  template <typename... A> static constexpr bool try_subst(...) {
     return false;
   }
 
-  static constexpr bool hasValueTypeTestWithValue(size_t v) {
-    return hasValueTypeSubst<T>(v);
+public:
+  static constexpr bool value = try_subst(static_cast<const T *>(nullptr));
+};
+
+template <class T, bool = BaseArrayTestHelper<T>::value> struct BaseArrayTest {
+  static constexpr size_t FIXED_CAPACITY = 0;
+  static constexpr size_t ALIGNAS = 0;
+  static constexpr bool value = false;
+  using data_type = void;
+
+  template <typename Target> static constexpr bool compatible() {
+    return false;
   }
-
-public:
-  static constexpr bool value = hasValueTypeSubst<T>(nullptr);
 };
 
-template <typename Array,
-          bool hasValueType = BaseArrayHasValueType<Array>::value>
-class BaseArrayDeductAboutBase {
-  class Dummy {};
+template <class T> struct BaseArrayTest<T, true> {
+  static constexpr size_t FIXED_CAPACITY = T::FIXED_CAPACITY;
+  static constexpr size_t ALIGNAS = T::ALIGNAS;
+  static constexpr bool value = true;
+  using data_type = typename T::data_type;
 
-public:
-  typedef AboutBaseArrayBase<Dummy, void> About;
+  template <typename Target> static constexpr bool compatible() {
+    return true; // std::is_assignable_v<data_type, Target>;
+  }
 };
 
-template <typename Array> class BaseArrayDeductAboutBase<Array, true> {
+template <class Array, typename T>
+concept ArrayCompatible = BaseArrayTest<Array>::template compatible<T>();
+
+template <class Array, typename T, size_t FIXED_CAPACITY>
+concept ArrayFixedCompatible =
+    BaseArrayTest<Array>::template compatible<T>() &&
+    BaseArrayTest<Array>::FIXED_CAPACITY != 0 && FIXED_CAPACITY != 0;
+
+
+/**
+ * ArrayBase implements basic array behavior that a subclass can inherit. To do
+ * that, the subclass must pass a delegate class as the last parameter \c C and
+ * implement the following three methods: <table>
+ *   <tr><td><code>array_capacity()</code></td><td>Returns the current capacity
+ * of the array and is ignored if #FIXED_CAPACITY is non-zero. The method must
+ * be const and nothrow.</td></tr>
+ *   <tr><td><code>array_data()</code></td><td>Returns the location of the data
+ * with a const qualifier. The method must be declared const noexcept.</td></tr>
+ *   <tr><td><code>array_data()</code></td><td>Returns the location of the data
+ * without a const qualifier. The method must be declared noexcept.</td></tr>
+ * </table>
+ * @tparam T The element type
+ * @tparam S The fixed capacity or zero if the capacity is not fixed.
+ * @tparam A The alignment value or zero if no specific alignment is required.
+ * coincide with the data of another array, \c false otherwise.
+ * @tparam C The delegate class that needs to implement the
+ */
+template <typename T, size_t S, size_t A, typename C> class BaseArray {
+  static_assert(A == 0 || org::simple::core::Alignment<T>::is_valid(A));
+  static_assert(
+      S == 0 ||
+      org::simple::core::SizeValue::Elements<sizeof(T)>::IsValid::value(S));
+
 public:
-  typedef AboutBaseArrayBase<Array, typename Array::value_type> About;
-};
+  static constexpr size_t ALIGNAS =
+      org::simple::core::Alignment<T>::get_valid(A);
+  static constexpr size_t FIXED_CAPACITY = S;
 
-template <typename Array> struct BaseArrayStaticWrapper {
-  typedef AboutBaseArray<Array> About;
+  using data_type = T;
+  using delegate_type = C;
+  typedef org::simple::core::SizeValue::Elements<sizeof(T)> Size;
 
-  static const typename About::value_type &at(const Array &array,
-                                              size_t index) {
-    if constexpr (About::hasUnsafeData) {
-      return array.hasUnsafeData()[index];
+  // raw data access
+
+  inline const T *begin() const noexcept {
+    const T *ptr = static_cast<const delegate_type *>(this)->array_data();
+    if constexpr (ALIGNAS != 0) {
+      return std::assume_aligned<ALIGNAS, const T>(ptr);
     } else {
-      return array[index];
+      return ptr;
     }
   }
-};
 
-template <typename Array, typename Value> class AboutBaseArrayBase {
-
-  // Checking for unsafeData() member, returning T*.
-
-  template <typename X>
-  static constexpr bool
-  hasUnsafeDataSubst(decltype(std::declval<X>().hasUnsafeData())) {
-    return true;
-  }
-  template <typename X> static constexpr bool hasUnsafeDataSubst(...) {
-    return false;
-  }
-  static constexpr bool hasUnsafeDataSubstWithValue(Value *v) {
-    return hasUnsafeDataSubst<Array>(v);
-  }
-
-  // Checking for operator[](size_t) returning a Value&
-
-  template <typename A>
-  static constexpr bool hasArrayOperatorSubst(
-      std::add_pointer_t<decltype(std::declval<A>().operator[](0))>) {
-    return true;
-  }
-
-  template <typename A> static constexpr bool hasArrayOperatorSubst(void *) {
-    return false;
-  }
-  static constexpr bool hasArrayOperatorTestWithValue(Value *v) {
-    return hasArrayOperatorSubst<Array>(v);
-  }
-
-public:
-  typedef Value value_type;
-  typedef about_array_function_size<Array, size_t> AboutSize;
-  static constexpr bool hasUnsafeData =
-      hasUnsafeDataSubstWithValue(static_cast<Value *>(0));
-  static constexpr bool hasArrayOperator =
-      hasArrayOperatorTestWithValue(static_cast<Value *>(0));
-
-  static constexpr bool size = AboutSize ::exists;
-  static constexpr bool constSize = AboutSize::is_constexpr;
-};
-
-} // namespace helper
-
-template <typename Array>
-class AboutBaseArray : public helper::BaseArrayDeductAboutBase<Array> {
-  using Super = typename helper::BaseArrayDeductAboutBase<Array>;
-
-public:
-  typedef typename Super::About::value_type value_type;
-  static constexpr bool hasUnsafeData = Super::About::hasUnsafeData;
-  static constexpr bool hasArrayOperator = Super::About::hasArrayOperator;
-  static constexpr bool size = Super::About::size;
-  static constexpr bool constSize = Super::About::constSize;
-
-  static constexpr bool isBaseArray =
-      (hasUnsafeData || hasArrayOperator) && size;
-  static constexpr bool isBaseArrayConstSize =
-      (hasUnsafeData || hasArrayOperator) && constSize;
-
-  template <typename TargetType>
-  static constexpr bool isAssignable = std::is_convertible_v<TargetType, value_type>;
-
-  template <typename TargetType>
-  static constexpr bool isSourceArray =
-      isBaseArray && isAssignable<TargetType>;
-  template <typename TargetType>
-  static constexpr bool isSourceArrayConstSize =
-      isBaseArrayConstSize &&isAssignable<TargetType>;
-};
-
-template <typename Array>
-concept IsBaseArray = AboutBaseArray<Array>::isBaseArray;
-template <typename Array>
-concept IsBaseArrayConstSize = AboutBaseArray<Array>::isBaseArrayConstSize;
-
-template <typename Array, typename T>
-concept IsSourceArray = AboutBaseArray<Array>::template isSourceArray<T>;
-template <typename Array, typename T>
-concept IsSourceArrayConstSize =
-    AboutBaseArray<Array>::template isBaseArrayConstSize<T>;
-
-template <typename Array,
-          typename Value = typename AboutBaseArray<Array>::value_type,
-          bool hasConstSize = AboutBaseArray<Array>::isBaseArrayConstSize>
-class BaseArrayWrapper;
-
-template <typename Array, typename Value>
-class BaseArrayWrapper<Array, Value, true>
-    : public helper::BaseArrayStaticWrapper<Array> {
-  const Array &array_;
-
-public:
-  BaseArrayWrapper(const Array &array) : array_(array){};
-  typedef typename helper::BaseArrayStaticWrapper<Array>::About About;
-  using helper::BaseArrayStaticWrapper<Array>::at;
-
-  const Value &operator[](size_t index) { return at(array_, index); }
-  static constexpr size_t size() { return Array::size(); }
-};
-
-template <typename Array, typename Value>
-class BaseArrayWrapper<Array, Value, false>
-    : public helper::BaseArrayStaticWrapper<Array> {
-  const Array &array_;
-
-public:
-  BaseArrayWrapper(const Array &array) : array_(array){};
-  using helper::BaseArrayStaticWrapper<Array>::at;
-
-  const Value &operator[](size_t index) { return at(array_, index); }
-  size_t size() const { return array_.size(); }
-};
-
-template <typename T, class S> class BaseArray {
-protected:
-  T *data() noexcept { return static_cast<S *>(this)->virtualData(); }
-  T &data(size_t index) noexcept { return data()[index]; }
-  const T &data(size_t index) const noexcept { return unsafeData()[index]; }
-  size_t checked_index(size_t index) const {
-    if (index < size()) {
-      return index;
+  T *begin() noexcept {
+    T *ptr = static_cast<delegate_type *>(this)->array_data();
+    if constexpr (ALIGNAS != 0) {
+      return std::assume_aligned<ALIGNAS, T>(ptr);
     }
-    throw std::out_of_range("BaseArray.checked_index(index)");
+    return ptr;
+  }
+  const T *end() const noexcept {
+    if constexpr (ALIGNAS != 0 && FIXED_CAPACITY != 0 &&
+                  (FIXED_CAPACITY % ALIGNAS == 0)) {
+      return std::assume_aligned<ALIGNAS, const T>(begin() + FIXED_CAPACITY);
+    }
+    return begin() + capacity();
+  }
+  T *end() noexcept {
+    if constexpr (ALIGNAS != 0 && FIXED_CAPACITY != 0 &&
+                  (FIXED_CAPACITY % ALIGNAS == 0)) {
+      return std::assume_aligned<ALIGNAS, T>(begin() + FIXED_CAPACITY);
+    }
+    return begin() + capacity();
   }
 
-public:
-  typedef T value_type;
-  const T *unsafeData() const noexcept {
-    return static_cast<const S *>(this)->virtualConstData();
+  // capacity
+
+  size_t capacity() const noexcept {
+    if constexpr (FIXED_CAPACITY != 0) {
+      return FIXED_CAPACITY;
+    } else {
+      return static_cast<const delegate_type *>(this)->array_capacity();
+    }
   }
-  typedef ::org::simple::core::SizeValue::Elements<sizeof(T)> SizeMetric;
-  size_t size() const noexcept {
-    return static_cast<const S *>(this)->virtualSize();
+
+  bool is_valid_calacity(size_t capacity) const {
+    return Size::IsValid::value(capacity);
   }
-  // Unchecked non-const access to element
-  T &operator[](size_t index) noexcept { return data(index); }
-  // Unchecked const access to element
-  const T &operator[](size_t index) const noexcept {
-    return data(index);
+
+  // Raw element access
+
+  const T &data(size_t offset) const noexcept { return begin()[offset]; }
+  const T &operator[](size_t offset) const noexcept { return data(offset); }
+
+  T &data(size_t offset) noexcept { return begin()[offset]; }
+  T &operator[](size_t offset) noexcept { return data(offset); }
+
+  // Offset-checked element access
+
+  const T &at(size_t offset) const {
+    if constexpr (FIXED_CAPACITY != 0) {
+      return begin()[org::simple::core::Index::safe(offset, FIXED_CAPACITY)];
+    } else {
+      return begin()[org::simple::core::Index::safe(offset, capacity())];
+    }
   }
-  // Checked non-const access to element
-  T &at(size_t index) noexcept { return data(checked_index(index)); }
-  // Checked const access to element
-  const T &at(size_t index) const noexcept {
-    return data(checked_index(index));
+  T &at(size_t offset) {
+    if constexpr (FIXED_CAPACITY != 0) {
+      return begin()[org::simple::core::Index::safe(offset, FIXED_CAPACITY)];
+    } else {
+      return begin()[org::simple::core::Index::safe(offset, capacity())];
+    }
+  }
+
+  /**
+   * Copies all the elements from \c source to this array if they both have the
+   * same capacity and returns \c true if that is the case. If a difference in
+   * capacity can be established compile-time, compilation will fail.
+   * @tparam Array The source array type
+   * @param source The source array
+   * @return \c true if copy was successful, \c false otherwise.
+   */
+  template <class Array>
+  requires ArrayCompatible<Array, T> bool assign(const Array &source) noexcept {
+    if constexpr (FIXED_CAPACITY != 0) {
+      if constexpr (Array::FIXED_CAPACITY != 0) {
+        static_assert(FIXED_CAPACITY == Array::FIXED_CAPACITY);
+      } else if (FIXED_CAPACITY != source.capacity()) {
+        return false;
+      }
+    } else if constexpr (Array::FIXED_CAPACITY != 0) {
+      if (capacity() != Array::FIXED_CAPACITY) {
+        return false;
+      }
+    } else {
+      if (capacity() != source.capacity()) {
+        return false;
+      }
+      T *__restrict destination = begin();
+      const T *__restrict src = source.begin();
+      for (size_t i = 0; i < capacity(); i++) {
+        destination[i] = src[i];
+      }
+      return true;
+    }
+    const size_t MOVES =
+        FIXED_CAPACITY != 0 ? FIXED_CAPACITY : Array::FIXED_CAPACITY;
+    T *__restrict to = begin();
+    const T *__restrict from = source.begin();
+    for (size_t i = 0; i < MOVES; i++) {
+      to[i] = from[i];
+    }
+    return true;
   }
 
   /**
    * Copies the array \c source to position \c dest and returns \c true if that
    * was successful. Fails if \c source too large or the combination of \c dest
-   * and the size of \c would exceed this array.
+   * and the capacity of \c would exceed this array.
    * @tparam Array The array type.
    * @param dest The destination (offset) for the first element of the source.
-   * @param source The source.array
+   * @param source The source.array.
    * @return \c true if copying was successful, \c false otherwise.
    */
-  template <typename Array>
-  requires IsSourceArray<Array, T> bool copy(size_t dest, const Array &source) {
-    BaseArrayWrapper<Array, T> wrapper(source);
-    if (dest >= this->size() || this->size() - dest < wrapper.size()) {
+  template <class Array>
+  requires ArrayCompatible<Array, T> bool copy(size_t dest,
+                                               const Array &source) {
+    if (dest >= capacity() || this->capacity() - dest < source.capacity()) {
       return false;
     }
-    const size_t end = dest + source.size();
+    T *__restrict to = begin();
+    const size_t end = dest + source.capacity();
+    const T *__restrict wrapper = source.begin();
     for (size_t src = 0, dst = dest; dst < end; src++, dst++) {
-      data(dst) = wrapper[src];
+      to[dst] = wrapper[src];
     }
     return true;
   }
 
   /**
-   * Moves the array \c source to position \c dest and returns \c true if that
-   * was successful. Fails if \c source too large or the combination of \c dest
-   * and the size of \c would exceed this array.
+   * Copies the array \c source to position \c DEST. Compilation fails if \c
+   * source too large or the combination of \c DEST and the capacity of \c
+   * source would exceed this array
+   * @tparam Array The array type.
+   * @tparam DEST The destination (offset) for the first element of the source.
+   * @param source The source.array.
+   * @return \c true if copying was successful, \c false otherwise.
+   */
+  template <size_t DEST, class Array>
+  requires ArrayFixedCompatible<Array, T, FIXED_CAPACITY> void
+  copy(const Array &source) {
+    static_assert(DEST < FIXED_CAPACITY &&
+                  FIXED_CAPACITY - DEST >= Array::FIXED_CAPACITY);
+    T *__restrict to = begin();
+    const size_t end = DEST + Array::FIXED_CAPACITY;
+    const T *__restrict from = source.begin();
+    for (size_t src = 0, dst = DEST; dst < end; src++, dst++) {
+      to[dst] = from[src];
+    }
+  }
+
+  /**
+   * Copies the the inclusive range \c start to \end from array \c source to
+   * position \c dest and returns \c true if that was successful. Fails if \c
+   * end is not smaller than the capacity of \c source, if \c start is larger than
+   * end or if the combination of \c dest, \c start and the capacity of the range
+   * would exceed this array.
    * @tparam Array The array type.
    * @param dest The destination (offset) for the first element of the source.
-   * @param source The source.array
-   * @return \c true if moving was successful, \c false otherwise.
+   * @param source The source array.
+   * @param start The starting element to copy from the source array.
+   * @param end The last element to copy from the source array.
+   * @return \c true if copying was successful, \c false otherwise.
    */
   template <typename Array>
-  requires IsBaseArray<Array> bool move(size_t dest, Array &source) {
-    BaseArrayWrapper<Array, T> wrapper(source);
-    if (dest >= this->size() || this->size() - dest < wrapper.size()) {
+  requires ArrayCompatible<Array, T> bool
+  copy_range(size_t dest, const Array &source, size_t start, size_t end) {
+    if (end >= source.capacity() || end < start || dest >= capacity()) {
       return false;
     }
-    const size_t end = dest + source.size();
-    for (size_t src = 0, dst = dest; dst < end; src++, dst++) {
-      data(dst) = std::move(wrapper[src]);
+    const size_t last = dest + (end - start);
+    if (last >= capacity()) {
+      return false;
+    }
+    T *__restrict to = begin();
+    const T *__restrict from = source.begin();
+
+    for (size_t src = start, dst = dest; dst <= last; src++, dst++) {
+      to[dst] = from[src];
     }
     return true;
   }
@@ -287,61 +306,29 @@ public:
   /**
    * Copies the the inclusive range \c start to \end from array \c source to
    * position \c dest and returns \c true if that was successful. Fails if \c
-   * end is not smaller than the size of \c source, if \c start is larger than
-   * end or if the combination of \c dest, \c start and the size of the range
+   * end is not smaller than the capacity of \c source, if \c start is larger than
+   * end or if the combination of \c dest, \c start and the capacity of the range
    * would exceed this array.
    * @tparam Array The array type.
-   * @param dest The destination (offset) for the first element of the source.
+   * @tparam DEST The destination (offset) for the first element of the source.
+   * @tparam START The starting element to copy from the source array.
+   * @tparam END The last element to copy from the source array.
    * @param source The source array.
-   * @param start The starting element to copy from the source array.
-   * @param end The last element to copy from the source array.
    * @return \c true if copying was successful, \c false otherwise.
    */
-  template <typename Array>
-  requires IsBaseArray<Array> bool copy_range(size_t dest, const Array &source,
-                                              size_t start, size_t end) {
-    BaseArrayWrapper<Array, T> wrapper(source);
-    if (end >= wrapper.size() || end < start || dest >= this->size()) {
-      return false;
-    }
-    const size_t last = dest + (end - start);
-    if (last >= this->size()) {
-      return false;
-    }
-    for (size_t src = start, dst = dest; dst <= last; src++, dst++) {
-      data(dst) = wrapper[src];
-    }
-    return true;
-  }
+  template <size_t DEST, size_t START, size_t END, typename Array>
+  requires ArrayFixedCompatible<Array, T, FIXED_CAPACITY> void
+  copy_range(const Array &source) {
+    static_assert(!(END >= Array::FIXED_CAPACITY || END < START ||
+                  DEST >= FIXED_CAPACITY));
+    static constexpr size_t last = DEST + (END - START);
+    static_assert(last < FIXED_CAPACITY);
+    T *__restrict to = begin();
+    const T *__restrict from = source.begin();
 
-  /**
-   * Moves the the inclusive range \c start to \end from array \c source to
-   * position \c dest and returns \c true if that was successful. Fails if \c
-   * end is not smaller than the size of \c source, if \c start is larger than
-   * end or if the combination of \c dest, \c start and the size of the range
-   * would exceed this array.
-   * @tparam Array The array type.
-   * @param dest The destination (offset) for the first element of the source.
-   * @param source The source array.
-   * @param start The starting element to copy from the source array.
-   * @param end The last element to copy from the source array.
-   * @return \c true if moving was successful, \c false otherwise.
-   */
-  template <typename Array>
-  requires IsBaseArray<Array> bool move_range(size_t dest, Array &source,
-                                              size_t start, size_t end) {
-    BaseArrayWrapper<Array, T> wrapper(source);
-    if (end >= wrapper.size() || end < start || dest >= this->size()) {
-      return false;
+    for (size_t src = START, dst = DEST; dst <= last; src++, dst++) {
+      to[dst] = from[src];
     }
-    const size_t last = dest + (end - start);
-    if (last >= this->size()) {
-      return false;
-    }
-    for (size_t src = start, dst = dest; dst <= last; src++, dst++) {
-      data(dst) = std::move(wrapper[src]);
-    }
-    return true;
   }
 
   /**
@@ -353,17 +340,37 @@ public:
    * @return an Array slice representing the range.
    */
   ArraySlice<T> range_ref(size_t start, size_t end) {
-    if (end < size() && start <= end) {
-      return ArraySlice<T>(unsafeData() + start, end + 1 - start);
+    if (end < capacity() && start <= end) {
+      return ArraySlice<T>(begin() + start, end + 1 - start);
     }
     throw std::out_of_range("org::simple::util::BaseArray(start,end)");
   }
 
   const ArraySlice<T> range_ref(size_t start, size_t end) const {
-    if (end < size() && start <= end) {
-      return ArraySlice<T>(unsafeData() + start, end + 1 - start);
+    if (end < capacity() && start <= end) {
+      return ArraySlice<T>(begin() + start, end + 1 - start);
     }
     throw std::out_of_range("org::simple::util::BaseArray(start,end)");
+  }
+
+  /**
+   * Returns an Array whose elements reference the elements in the range that
+   * starts at element \c START and ends at element \c END. Compile fails when
+   * the range exceeds the array boundaries.
+   * @tparam START The first element to reference.
+   * @tparam END The last element to reference.
+   * @return an Array slice representing the range.
+   */
+  template <size_t START, size_t END>
+  requires(FIXED_CAPACITY != 0) ArraySlice<T> range_ref() {
+    static_assert(END < FIXED_CAPACITY && START <= END);
+    return ArraySlice<T>(begin() + START, END + 1 - START);
+  }
+
+  template <size_t START, size_t END>
+  requires(FIXED_CAPACITY != 0) const ArraySlice<T> range_ref() const {
+    static_assert(END < FIXED_CAPACITY && START <= END);
+    return ArraySlice<T>(begin() + START, END + 1 - START);
   }
 
   /**
@@ -375,222 +382,57 @@ public:
    * @return an Array representing the range.
    */
   const ArrayHeap<T> range_copy(size_t start, size_t end) const {
-    if (end < size() && start <= end) {
-      return ArrayHeap<T>(unsafeData() + start, end + 1 - start);
+    if (end < capacity() && start <= end) {
+      return ArrayHeap<T>(begin() + start, end + 1 - start);
     }
     throw std::out_of_range("org::simple::util::BaseArray(start,end)");
-  }
-};
-
-template <typename T, class S>
-class BaseArrayConstSize : public BaseArray<T, BaseArrayConstSize<T, S>> {
-
-protected:
-  T *virtualData() noexcept { return static_cast<S *>(this)->virtualData(); }
-  const T *virtualConstData() const noexcept {
-    return static_cast<const S *>(this)->virtualConstData();
-  }
-  static constexpr size_t checked_index(size_t index) {
-    if (index < size()) {
-      return index;
-    }
-    throw std::out_of_range("BaseArrayCOnstSize::checked_index(index)");
-  }
-
-  size_t virtualSize() const noexcept { return S::virtualConstSize(); }
-
-public:
-  typedef T value_type;
-  typedef BaseArray<T, BaseArrayConstSize<T, S>> Super;
-  typedef typename Super::SizeMetric SizeMetric;
-  friend Super;
-
-  static constexpr size_t size() noexcept { return S::virtualConstSize(); }
-
-  template <size_t START, size_t END>
-  static constexpr bool ValidRange = (END < size()) && (START <= END);
-
-  /**
-   * Copies the array \c source to position \c DEST and returns \c true if that
-   * was successful. Fails if \c source too large or the combination of \c DEST
-   * and the size of \c would exceed this array.
-   * @tparam DEST The destination (offset) for the first element of the source.
-   * @tparam Array The array type.
-   * @param source The source.array
-   * @return \c true if copying was successful, \c false otherwise.
-   */
-  template <size_t DEST, typename Array>
-  requires IsBaseArrayConstSize<Array> void copy(const Array &source) {
-    static_assert((DEST < size()) &&
-                  (size() - DEST >= Array::size()));
-    const size_t end = DEST + Array::size();
-    for (size_t src = 0, dst = DEST; dst < end; src++, dst++) {
-      this->data(dst) = BaseArrayWrapper<Array, T>::at(source, src);
-    }
-  }
-  /**
-   * @see BaseArray.copy(dest, source)
-   */
-  template <typename Array>
-  requires IsBaseArray<Array> bool copy(size_t dest, const Array &source) {
-    return Super::copy(dest, source);
-  }
-
-  /**
-   * Moves the array \c source to position \c DEST and returns \c true if that
-   * was successful. Fails if \c source too large or the combination of \c DEST
-   * and the size of \c would exceed this array.
-   * @tparam DEST The destination (offset) for the first element of the source.
-   * @tparam Array The array type.
-   * @param source The source array.
-   * @return \c true if moving was successful, \c false otherwise.
-   */
-  template <size_t DEST, typename Array>
-  requires IsBaseArrayConstSize<Array> void move(Array &source) {
-    static_assert((DEST < size()) &&
-                  (size() - DEST >= Array::size()));
-    const size_t end = DEST + Array::size();
-    for (size_t src = 0, dst = DEST; dst < end; src++, dst++) {
-      this->data(dst) = std::move(BaseArrayWrapper<Array, T>::at(source, src));
-    }
-  }
-  /**
-   * @see BaseArray.move(dest, source)
-   */
-  template <typename Array>
-  requires IsBaseArray<Array> bool move(size_t dest, const Array &source) {
-    return Super::move(dest, source);
-  }
-  /**
-   * Copies the the inclusive range \c start to \end from array \c source to
-   * position \c dest and returns \c true if that was successful. Fails if \c
-   * end is not smaller than the size of \c source, if \c start is larger than
-   * end or if the combination of \c dest, \c start and the size of the range
-   * would exceed this array.
-   * @tparam DEST The destination (offset) for the first element of the source.
-   * @tparam START The starting element to copy from the source array.
-   * @tparam END The last element to copy from the source array.
-   * @tparam Array The array type.
-   * @param source The source array.
-   */
-  template <size_t DEST, size_t START, size_t END, typename Array>
-  requires IsBaseArrayConstSize<Array> void copy_range(Array &source) {
-    static_assert((END < Array::size()) && (START <= END) &&
-                  (DEST < size()) &&
-                  (size() - DEST >= (END + 1 - START)));
-    const size_t last = DEST + (END - START);
-    for (size_t src = START, dst = DEST; dst <= last; src++, dst++) {
-      this->data(dst) = BaseArrayWrapper<Array, T>::at(source, src);
-    }
-  }
-  /**
-   * @see BaseArray.copy_range(dest, source, start, end)
-   */
-  template <typename Array>
-  requires IsBaseArray<Array> bool
-      copy_range(size_t dest, const Array &source, size_t start, size_t end) {
-    return Super::copy_range(dest, source, start, end);
-  }
-
-  /**
-   * Moves the the inclusive range \c start to \end from array \c source to
-   * position \c dest and returns \c true if that was successful. Fails if \c
-   * end is not smaller than the size of \c source, if \c start is larger than
-   * end or if the combination of \c dest, \c start and the size of the range
-   * would exceed this array.
-   * @tparam DEST The destination (offset) for the first element of the source.
-   * @tparam START The starting element to copy from the source array.
-   * @tparam END The last element to copy from the source array.
-   * @tparam Array The array type.
-   * @param source The source array.
-   */
-  template <size_t DEST, size_t START, size_t END, typename Array>
-  requires IsBaseArrayConstSize<Array> void move_range(Array &source) {
-    static_assert((END < Array::size()) && (START <= END) &&
-                  (DEST < size()) &&
-                  (size() - DEST >= (END + 1 - START)));
-    const size_t last = DEST + (END - START);
-    for (size_t src = START, dst = DEST; dst <= last; src++, dst++) {
-      this->data(dst) = std::move(BaseArrayWrapper<Array, T>::at(source, src));
-    }
-  }
-  /**
-   * @see BaseArray.move_range(dest, source, start, end)
-   */
-  template <typename Array>
-  requires IsBaseArray<Array> bool move_range(size_t dest, const Array &source,
-                                              size_t start, size_t end) {
-    return Super::move_range(dest, source, start, end);
-  }
-
-  /**
-   * Returns an Array whose elements reference the elements in the range that
-   * starts at element \c START and ends at element \c END. Throws
-   * std::out_of_range when the range exceeds the array boundaries.
-   * @tparam START The first element to reference.
-   * @tparam END The last element to reference.
-   * @return an Array slice representing the range.
-   */
-  template <size_t START, size_t END>
-  requires(ValidRange<START, END>) ArraySlice<T> range_ref() const noexcept {
-    return ArraySlice<T>(this->data() + START, END + 1 - START);
-  }
-  template <size_t START, size_t END>
-  requires(ValidRange<START, END>) const
-      ArraySlice<T> range_ref() const noexcept {
-    return ArraySlice<T>(this->data() + START, END + 1 - START);
-  }
-  /**
-   * @see BaseArray.range_ref(start, end);
-   */
-  ArraySlice<T> range_ref(size_t start, size_t end) {
-    return Super::range_ref(start, end);
-  }
-  /**
-   * @see BaseArray.range_ref(start, end);
-   */
-  const ArraySlice<T> range_ref(size_t start, size_t end) const {
-    return Super::range_ref(start, end);
   }
 
   /**
    * Returns an array whose elements are a copy of the elements in the range
-   * that starts at element \c START and ends at element \c END..
+   * that starts at element \c START and ends at element \c END. Compilation
+   * fails if the range exceeds the array boundaries.
    * @tparam START The first element to copy.
    * @tparam END The last element to copy.
    * @return an Array representing the range.
    */
   template <size_t START, size_t END>
-  requires(ValidRange<START, END>)
-      ArrayInline<T, END + 1 - START> range_copy() const noexcept {
-    ArrayInline<T, END + 1 - START> r;
-    for (size_t src = START, dst = 0; src <= END; src++, dst++) {
-      r[dst] = this->data(src);
-    }
-    return r;
-  }
-  /**
-   * @see BaseArray.range_copy(start, end)
-   */
-  const ArrayHeap<T> range_copy(size_t start, size_t end) const {
-    return Super::range_copy(start, end);
+  requires(FIXED_CAPACITY != 0) const ArrayHeap<T> range_copy() const {
+    static_assert(END < FIXED_CAPACITY && START <= END);
+    return ArrayHeap<T>(begin() + START, END + 1 - START);
   }
 };
 
-template <typename T, size_t S, size_t A>
-class ArrayInline : public BaseArrayConstSize<T, ArrayInline<T, S, A>> {
-  alignas(org::simple::core::Alignment<T>::get_valid(A)) T data_[S];
+namespace helper {
 
-  T *virtualData() noexcept { return &data_[0]; }
-  const T *virtualConstData() const noexcept { return &data_[0]; }
-  static constexpr size_t virtualConstSize() noexcept { return S; }
+template <typename T>
+static constexpr size_t eff_align(size_t A) {
+  return org::simple::core::Alignment<T>::get_valid(A);
+}
+
+template <typename T, size_t S>
+static constexpr size_t eff_capacity() {
+  static_assert(org::simple::core::SizeValue::Elements<sizeof(T)>::IsValid::value(S));
+  return S;
+}
+
+}
+
+using namespace helper;
+
+template <typename T, size_t S, size_t A = 0>
+class ArrayInline : public BaseArray<T, eff_capacity<T,S>(), eff_align<T>(A), ArrayInline<T, S, A>> {
+  alignas(eff_align<T>(A)) T data_[S];
+
+  T *array_data() noexcept { return &data_[0]; }
+  const T *array_data() const noexcept { return &data_[0]; }
 
 public:
-  typedef T value_type;
-  typedef BaseArrayConstSize<T, ArrayInline<T, S>> Super;
-  typedef typename Super::SizeMetric SizeMetric;
+  typedef BaseArray<T, eff_capacity<T,S>(), eff_align<T>(A), ArrayInline<T, S, A>> Super;
+  typedef typename Super::data_type data_type;
+  typedef typename Super::Size Size;
+  using Super::FIXED_CAPACITY;
   friend Super;
-  static_assert(SizeMetric::IsValid::value(S));
 
   ArrayInline() = default;
   ArrayInline(const ArrayInline &) = default;
@@ -598,26 +440,26 @@ public:
 };
 
 template <typename T, size_t S, size_t A = 0>
-class ArrayConstAlloc : public BaseArrayConstSize<T, ArrayConstAlloc<T, S, A>> {
+class ArrayConstAlloc : public BaseArray<T, eff_capacity<T,S>(), eff_align<T>(A), ArrayConstAlloc<T, S, A>> {
   struct DataStruct {
-    alignas(org::simple::core::Alignment<T>::get_valid(A)) T data_[S];
+    alignas(eff_align<T>(S)) T data_[S];
   };
 
   DataStruct *data_;
 
-  static constexpr size_t virtualConstSize() noexcept { return S; }
-  T *virtualData() noexcept { return data_->data_; }
-  const T *virtualConstData() const noexcept { return data_->data_; }
+  T *array_data() noexcept { return data_->data_; }
+  const T *array_data() const noexcept { return data_->data_; }
 
 public:
-  typedef T value_type;
-  typedef BaseArrayConstSize<T, ArrayConstAlloc<T, S>> Super;
-  typedef typename Super::SizeMetric SizeMetric;
+  typedef BaseArray<T, eff_capacity<T,S>(), eff_align<T>(A), ArrayConstAlloc<T, S, A>> Super;
+  typedef typename Super::data_type data_type;
+  typedef typename Super::Size Size;
+  using Super::FIXED_CAPACITY;
   friend Super;
+
   ArrayConstAlloc() : data_(new T[Super::SizeMetric::Valid::value(S)]) {}
 
-  ArrayConstAlloc(const ArrayConstAlloc &source)
-      : data_(new DataStruct) {
+  ArrayConstAlloc(const ArrayConstAlloc &source) : data_(new DataStruct) {
     for (size_t i = 0; i < Super::constSize(); i++) {
       data_[i] = source.data_[i];
     }
@@ -630,87 +472,76 @@ public:
     delete data_;
     data_ = nullptr;
   }
-  static_assert(SizeMetric::IsValid::value(S));
 };
 
 template <typename T, size_t S>
-class ArrayConstRef : public BaseArrayConstSize<T, ArrayConstRef<T, S>> {
+class ArrayConstRef : public BaseArray<T, eff_capacity<T,S>(), 0, ArrayConstRef<T, S>> {
 
   T *data_;
 
-  static constexpr size_t virtualConstSize() noexcept { return S; }
-  T *virtualData() noexcept { return data_; }
-  const T *virtualConstData() const noexcept { return data_; }
-
-protected:
-  T *data() noexcept { return Super::data(); }
-  const T *data() const noexcept { return Super::data(); }
+  T *array_data() noexcept { return data_; }
+  const T *array_data() const noexcept { return data_; }
 
 public:
-  typedef T value_type;
-  typedef BaseArrayConstSize<T, ArrayConstRef<T, S>> Super;
-  typedef typename Super::SizeMetric SizeMetric;
+  typedef BaseArray<T, eff_capacity<T,S>(), 0, ArrayConstRef<T, S>> Super;
+  typedef typename Super::data_type data_type;
+  typedef typename Super::Size Size;
+  using Super::FIXED_CAPACITY;
   friend Super;
+
   ArrayConstRef() = delete;
   ArrayConstRef(T *data) : data_(core::Dereference::checked(data)) {}
   ArrayConstRef(const ArrayConstRef &source) : data_(source.data_) {}
-  static_assert(SizeMetric::IsValid::value(S));
 };
 
-template <typename T> class ArraySlice : public BaseArray<T, ArraySlice<T>> {
+template <typename T> class ArraySlice : public BaseArray<T, 0, 0, ArraySlice<T>> {
 
   T *data_;
   size_t size_;
 
-  T *virtualData() noexcept { return data_; }
-  const T *virtualConstData() const noexcept { return data_; }
-  size_t virtualSize() const noexcept { return size_; }
-
-protected:
-  T *data() noexcept { return Super::data(); }
-  const T *data() const noexcept { return Super::data(); }
+  size_t array_capacity() const noexcept { return size_; }
+  T *array_data() noexcept { return data_; }
+  const T *array_data() const noexcept { return data_; }
 
 public:
-  typedef T value_type;
-  typedef BaseArray<T, ArraySlice<T>> Super;
-  typedef typename Super::SizeMetric SizeMetric;
+  typedef BaseArray<T, 0, 0, ArraySlice<T>> Super;
+  typedef typename Super::data_type data_type;
+  typedef typename Super::Size Size;
   friend Super;
+
   ArraySlice() = delete;
   ArraySlice(T *data, size_t size)
       : data_(core::Dereference::checked(data)),
-        size_(SizeMetric::Valid::value(size)) {}
+        size_(Super::Size::Valid::value(size)) {}
   ArraySlice(const ArraySlice &source)
       : data_(source.data_), size_(source.size_) {}
 };
 
-template <typename T> class ArrayHeap : public BaseArray<T, ArraySlice<T>> {
+template <typename T> class ArrayHeap : public BaseArray<T, 0, 0, ArrayHeap<T>> {
 
   T *data_;
   size_t size_;
 
-  T *virtualData() noexcept { return data_; }
-  const T *virtualConstData() const noexcept { return data_; }
-  size_t virtualSize() const noexcept { return size_; }
-
-protected:
-  T *data() noexcept { return Super::data(); }
-  const T *data() const noexcept { return Super::data(); }
+  size_t array_capacity() const noexcept { return size_; }
+  T *array_data() noexcept { return data_; }
+  const T *array_data() const noexcept { return data_; }
 
 public:
-  typedef T value_type;
-  typedef BaseArray<T, ArraySlice<T>> Super;
-  typedef typename Super::SizeMetric SizeMetric;
+  typedef BaseArray<T, 0, 0, ArrayHeap<T>> Super;
+  typedef typename Super::data_type data_type;
+  typedef typename Super::Size Size;
   friend Super;
+
   ArrayHeap(size_t size)
-      : data_(new T[SizeMetric::Valid::value(size)]), size_(size) {}
+      : data_(new T[Size::Valid::value(size)]), size_(size) {}
   ArrayHeap(const T *source, size_t size)
-      : data_(new T[SizeMetric::Valid::value(size)]), size_(size) {
+      : data_(new T[Super::Size::Valid::value(size)]), size_(size) {
     for (size_t i = 0; i < size_; i++) {
       data_[i] = source[i];
     }
   }
   ArrayHeap(const ArrayHeap &source)
-      : data_(new T[source.size_]), size_(source.size) {
+      : data_(new T[source.size_]), size_(source.capacity) {
     for (size_t i = 0; i < size_; i++) {
       data_[i] = source.data_[i];
     }
