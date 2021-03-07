@@ -123,21 +123,23 @@ public:
     }
   }
 
-  T *begin() noexcept {
+  inline T *begin() noexcept {
     T *ptr = static_cast<delegate_type *>(this)->array_data();
     if constexpr (ALIGNAS != 0) {
       return std::assume_aligned<ALIGNAS, T>(ptr);
     }
     return ptr;
   }
-  const T *end() const noexcept {
+
+  inline const T *end() const noexcept {
     if constexpr (ALIGNAS != 0 && FIXED_CAPACITY != 0 &&
                   (FIXED_CAPACITY % ALIGNAS == 0)) {
       return std::assume_aligned<ALIGNAS, const T>(begin() + FIXED_CAPACITY);
     }
     return begin() + capacity();
   }
-  T *end() noexcept {
+
+  inline T *end() noexcept {
     if constexpr (ALIGNAS != 0 && FIXED_CAPACITY != 0 &&
                   (FIXED_CAPACITY % ALIGNAS == 0)) {
       return std::assume_aligned<ALIGNAS, T>(begin() + FIXED_CAPACITY);
