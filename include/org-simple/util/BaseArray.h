@@ -452,14 +452,14 @@ template <typename T, size_t S, size_t A = 0>
 class ArrayConstAlloc
     : public BaseArray<T, eff_capacity<T, S>(), eff_align<T>(A),
                        ArrayConstAlloc<T, S, A>> {
+public:
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
-  struct DataStruct {
-    alignas(eff_align<T>(S)) T data_[S];
-  };
 
-  DataStruct *data_;
+  struct DataStruct {
+    alignas(eff_align<T>(A)) T data_[S];
+  };
 
   T *array_data() noexcept { return data_->data_; }
   const T *array_data() const noexcept { return data_->data_; }
@@ -488,6 +488,8 @@ public:
     delete data_;
     data_ = nullptr;
   }
+private:
+  DataStruct *data_;
 };
 
 template <typename T, size_t S>
@@ -536,7 +538,7 @@ public:
 };
 
 template <typename T, size_t A>
-class ArrayHeap : public BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T>> {
+class ArrayHeap : public BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T, A>> {
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
@@ -554,7 +556,7 @@ class ArrayHeap : public BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T>> {
   }
 
 public:
-  typedef BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T>> Super;
+  typedef BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T, A>> Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   friend Super;
