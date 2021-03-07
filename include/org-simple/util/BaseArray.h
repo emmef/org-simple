@@ -165,7 +165,7 @@ public:
 
   // Raw element access
 
-  const T &data_(size_t offset) const noexcept { return begin()[offset]; }
+  const T &data(size_t offset) const noexcept { return begin()[offset]; }
   const T &operator[](size_t offset) const noexcept { return data(offset); }
 
   T &data(size_t offset) noexcept { return begin()[offset]; }
@@ -536,7 +536,7 @@ public:
 };
 
 template <typename T, size_t A>
-class ArrayHeap : public BaseArray<T, 0, eff_align<A>(), ArrayHeap<T>> {
+class ArrayHeap : public BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T>> {
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
@@ -554,7 +554,7 @@ class ArrayHeap : public BaseArray<T, 0, eff_align<A>(), ArrayHeap<T>> {
   }
 
 public:
-  typedef BaseArray<T, 0, eff_align<A>(), ArrayHeap<T>> Super;
+  typedef BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T>> Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   friend Super;
@@ -578,7 +578,7 @@ public:
   ArrayHeap(ArrayHeap &&source) : data_(std::move(source.data_)) {}
 
 private:
-  core::AlignedAlloc<T, eff_align<A>()> data_;
+  core::AlignedAlloc<T, eff_align<T>(A)> data_;
 };
 
 } // namespace org::simple::util
