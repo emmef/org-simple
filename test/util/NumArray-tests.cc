@@ -108,11 +108,5 @@ BOOST_AUTO_TEST_CASE(testAdd) {
   }
 }
 
-//BOOST_AUTO_TEST_CASE(testShiftLargerArrayIn) {
-//  Numa10 num10 = {0,1,2,3,4,5,6,7,8,9} ;
-//  Array10 array10;
-//  array10.copy<0>(num10);
-//}
-//
 
 BOOST_AUTO_TEST_SUITE_END()

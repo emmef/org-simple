@@ -352,10 +352,10 @@ template <typename T, size_t ELEMENTS, class S> struct BaseNumArray : public S {
   // Squared absolute value (norm)
 
   typename org::simple::core::Complex<T>::real_type
-  norm() const noexcept {
+  squared_absolute() const noexcept {
     typename org::simple::core::Complex<T>::value_type sum = 0;
     for (size_t i = 0; i < ELEMENTS; i++) {
-      sum += org::simple::core::Numbers::norm(this->data(i));
+      sum += org::simple::core::Numbers::squared_absolute(this->data(i));
     }
     return sum;
   }

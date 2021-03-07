@@ -42,14 +42,13 @@ template <typename T>
 static constexpr bool is_number = std::is_arithmetic_v<T> || is_complex_v<T>;
 
 struct Numbers {
-  template <typename T> static constexpr T norm(const T &v) {
+  template <typename T> static constexpr T squared_absolute(const T &v) {
     return std::norm(v);
   }
 
-  template <typename T> static constexpr T norm(const std::complex<T> &v) {
+  template <typename T> static constexpr T squared_absolute(const std::complex<T> &v) {
     return std::norm(v);
   }
-
 
   template <typename T> static constexpr T times_conj(const T &v1, T &v2) {
     return v1 * std::conj(v2);

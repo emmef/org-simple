@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(testComplexComplexDoubleIsNotComplex) {
 
 BOOST_AUTO_TEST_CASE(testSquaredAbsoluteReal) {
   double x = 4.0;
-  double y = Numbers::norm(x);
+  double y = Numbers::squared_absolute(x);
 
   BOOST_CHECK_EQUAL(x * x, y);
 }
@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(testSquaredAbsoluteComplexZeroImg) {
   using complex = std::complex<double>;
   double r = 4.0;
   complex x = {r, 0.0};
-  double y = Numbers::norm(x);
+  double y = Numbers::squared_absolute(x);
 
   BOOST_CHECK_EQUAL(r * r, y);
 }
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(testSquaredAbsoluteComplex) {
   double r = 4.0;
   double i = 3.0;
   complex x = {r, i};
-  double y = Numbers::norm(x);
+  double y = Numbers::squared_absolute(x);
 
   BOOST_CHECK_EQUAL(r * r + i * i, y);
 }
