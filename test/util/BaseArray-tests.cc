@@ -95,7 +95,7 @@ void testAlignmentValuesHeap() {
   typedef typename Test::data_type data_type;
 
   BOOST_CHECK_EQUAL(0, Test::FIXED_CAPACITY);
-  BOOST_CHECK_EQUAL(org::simple::core::Alignment<int32_t>::get_valid(ALIGN), Test::ALIGNAS);
+  BOOST_CHECK_EQUAL(org::simple::core::alignment_get_correct<int32_t>(ALIGN), Test::ALIGNAS);
   BOOST_CHECK_GE(Test::ALIGNAS, alignof(data_type));
 
   auto ptr = heap.begin();
@@ -368,7 +368,7 @@ BOOST_AUTO_TEST_CASE(testSliceIsBaseArray) {
 }
 
 template <typename T> static constexpr size_t effective_alignment(size_t A) {
-  return org::simple::core::Alignment<T>::is_valid(A) ? A : 0;
+  return org::simple::core::alignment_is_valid<T>(A) ? A : 0;
 }
 
 BOOST_AUTO_TEST_CASE(testTestArrayBase) {

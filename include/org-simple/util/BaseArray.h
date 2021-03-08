@@ -100,14 +100,14 @@ concept ArrayFixedCompatible =
  * @tparam C The delegate class that needs to implement the
  */
 template <typename T, size_t S, size_t A, typename C> class BaseArray {
-  static_assert(A == 0 || org::simple::core::Alignment<T>::is_valid(A));
+  static_assert(A == 0 || org::simple::core::alignment_is_valid<T>(A));
   static_assert(
       S == 0 ||
       org::simple::core::SizeValue::Elements<sizeof(T)>::IsValid::value(S));
 
 public:
   static constexpr size_t ALIGNAS =
-      org::simple::core::Alignment<T>::get_valid(A);
+      org::simple::core::alignment_get_correct<T>(A);
   static constexpr size_t FIXED_CAPACITY = S;
 
   using data_type = T;
@@ -410,7 +410,7 @@ public:
 namespace helper {
 
 template <typename T> static constexpr size_t eff_align(size_t A) {
-  return org::simple::core::Alignment<T>::get_valid(A);
+  return org::simple::core::alignment_get_correct<T>(A);
 }
 
 template <typename T, size_t S> static constexpr size_t eff_capacity() {
@@ -488,6 +488,7 @@ public:
     delete data_;
     data_ = nullptr;
   }
+
 private:
   DataStruct *data_;
 };

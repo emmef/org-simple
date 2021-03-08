@@ -28,128 +28,191 @@
 
 namespace org::simple::core {
 
-static constexpr bool is_valid_alignment(size_t align) {
-  return align < 2 || Power2::is(align);
-}
-static constexpr bool is_valid_positive_alignment(size_t align) {
-  return align == 1 || Power2::is(align);
-}
-
-static constexpr size_t align_with_unchecked(size_t offset,
-                                             size_t checked_align) {
-  return 1 + ((offset - 1) | (checked_align - 1));
+/**
+ * Returns is the specified alignment \c alignment is valid. This is the case if
+ * it's a positive power of two.
+ * @param alignment The alignment to test.
+ * @return \c true if \c alignment is a positive power of two, false otherwise.
+ */
+static constexpr bool alignment_is_valid(size_t alignment) {
+  return alignment == 1 || Power2::is(alignment);
 }
 
-template <typename T> static constexpr size_t align_with(size_t offset) {
-  return align_with_unchecked(offset, alignof(T));
+/**
+ * Returns is the specified alignment \c alignment is valid. This is the case if
+ * it's a positive power of two and not smaller than the alignment of \c T.
+ * @tparam T The type for which the validity of \c alignment must be checked.
+ * @param alignment The alignment to test.
+ * @return \c true if \c alignment is a positive power of two, false otherwise.
+ */
+template <typename T>
+static constexpr bool alignment_is_valid(size_t alignment) {
+  return alignment_is_valid(alignment) && alignment >= alignof(T);
 }
 
-static constexpr size_t align_with(size_t offset, size_t checked_align) {
-  return is_valid_positive_alignment(checked_align)
-             ? align_with_unchecked(offset, checked_align)
+/**
+ * Returns whether specified \c offset is aligned with the, assumed valid,
+ * alignment \c valid_align.
+ * @param offset The offset to check.
+ * @param valid_align The, assumed valid, alignment to use.
+ * @return \c true if the offset is aligned with \c valid_align, \c false
+ * otherwise.
+ */
+static constexpr bool alignment_unchecked_matches(size_t offset,
+                                                  size_t valid_align) {
+  return (offset & (valid_align - 1)) == 0;
+}
+
+/**
+ * Returns whether \c offset is aligned with \c ALIGNAS
+ * Compilation fails if \c ALIGNAS is not a valid alignment.
+ * @tparam ALIGNAS The alignment to apply to \c offset.
+ * @param offset The offset to test.
+ * @return \c true if the offset is aligned with \c ALIGNAS, \c false otherwise.
+ */
+template <size_t ALIGNAS>
+static constexpr bool alignment_matches(size_t offset) {
+  static_assert(alignment_is_valid(ALIGNAS));
+  return alignment_unchecked_matches(offset, ALIGNAS);
+}
+
+/**
+ * Returns whether \c offset is aligned with the natural alignment of type \c
+ * T.
+ * @tparam T The type whose natural alignment to test \c offset with.
+ * @param offset The offset to test.
+ * @return \c true if the offset is aligned with \c T's natural alignment, \c
+ * false otherwise.
+ */
+template <typename T> static constexpr bool alignment_matches(size_t offset) {
+  return alignment_unchecked_matches(offset, alignof(T));
+}
+
+/**
+ * Returns whether \c offset is aligned with \c alignment or \c false if \c
+ * alignment is not a valid alignment..
+ * @param offset The offset to test.
+ * @param alignment The alignment to use.
+ * @return \c true if \c alignment is a valid alignment and the offset is
+ * aligned with it, \c false otherwise.
+ */
+static constexpr bool alignment_matches(size_t offset, size_t alignment) {
+  return alignment_is_valid(alignment) &&
+         alignment_unchecked_matches(offset, alignment);
+}
+
+/**
+ * Returns the offset with the, assumed valid, alignment \c valid_align applied.
+ * The result will be \c offset if it's already aligned and the next multiple of
+ * \c valid_align otherwise.
+ * @param offset The offset whose aligned value must be returned.
+ * @param valid_align The, assumed valid, alignment to apply to \c offset.
+ * @return the aligned value of \c offset.
+ */
+static constexpr size_t alignment_unchecked_apply(size_t offset,
+                                                  size_t valid_align) {
+  return 1 + ((offset - 1) | (valid_align - 1));
+}
+
+/**
+ * Returns the offset with the alignment \c ALIGNAS applied.
+ * Compilation fails if \c ALIGNAS is not a valid alignment.
+ * @tparam ALIGNAS The alignment to apply to \c offset.
+ * @param offset The offset whose aligned value muist be returned.
+ * @return the aligned value of \c offset.
+ */
+template <size_t ALIGNAS>
+static constexpr size_t alignment_apply(size_t offset) {
+  static_assert(alignment_is_valid(ALIGNAS));
+  return alignment_unchecked_apply(offset, ALIGNAS);
+}
+
+/**
+ * Returns the offset with the natural alignment of type \c T applied.
+ * @tparam T The type whose natural alignment to apply to \c offset.
+ * @param offset The offset whose aligned value muist be returned.
+ * @return the aligned value of \c offset.
+ */
+template <typename T> static constexpr size_t alignment_apply(size_t offset) {
+  return alignment_unchecked_apply(offset, alignof(T));
+}
+
+/**
+ * Returns the offset with the alignment \c alignment applied or \c offset if \c
+ * alignment is not a valid alignment.
+ * @param offset The offset whose aligned value must be returned.
+ * @param alignment The, assumed valid, alignment to apply to \c offset.
+ * @return the aligned value of \c offset.
+ */
+static constexpr size_t alignment_apply(size_t offset, size_t alignment) {
+  return alignment_is_valid(alignment)
+             ? alignment_unchecked_apply(offset, alignment)
              : offset;
 }
 
-template <typename T> struct Alignment {
-  /**
-   * The alignment in bytes of the type parameter.
-   */
-  static constexpr size_t bytes = alignof(T);
-  using type = T;
+/**
+ * Returns correct alignment for the specified type \c T based on the suggested
+ * alignment \c suggestion. If \c suggestion is both a valid alignment and
+ * it is bigger than the natural alignment of \c T, \c suggestion is returned.
+ * Otherwise, the natural alignment of \c T is returned.
+ * @tparam T The type that the alignment should apply to.
+ * @param suggestion The suggested alignment.
+ * @return the correct alignment value, equal to or larger than alignof(T).
+ */
+template <typename T>
+static constexpr size_t alignment_get_correct(size_t suggestion) {
+  return alignment_is_valid(suggestion) && suggestion > alignof(T) ? suggestion
+                                                                   : alignof(T);
+}
 
-  /**
-   * Returns if the specific alignment is a positive power of two and equal to
-   * or greater than the alignment of the type parameter. The latter is always
-   * a power of two.
-   * @param align The specified alignment.
-   * @return \c true when the the alignment is valid, \c false otherwise..
-   */
-  static constexpr bool is_valid(size_t align) {
-    // alignof(T) is always a power of two, as is align after first check,
-    // so it is justified to just check for same or bigger.
-    return is_valid_positive_alignment(align) && align >= alignof(T);
-  }
-
-  /**
-   * Returns a valid alignment, given the specified minimum alignment and the
-   * type parameter. If the specified minimum is invalid or less than the type
-   * alignment, the type alignment is returned. Otherwise, the valid minimum
-   * alignment is returned.
-   * @param min_alignment The specified minimum alignment.
-   * @return a valid alignment meeting both type and minimym specified
-   * alignments.
-   */
-  static constexpr size_t get_valid(size_t min_alignment) {
-    return is_valid_positive_alignment(min_alignment)
-               ? std::max(min_alignment, alignof(T))
-               : alignof(T);
-  }
-
-  /**
-   * Returns if the specified alignment is ideal for an array of elements of the
-   * type parameter \c T.
-   * This means that the specified alignment, a positive power of two, is equal
-   * to or bigger than the alignment of \c T and smaller than the size of \c T,
-   * which is always a multiple of the alignment of \c T. This way, the first
-   * element will be aligned correctly as well as all consecutive elements in
-   * the array.
-   * @param align The specified alignment.
-   * @return \c true if the specified alignment is correct
-   */
-  static constexpr bool is_ideal_for_array(size_t align) {
-    return is_valid_positive_alignment(align) && align >= alignof(T) &&
-           align <= sizeof(T);
-  }
-
-  static constexpr size_t aligned(size_t offset) {
-    return align_with_unchecked(offset, alignof(T));
-  }
-};
+/**
+ * Applies correct alignment to \c ptr for the specified type \c T based on the
+ * suggested alignment \c suggestion.
+ * @tparam T The type that the alignment should apply to.
+ * @param suggestion The suggested alignment.
+ * @param ptr The pointer to align
+ * @return the aligned pointer.
+ */
+template <typename T>
+static constexpr T *alignment_apply_correct(size_t suggestion, T *ptr) {
+  return (T *)alignment_unchecked_apply((uintptr_t)ptr,
+                                        alignment_get_correct<T>(suggestion));
+}
 
 template <typename T, size_t ALIGNAS> class AlignedAlloc {
-  static constexpr size_t ALIGN = Alignment<T>::get_valid(ALIGNAS);
+  static constexpr size_t ALIGN = alignment_get_correct<T>(ALIGNAS);
+  static constexpr bool ALIGNED_ALLOC =
+      ALIGN > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
 
-  T *alloc_;
   T *data_;
   size_t capacity_;
 
   void disown() {
-    alloc_ = nullptr;
     data_ = nullptr;
     capacity_ = 0;
   }
 
 public:
-  AlignedAlloc(size_t count) {
-    typedef typename SizeValue::Elements<sizeof(T)>::Valid Valid;
-    static constexpr size_t MAX_ALIGN = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-    if constexpr (ALIGN == 0) {
-      alloc_ = new T[Valid::value(count)];
-      data_ = alloc_;
-    } else if constexpr (ALIGN <= MAX_ALIGN) {
-      alloc_ = new T[Valid::value(count), ALIGN];
-      data_ = alloc_;
+  explicit AlignedAlloc(size_t count) {
+    capacity_ = SizeValue::Elements<sizeof(T)>::Valid::value(count);
+    if constexpr (ALIGNED_ALLOC) {
+      data_ = new (std::align_val_t{ALIGN}) T[capacity_];
     } else {
-      alloc_ = new T[Valid::sum(count, ALIGN - MAX_ALIGN), MAX_ALIGN];
-      size_t alloc_offs = (const char *)alloc_ - (const char *)nullptr;
-      size_t diff = align_with(alloc_offs, ALIGN) - alloc_offs;
-      data_ = (T *)((const char *)alloc_ + diff);
+      data_ = new T[capacity_];
     }
-    capacity_ = Valid::value(count);
   }
 
-  AlignedAlloc(AlignedAlloc &&source)
-      : alloc_(source.alloc_), data_(source.data_),
-        capacity_(source.capacity_) {
+  AlignedAlloc(AlignedAlloc &&source) noexcept
+      : data_(source.data_), capacity_(source.capacity_) {
     source.disown();
   }
 
-  T *data() const noexcept { return data_; }
-  size_t capacity() const noexcept { return capacity_; }
+  [[nodiscard]] T *data() const noexcept { return data_; }
+  [[nodiscard]] size_t capacity() const noexcept { return capacity_; }
 
   ~AlignedAlloc() {
-    if (alloc_) {
-      delete[] alloc_;
+    if (data_) {
+      delete[] data_;
       disown();
     }
   }
