@@ -22,9 +22,9 @@
  */
 
 #include <cstddef>
-#include <org-simple/core/Align.h>
 #include <org-simple/core/Index.h>
 #include <org-simple/core/Size.h>
+#include <org-simple/core/align.h>
 #include <stdexcept>
 
 namespace org::simple::util {

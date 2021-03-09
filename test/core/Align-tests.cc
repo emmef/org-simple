@@ -3,7 +3,7 @@
 //
 
 #include "test-helper.h"
-#include <org-simple/core/Align.h>
+#include <org-simple/core/align.h>
 
 BOOST_AUTO_TEST_SUITE(org_simple_core_Align)
 
