@@ -11,7 +11,7 @@ BOOST_AUTO_TEST_SUITE(org_simple_core_Numbers)
 
 BOOST_AUTO_TEST_CASE(testDoubleIsNotComplex) {
   static constexpr bool DOUBLE_IS_COMPLEX =
-      org::simple::core::Complex<double>::value;
+      org::simple::core::is_complex<double>::value;
 
   BOOST_CHECK_EQUAL(DOUBLE_IS_COMPLEX, false);
   BOOST_CHECK_EQUAL(is_number<double>, true);
@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(testDoubleIsNotComplex) {
 
 BOOST_AUTO_TEST_CASE(testComplexDoubleIsComplex) {
   static constexpr bool COMPLEX_DOUBLE_IS_COMPLEX =
-      org::simple::core::Complex<std::complex<double>>::value;
+      org::simple::core::is_complex<std::complex<double>>::value;
 
   BOOST_CHECK_EQUAL(COMPLEX_DOUBLE_IS_COMPLEX, true);
   BOOST_CHECK_EQUAL(is_number<std::complex<double>>, true);
@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE(testComplexDoubleIsComplex) {
 
 BOOST_AUTO_TEST_CASE(testComplexComplexDoubleIsNotComplex) {
   static constexpr bool COMPLEX_COMPLEX_DOUBLE_IS_COMPLEX =
-      org::simple::core::Complex<std::complex<std::complex<double>>>::value;
+      org::simple::core::is_complex<std::complex<std::complex<double>>>::value;
 
   BOOST_CHECK_EQUAL(COMPLEX_COMPLEX_DOUBLE_IS_COMPLEX, false);
   BOOST_CHECK_EQUAL(is_number<std::complex<std::complex<double>>>, false);

@@ -32,9 +32,9 @@
 namespace org::simple::core {
 
 /**
- * Returns whether @p unsigned_type is a valid size value type. A valid size value
- * type is  unsigned and its maximum value cannot exceed the maximum value of
- * size_t.
+ * Returns whether @p unsigned_type is a valid size value type. A valid size
+ * value type is  unsigned and its maximum value cannot exceed the maximum value
+ * of size_t.
  * @tparam size_type The type to be checked for validity.
  * @return @c true if @p unsigned_type is a valid size value type.
  */
@@ -51,82 +51,70 @@ template <typename size_type> struct TypeCheckSize {
       "must not be able to contain larger values than size_t.");
 
   static constexpr size_type max = std::numeric_limits<size_type>::max();
-
-  size_type size_value = 0;
-  bool bool_value = false;
 };
 
 template <typename size_type>
-static constexpr auto size_type_max()
-    -> decltype(TypeCheckSize<size_type>::size_value) {
+requires(is_valid_size_type<size_type>()) static constexpr size_type
+    size_type_max() {
   return TypeCheckSize<size_type>::max;
 }
 
 template <typename size_type>
-static constexpr auto is_valid_size_value(size_type value)
-    -> decltype(TypeCheckSize<size_type>::bool_value) {
-  return is_between(value, size_type(1), size_type_max<size_type>());
-}
-
-template <typename value_type, typename limit_type>
-static constexpr auto is_valid_size_value(value_type value, limit_type size_limit)
-    -> decltype(TypeCheckSize<limit_type>::bool_value) {
-  return is_between(value, limit_type(1), size_limit);
+requires(is_valid_size_type<size_type>()) static constexpr size_type
+    is_valid_size_value(size_type value) {
+  return is_within(value, size_type(1), size_type_max<size_type>());
 }
 
 template <typename size_type>
-static constexpr auto size_type_max_index()
-    -> decltype(TypeCheckSize<size_type>::size_value) {
+requires(is_valid_size_type<size_type>()) static constexpr size_type
+    size_type_max_index() {
   return size_type_max<size_type>() - 1;
 }
 
 template <typename size_type>
-static constexpr auto is_valid_index_value(size_type index)
-    -> decltype(TypeCheckSize<size_type>::bool_value) {
-  return is_between(index, size_type(0), size_type_max_index<size_type>());
-}
-
-template <typename index_type, typename limit_type>
-static constexpr auto is_valid_index_value(index_type index, limit_type size_limit)
-    -> decltype(TypeCheckSize<limit_type>::bool_value) {
-  return is_between(index, limit_type(0), size_limit > 0 ? size_limit - 1 : 0);
+requires(is_valid_size_type<
+         size_type>()) static constexpr bool is_valid_index_value(size_type
+                                                                      index) {
+  return is_within(index, size_type(0), size_type_max_index<size_type>());
 }
 
 template <typename size_type>
-static constexpr auto get_max_index_value(size_type size_limit)
-    -> decltype(TypeCheckSize<size_type>::size_value) {
+requires(is_valid_size_type<size_type>()) static constexpr size_type
+    get_max_index_value(size_type size_limit) {
   return size_limit > 0 ? size_limit - 1 : 0;
 }
 
 template <typename size_type>
-static constexpr auto get_max_mask_from_index(size_type max_index)
-    -> decltype(TypeCheckSize<size_type>::size_value) {
+requires(is_valid_size_type<size_type>()) static constexpr size_type
+    get_max_mask_from_index(size_type max_index) {
   return Bits<size_type>::bit_mask_not_exceeding(max_index);
 }
 
 template <typename size_type>
-static constexpr auto get_max_mask_from_size(size_type max_size)
-    -> decltype(TypeCheckSize<size_type>::size_value) {
+requires(is_valid_size_type<size_type>()) static constexpr size_type
+    get_max_mask_from_size(size_type max_size) {
   return max_size > 2 ? Bits<size_type>::bit_mask_not_exceeding(max_size - 1)
                       : 0;
 }
 
 template <typename size_type>
-static constexpr auto is_valid_number_of_size_bits(unsigned bits)
-    -> decltype(TypeCheckSize<size_type>::bool_value) {
+requires(
+    is_valid_size_type<
+        size_type>()) static constexpr bool is_valid_number_of_size_bits(unsigned
+                                                                             bits) {
   return bits <= sizeof(size_type) * 8;
 }
 
 template <typename size_type>
-static constexpr auto get_size_for_size_bits(unsigned bits)
-    -> decltype(TypeCheckSize<size_type>::size_value) {
+requires(is_valid_size_type<size_type>()) static constexpr size_type
+    get_size_for_size_bits(unsigned bits) {
   return bits == sizeof(size_type) * 8 ? std::numeric_limits<size_type>::max()
                                        : size_type(1) << bits;
 }
 
 template <typename size_type, unsigned bits>
-static constexpr auto get_size_for_size_bits()
-    -> decltype(TypeCheckSize<size_type>::size_value) {
+requires(is_valid_size_type<size_type>()) static constexpr size_type
+    get_size_for_size_bits() {
   static_assert(is_valid_number_of_size_bits<size_type>(bits));
   return bits == sizeof(size_type) * 8 ? std::numeric_limits<size_type>::max()
                                        : size_type(1) << bits;
@@ -192,14 +180,13 @@ struct SizeValueBase {
      * @return true if value is valid, false otherwise.
      */
     template <typename T>
-    static constexpr auto value_with_limit(T value,
-                                           size_type size_limit) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<T>()) static constexpr bool value_with_limit(
+        T value, size_type size_limit) noexcept {
       return is_within(value, size_type(1), size_limit);
     }
     template <typename T>
-    static constexpr auto value(T value) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr bool value(
+        T value) noexcept {
       return value_with_limit(value, limit);
     }
 
@@ -209,14 +196,13 @@ struct SizeValueBase {
      */
 
     template <typename T>
-    static constexpr auto index_with_limit(T value,
-                                           size_type size_limit) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr bool index_with_limit(
+        T value, size_type size_limit) noexcept {
       return is_within(value, size_type(0), size_limit - 1);
     }
     template <typename T>
-    static constexpr auto index(T value) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr bool index(
+        T value) noexcept {
       return index_with_limit(value, limit);
     }
 
@@ -226,15 +212,14 @@ struct SizeValueBase {
      * @return true if the sum represents a valid size, false otherwise.
      */
     template <typename T>
-    static constexpr auto sum_with_limit(T v1, T v2,
-                                         size_type size_limit) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr bool sum_with_limit(
+        T v1, T v2, size_type size_limit) noexcept {
       return v1 > 0 ? v1 <= size_limit && size_limit - v1 >= v2
                     : v2 > 0 && v2 <= size_limit;
     }
     template <typename T>
-    static constexpr auto sum(T v1, T v2) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr bool sum(
+        T v1, T v2) noexcept {
       return sum_with_limit(v1, v2, limit);
     }
 
@@ -244,14 +229,12 @@ struct SizeValueBase {
      * @return true if the product represents a valid size, false otherwise.
      */
     template <typename T>
-    static constexpr auto product_with_limit(T v1, T v2,
-                                             size_type size_limit) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr bool product_with_limit(
+        T v1, T v2, size_type size_limit) noexcept {
       return v1 > 0 && v2 > 0 && size_limit / v1 >= v2;
     }
     template <typename T>
-    static constexpr auto product(T v1, T v2) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr bool product(T v1, T v2) noexcept {
       return product_with_limit(v1, v2, limit);
     }
 
@@ -260,15 +243,15 @@ struct SizeValueBase {
      * @return true if mask if valid, false otherwise.
      */
     template <typename T>
-    static constexpr auto mask_with_limit(T mask, size_type size_limit) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr bool mask_with_limit(
+        T mask, size_type size_limit) noexcept {
       return size_limit > 1
                  ? mask <= size_limit - 1 && Bits<size_type>::fill(mask) == mask
                  : false;
     }
     template <typename T>
-    static constexpr auto mask(T mask) noexcept
-        -> decltype(TypeCheckSize<T>::bool_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr bool mask(
+        T mask) noexcept {
       return mask_with_limit(mask, limit);
     }
   };
@@ -278,8 +261,8 @@ struct SizeValueBase {
      * Returns v if #value(v) is true, throws std::range_error otherwise.
      */
     template <typename T>
-    static constexpr auto value_with_limit(T v, size_type size_limit)
-        -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T
+        value_with_limit(T v, size_type size_limit) {
       if (IsValid::value_with_limit(v, size_limit)) {
         return static_cast<size_type>(v);
       }
@@ -287,7 +270,7 @@ struct SizeValueBase {
                              "must be positive and cannot exceed max.");
     }
     template <typename T>
-    static constexpr auto value(T v) -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T value(T v) {
       return value_with_limit(v, limit);
     }
 
@@ -295,8 +278,8 @@ struct SizeValueBase {
      * Returns v if #index(v) is true, throws std::range_error otherwise.
      */
     template <typename T>
-    static constexpr auto index_with_limit(T v, size_type size_limit)
-        -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T
+        index_with_limit(T v, size_type size_limit) {
       if (IsValid::index_with_limit(v, size_limit)) {
         return v;
       }
@@ -304,7 +287,7 @@ struct SizeValueBase {
                              "value cannot exceed max_index.");
     }
     template <typename T>
-    static constexpr auto index(T v) -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T index(T v) {
       return index_with_limit(v, limit);
     }
 
@@ -313,8 +296,8 @@ struct SizeValueBase {
      * std::invalid_argument otherwise.
      */
     template <typename T>
-    static constexpr auto sum_with_limit(T v1, T v2, size_type size_limit)
-        -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T
+        sum_with_limit(T v1, T v2, size_type size_limit) {
       if (IsValid::sum_with_limit(v1, v2, size_limit)) {
         return v1 + v2;
       }
@@ -322,9 +305,10 @@ struct SizeValueBase {
                                   "values must be positive and "
                                   "cannot exceed max.");
     }
+
     template <typename T>
-    static constexpr auto sum(T v1, T v2)
-        -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T
+        sum(T v1, T v2) {
       return sum_with_limit(v1, v2, limit);
     }
 
@@ -333,8 +317,8 @@ struct SizeValueBase {
      * std::invalid_argument otherwise.
      */
     template <typename T>
-    static constexpr auto product_with_limit(T v1, T v2, size_type size_limit)
-        -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T
+        product_with_limit(T v1, T v2, size_type size_limit) {
       if (IsValid::product_with_limit(v1, v2, size_limit)) {
         return v1 * v2;
       }
@@ -343,9 +327,10 @@ struct SizeValueBase {
           "of values must be positive "
           "and cannot exceed max.");
     }
+
     template <typename T>
-    static constexpr auto product(T v1, T v2)
-        -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T
+        product(T v1, T v2) {
       return product_with_limit(v1, v2, limit);
     }
 
@@ -353,8 +338,8 @@ struct SizeValueBase {
      * Returns v if #mask(v) is true, throws std::invalid_argument otherwise.
      */
     template <typename T>
-    static constexpr auto mask_with_limit(T v, size_type size_limit)
-        -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T
+        mask_with_limit(T v, size_type size_limit) {
       if (IsValid::mask_with_limit(v, size_limit)) {
         return v;
       }
@@ -362,18 +347,19 @@ struct SizeValueBase {
                                   "must have all bits set and "
                                   "cannot exceed max_mask.");
     }
+
     template <typename T>
-    static constexpr auto mask(T v) -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T mask(T v) {
       return mask_with_limit(v, limit);
     }
+
     /**
      * Return a mask that can be used for indexes that can at least address the
      * number of provided elements.
      */
     template <typename T>
-    static constexpr auto mask_for_elements_with_limit(T elements,
-                                                       size_type size_limit)
-        -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T
+        mask_for_elements_with_limit(T elements, size_type size_limit) {
       size_type value =
           Bits<size_type>::fill(value_with_limit(elements, limit) - 1);
       if (value < size_limit) {
@@ -383,9 +369,10 @@ struct SizeValueBase {
           "org::simple::core::SizeValue::Valid: cannot create a valid indexing "
           "mask for number of elements without exceeding size limit.");
     }
+
     template <typename T>
-    static constexpr auto mask_for_elements(T elements)
-        -> decltype(TypeCheckSize<T>::size_value) {
+    requires(is_valid_size_type<size_type>()) static constexpr T
+        mask_for_elements(T elements) {
       return mask_for_elements_with_limit(elements, limit);
     }
   };

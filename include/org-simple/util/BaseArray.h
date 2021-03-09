@@ -29,6 +29,11 @@
 
 namespace org::simple::util {
 
+// TODO Mark move constructors as noexcept
+// TODO Allow for alignment in ArrayConstRef with constructor check
+// TODO Allow for alignment in ArraySlice with constructor check
+// TODO Rename ArrayConstRef to ArrayConstSlice?
+
 template <typename T, size_t S, size_t A, typename C> class BaseArray;
 template <typename T> class ArraySlice;
 template <typename T, size_t A = 0> class ArrayHeap;

@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_ALIGN_H
 #define ORG_SIMPLE_ALIGN_H
 /*
- * org-simple/align.h
+ * org-simple/core/align.h
  *
  * Added by michel on 2021-03-05
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -118,7 +118,7 @@ static constexpr size_t alignment_unchecked_apply(size_t offset,
  * Returns the offset with the alignment \c ALIGNAS applied.
  * Compilation fails if \c ALIGNAS is not a valid alignment.
  * @tparam ALIGNAS The alignment to apply to \c offset.
- * @param offset The offset whose aligned value muist be returned.
+ * @param offset The offset whose aligned value must be returned.
  * @return the aligned value of \c offset.
  */
 template <size_t ALIGNAS>
@@ -130,7 +130,7 @@ static constexpr size_t alignment_apply(size_t offset) {
 /**
  * Returns the offset with the natural alignment of type \c T applied.
  * @tparam T The type whose natural alignment to apply to \c offset.
- * @param offset The offset whose aligned value muist be returned.
+ * @param offset The offset whose aligned value must be returned.
  * @return the aligned value of \c offset.
  */
 template <typename T> static constexpr size_t alignment_apply(size_t offset) {
@@ -157,7 +157,7 @@ static constexpr size_t alignment_apply(size_t offset, size_t alignment) {
  * Otherwise, the natural alignment of \c T is returned.
  * @tparam T The type that the alignment should apply to.
  * @param suggestion The suggested alignment.
- * @return the correct alignment value, equal to or larger than alignof(T).
+ * @return the correct alignment value, equal to or larger than \c alignof(T).
  */
 template <typename T>
 static constexpr size_t alignment_get_correct(size_t suggestion) {

@@ -26,17 +26,17 @@
 namespace org::simple::core {
 
 
-template <class T> struct Complex {
+template <class T> struct is_complex {
   static constexpr bool value = false;
   using real_type = T;
 };
 
-template <class T> struct Complex<std::complex<T>>  {
-  static constexpr bool value = !Complex<T>::value;
+template <class T> struct is_complex<std::complex<T>>  {
+  static constexpr bool value = !is_complex<T>::value;
   using real_type = T;
 };
 
-template <typename T> static constexpr bool is_complex_v = Complex<T>::value;
+template <typename T> static constexpr bool is_complex_v = is_complex<T>::value;
 
 template <typename T>
 static constexpr bool is_number = std::is_arithmetic_v<T> || is_complex_v<T>;

@@ -116,7 +116,7 @@ struct Dereference {
     if (ptr) {
       return ptr;
     }
-    throw std::invalid_argument("Dereferece::checked(ptr): nullptr.");
+    throw std::invalid_argument("Dereference::checked(ptr): nullptr.");
   }
 
   template <typename T> [[nodiscard]] static T *unchecked(T *ptr) noexcept {

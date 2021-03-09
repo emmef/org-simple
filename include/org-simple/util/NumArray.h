@@ -202,17 +202,17 @@ template <typename T, class S> struct BaseNumArray : public S {
     return r;
   }
 
-  // Add another array
-
-  BaseNumArray &operator+=(const BaseNumArray &o) noexcept {
+  BaseNumArray &negate() noexcept {
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
-      data[i] += o[i];
+      data[i] = -data[i];
     }
     return *this;
   }
 
-  template <class Array>
+  // Add another array
+
+  template <class Array> requires BaseArrayTest<Array>::value
   BaseNumArray &operator+=(const Array &source) noexcept
       requires SameSizeArray<Array> {
     auto data = this->begin();
@@ -223,35 +223,24 @@ template <typename T, class S> struct BaseNumArray : public S {
     return *this;
   }
 
-  BaseNumArray operator+(const BaseNumArray &o) const noexcept {
+  template <class Array> requires BaseArrayTest<Array>::value
+  BaseNumArray operator+(const Array &o) const noexcept {
     BaseNumArray r = *this;
     r += o;
     return r;
   }
 
-  template <class Array>
-  requires BaseArrayTest<Array>::value BaseNumArray
-  operator+(const Array &o) const noexcept {
-    BaseNumArray r = *this;
-    r += o;
-    return r;
-  }
-
-  friend BaseNumArray &operator+(const BaseNumArray &o,
+  template <class Array> requires BaseArrayTest<Array>::value
+  friend BaseNumArray &operator+(const Array &o,
                                  BaseNumArray &&a) noexcept {
-    a += o;
-    return a;
-  }
-
-  template <class Array>
-  friend BaseNumArray &operator+(const Array &o, BaseNumArray &&a) noexcept {
     a += o;
     return a;
   }
 
   // Subtract an array
 
-  BaseNumArray &operator-=(const BaseNumArray &source) noexcept {
+  template <class Array> requires BaseArrayTest<Array>::value
+  BaseNumArray &operator-=(const Array &source) noexcept {
     auto data = this->begin();
     auto o = source.begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
@@ -351,8 +340,8 @@ template <typename T, class S> struct BaseNumArray : public S {
     auto v1 = this->begin();
     auto v2 = other.begin();
 
-    static constexpr bool v1Complex = org::simple::core::Complex<T>::value;
-    static constexpr bool v2Complex = org::simple::core::Complex<
+    static constexpr bool v1Complex = org::simple::core::is_complex<T>::value;
+    static constexpr bool v2Complex = org::simple::core::is_complex<
         typename BaseArrayTest<Array>::data_type>::value;
 
     if constexpr (v1Complex) {
@@ -378,10 +367,10 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   // Squared absolute value (norm)
 
-  typename org::simple::core::Complex<T>::real_type
+  typename org::simple::core::is_complex<T>::real_type
   squared_absolute() const noexcept {
-    if constexpr (org::simple::core::Complex<T>::value) {
-      typename org::simple::core::Complex<T>::value_type sum = 0;
+    if constexpr (org::simple::core::is_complex<T>::value) {
+      typename org::simple::core::is_complex<T>::value_type sum = 0;
       const T * p = this->begin();
       for (size_t i = 0; i < FIXED_CAPACITY; i++) {
         sum += std::norm(p[i]);

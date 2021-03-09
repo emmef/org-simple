@@ -44,10 +44,11 @@ struct CircularAlgoBase<WrappingType::BIT_MASK, size_type, size_limit> {
   }
 
   static constexpr size_type elements_for_allocation(size_t elements) noexcept {
-    return elements(value_for_elements(elements));
+    return CircularAlgoBase<WrappingType::BIT_MASK, size_type,
+                            size_limit>::elements(value_for_elements(elements));
   }
 
-  [[nodiscard]] static constexpr size_t is_valid_elements(size_type elements) {
+  [[nodiscard]] static constexpr bool is_valid_elements(size_type elements) {
     return size_metric::IsValid::value(elements);
   }
 
@@ -119,10 +120,11 @@ struct CircularAlgoBase<WrappingType::MODULO, size_type, size_limit> {
   }
 
   static constexpr size_type elements_for_allocation(size_t elements) noexcept {
-    return elements(value_for_elements(elements));
+    return CircularAlgoBase<WrappingType::MODULO, size_type,
+                            size_limit>::elements(value_for_elements(elements));
   }
 
-  [[nodiscard]] static constexpr size_t is_valid_elements(size_type elements) {
+  [[nodiscard]] static constexpr bool is_valid_elements(size_type elements) {
     return size_metric::IsValid::value(elements);
   }
 
@@ -178,23 +180,23 @@ struct CircularAlgoBase<WrappingType::MODULO, size_type, size_limit> {
 
   [[nodiscard]] static constexpr size_type diff(size_type hi, size_type lo,
                                                 size_t size) noexcept {
-    return unsafe_diff(wrapped(hi, size), wrapped(lo, size));
+    return unsafe_diff(wrapped(hi, size), wrapped(lo, size), size);
   }
 };
 
 template <typename size_type = size_t,
-    size_type size_limit = std::numeric_limits<size_type>::max()>
+          size_type size_limit = std::numeric_limits<size_type>::max()>
 struct CircularBase {
 
-  template <WrappingType wrappingType>
-  struct Metric {
+  template <WrappingType wrappingType> struct Metric {
     typedef CircularAlgoBase<wrappingType, size_type, size_limit> circular;
 
-    [[nodiscard]] static constexpr size_t value_for_elements(size_type elements) {
+    [[nodiscard]] static constexpr size_t
+    value_for_elements(size_type elements) {
       return circular::value_for_elements(elements);
     }
 
-    Metric(size_t elements) : value_(value_for_elements(elements)) {}
+    explicit Metric(size_t elements) : value_(value_for_elements(elements)) {}
 
     size_type elements() const noexcept { return circular::elements(value_); }
 
@@ -223,7 +225,8 @@ struct CircularBase {
       return circular::unsafe_add(index, delta, value_);
     }
 
-    [[nodiscard]] size_type add(size_type index, size_type delta) const noexcept {
+    [[nodiscard]] size_type add(size_type index,
+                                size_type delta) const noexcept {
       return circular::add(index, delta, value_);
     }
 
@@ -232,7 +235,8 @@ struct CircularBase {
       return circular::unsafe_sub(index, delta, value_);
     }
 
-    [[nodiscard]] size_type sub(size_type index, size_type delta) const noexcept {
+    [[nodiscard]] size_type sub(size_type index,
+                                size_type delta) const noexcept {
       return circular::sub(index, delta, value_);
     }
 
@@ -254,10 +258,9 @@ struct CircularBase {
     size_type value_;
   };
 
-  template <WrappingType wrappingType, size_type ELEMENTS>
-  struct FixedMetric {
+  template <WrappingType wrappingType, size_type ELEMENTS> struct FixedMetric {
     typedef CircularAlgoBase<wrappingType, size_type,
-        std::numeric_limits<size_type>::max()>
+                             std::numeric_limits<size_type>::max()>
         circular;
 
     static_assert(circular::is_valid_elements(ELEMENTS));
@@ -267,7 +270,8 @@ struct CircularBase {
       return circular::elements(VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type wrapped(size_type to_wrap) noexcept {
+    [[nodiscard]] static constexpr size_type
+    wrapped(size_type to_wrap) noexcept {
       return circular::wrapped(to_wrap, VALUE);
     }
 
@@ -309,8 +313,8 @@ struct CircularBase {
       return circular::sub(index, delta, VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type unsafe_diff(size_type hi,
-                                                         size_type lo) noexcept {
+    [[nodiscard]] static constexpr size_type
+    unsafe_diff(size_type hi, size_type lo) noexcept {
       return circular::unsafe_diff(hi, lo, VALUE);
     }
 
@@ -323,7 +327,7 @@ struct CircularBase {
   template <WrappingType wrappingType, size_type ELEMENTS>
   struct FixedMetricInstance {
     typedef CircularAlgoBase<wrappingType, size_type,
-        std::numeric_limits<size_type>::max()>
+                             std::numeric_limits<size_type>::max()>
         circular;
 
     static_assert(circular::is_valid_elements(ELEMENTS));
@@ -356,7 +360,8 @@ struct CircularBase {
       return circular::unsafe_add(index, delta, value_);
     }
 
-    [[nodiscard]] size_type add(size_type index, size_type delta) const noexcept {
+    [[nodiscard]] size_type add(size_type index,
+                                size_type delta) const noexcept {
       return circular::add(index, delta, value_);
     }
 
@@ -365,7 +370,8 @@ struct CircularBase {
       return circular::unsafe_sub(index, delta, value_);
     }
 
-    [[nodiscard]] size_type sub(size_type index, size_type delta) const noexcept {
+    [[nodiscard]] size_type sub(size_type index,
+                                size_type delta) const noexcept {
       return circular::sub(index, delta, value_);
     }
 
