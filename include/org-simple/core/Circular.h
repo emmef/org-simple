@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_CIRCULAR_H
 #define ORG_SIMPLE_CIRCULAR_H
 /*
- * org-simple/circular.h
+ * org-simple/core/Circular.h
  *
  * Added by michel on 2020-09-21
  * Copyright (C) 2015-2020 Michel Fleur.

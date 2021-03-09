@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_NUMBERS_H
-#define ORG_SIMPLE_NUMBERS_H
+#ifndef ORG_SIMPLE_NUMBER_TRAITS_H
+#define ORG_SIMPLE_NUMBER_TRAITS_H
 /*
- * org-simple/core/Complex.h
+ * org-simple/core/complex_traits.h
  *
  * Added by michel on 2021-03-05
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -23,15 +23,14 @@
 
 #include <complex>
 
-namespace org::simple::core {
-
+namespace org::simple::traits {
 
 template <class T> struct is_complex {
   static constexpr bool value = false;
   using real_type = T;
 };
 
-template <class T> struct is_complex<std::complex<T>>  {
+template <class T> struct is_complex<std::complex<T>> {
   static constexpr bool value = !is_complex<T>::value;
   using real_type = T;
 };
@@ -41,20 +40,6 @@ template <typename T> static constexpr bool is_complex_v = is_complex<T>::value;
 template <typename T>
 static constexpr bool is_number = std::is_arithmetic_v<T> || is_complex_v<T>;
 
-struct Numbers {
-  template <typename T> static constexpr T squared_absolute(const T &v) {
-    return std::norm(v);
-  }
+} // namespace org::simple::traits
 
-  template <typename T> static constexpr T squared_absolute(const std::complex<T> &v) {
-    return std::norm(v);
-  }
-
-  template <typename T> static constexpr T times_conj(const T &v1, T &v2) {
-    return v1 * std::conj(v2);
-  }
-};
-
-} // namespace org::simple::core
-
-#endif // ORG_SIMPLE_NUMBERS_H
+#endif // ORG_SIMPLE_NUMBER_TRAITS_H

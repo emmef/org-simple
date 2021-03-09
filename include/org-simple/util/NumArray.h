@@ -23,7 +23,7 @@
 
 #include <complex>
 #include <org-simple/core/Index.h>
-#include <org-simple/core/Numbers.h>
+#include <org-simple/core/number_traits.h>
 #include <org-simple/util/BaseArray.h>
 #include <type_traits>
 

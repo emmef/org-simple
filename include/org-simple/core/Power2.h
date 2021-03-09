@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_POWER2_H
 #define ORG_SIMPLE_POWER2_H
 /*
- * org-simple/core/power2.h
+ * org-simple/core/Power2.h
  *
  * Added by michel on 2020-09-21
  * Copyright (C) 2015-2020 Michel Fleur.
