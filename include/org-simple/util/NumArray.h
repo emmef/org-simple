@@ -42,12 +42,12 @@ concept NumberIsR2LAssignable = (is_complex_v<L> && is_number<R>) ||
 
 } // namespace concepts
 
-template <typename T, class S> struct BaseNumArray : public S {
-  static_assert(BaseArrayTest<S>::value);
-  static_assert(BaseArrayTest<S>::FIXED_CAPACITY != 0);
+using namespace concepts;
 
-  static_assert(org::simple::core::is_number<T>);
-  static_assert(BaseArrayTest<S>::value);
+template <typename T, class S> struct BaseNumArray : public S {
+  static_assert(is_base_array<S>);
+  static_assert(concept_base_array<S>::FIXED_CAPACITY != 0);
+  static_assert(org::simple::traits::is_number<T>);
 
   typedef S Super;
   typedef typename Super::data_type data_type;
@@ -56,23 +56,23 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   template <typename X>
   static constexpr bool SameSizeArray =
-      BaseArrayTest<X>::FIXED_CAPACITY == FIXED_CAPACITY;
+      is_type_compat_same_size_arrays<X, T, FIXED_CAPACITY>;
 
   template <typename X>
   static constexpr bool NotSmallerArray =
-      BaseArrayTest<X>::FIXED_CAPACITY >= FIXED_CAPACITY;
+      is_type_compat_ge_size_arrays<X, T, FIXED_CAPACITY>;
 
   template <typename X>
   static constexpr bool BiggerArray =
-      BaseArrayTest<X>::FIXED_CAPACITY > FIXED_CAPACITY;
+      is_type_compat_gt_size_arrays<X, T, FIXED_CAPACITY>;
 
   template <typename X>
   static constexpr bool NotBiggerArray =
-      BaseArrayTest<X>::FIXED_CAPACITY <= FIXED_CAPACITY;
+      is_type_compat_le_size_arrays<X, T, FIXED_CAPACITY>;
 
   template <typename X>
   static constexpr bool SmallerArray =
-      BaseArrayTest<X>::FIXED_CAPACITY < FIXED_CAPACITY;
+      is_type_compat_lt_size_arrays<X, T, FIXED_CAPACITY>;
 
   template <size_t START, size_t SRC_ELEM>
   static constexpr bool ValidForGraftArray = (START + SRC_ELEM <=
@@ -80,7 +80,7 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   template <typename X>
   static constexpr bool ValidForCrossProductArray =
-      FIXED_CAPACITY == BaseArrayTest<X>::FIXED_CAPACITY &&FIXED_CAPACITY == 3;
+      FIXED_CAPACITY == concept_base_array<X>::FIXED_CAPACITY &&FIXED_CAPACITY == 3;
 
   BaseNumArray() = default;
   BaseNumArray(const BaseNumArray &) = default;
@@ -125,14 +125,14 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   void fill(T v) {
     auto data = this->begin();
-    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+    for (size_t i = 0; i < this->capacity(); i++) {
       data[i] = v;
     }
   }
 
   BaseNumArray &plus(T v) {
     auto data = this->begin();
-    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+    for (size_t i = 0; i < this->capacity(); i++) {
       data[i] += v;
     }
     return *this;
@@ -141,7 +141,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   BaseNumArray &operator<<(const T *source) {
     const T *src = core::Dereference::safe(source);
     auto data = this->begin();
-    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+    for (size_t i = 0; i < this->capacity(); i++) {
       data[i] += src[i];
     }
     return *this;
@@ -149,46 +149,9 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   void operator>>(T *destination) {
     const T *dst = core::Dereference::safe(destination);
-    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
+    for (size_t i = 0; i < this->capacity(); i++) {
       dst[i] += this->data_(i);
     }
-  }
-
-  template <class Array>
-  requires NotSmallerArray<Array> BaseNumArray &
-  operator<<(const Array &source) {
-    auto data = this->begin();
-    auto o = source.begin();
-    for (size_t i = 0; i < FIXED_CAPACITY; i++) {
-      data[i] += o[i];
-    }
-    return *this;
-  }
-
-  template <typename X>
-  requires SmallerArray<X> BaseNumArray &operator<<(const X &source) {
-    size_t i;
-    auto data = this->begin();
-    auto o = source.begin();
-    for (i = 0; i < X::constSize(); i++) {
-      data[i] += o[i];
-    }
-    for (; i < FIXED_CAPACITY; i++) {
-      data[i] = 0;
-    }
-    return *this;
-  }
-
-  template <typename Array, size_t START, size_t SRC_ELEM>
-  requires ValidForGraftArray<START, SRC_ELEM> BaseNumArray &
-  graft(const Array &source) {
-    auto data = this->begin();
-    auto o = source.begin();
-
-    for (size_t src = 0, dst = START; src <= SRC_ELEM; src++, dst++) {
-      data[dst] = o[src];
-    }
-    return *this;
   }
 
   // Negate
@@ -213,10 +176,10 @@ template <typename T, class S> struct BaseNumArray : public S {
   // Add another array
 
   template <class Array>
-  requires BaseArrayTest<Array>::value BaseNumArray &
-  operator+=(const Array &source) requires SameSizeArray<Array> {
-    auto data = this->begin();
-    auto o = source.begin();
+  requires SameSizeArray<Array> BaseNumArray &
+  operator+=(const Array &source) {
+    T * __restrict data = this->begin();
+    const T * __restrict o = source.begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] += o[i];
     }
@@ -224,7 +187,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   }
 
   template <class Array>
-  requires BaseArrayTest<Array>::value BaseNumArray
+  requires SameSizeArray<Array> BaseNumArray
   operator+(const Array &o) const {
     BaseNumArray r = *this;
     r += o;
@@ -232,7 +195,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   }
 
   template <class Array>
-  requires BaseArrayTest<Array>::value friend BaseNumArray &
+  requires SameSizeArray<Array> friend BaseNumArray &
   operator+(const Array &o, BaseNumArray &&a) {
     a += o;
     return a;
@@ -241,33 +204,22 @@ template <typename T, class S> struct BaseNumArray : public S {
   // Subtract an array
 
   template <class Array>
-  requires BaseArrayTest<Array>::value BaseNumArray &
+  requires SameSizeArray<Array> BaseNumArray &
   operator-=(const Array &source) {
-    auto data = this->begin();
-    auto o = source.begin();
+    T * __restrict data = this->begin();
+    const T * __restrict o = source.begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] -= o[i];
     }
     return *this;
   }
 
-  BaseNumArray operator-(const BaseNumArray &o) const {
-    BaseNumArray r = *this;
-    r -= o;
-    return r;
-  }
-
   template <class Array>
-  requires BaseArrayTest<Array>::value BaseNumArray
+  requires SameSizeArray<Array> BaseNumArray
   operator-(const Array &o) const {
     BaseNumArray r = *this;
     r -= o;
     return r;
-  }
-
-  friend BaseNumArray &operator-(const BaseNumArray &o, BaseNumArray &&a) {
-    a -= o;
-    return a;
   }
 
   template <class Array>
@@ -333,13 +285,13 @@ template <typename T, class S> struct BaseNumArray : public S {
   // Dot product
 
   template <class Array>
-  requires ArrayCompatible<Array, T> T dot(const Array &other) const {
+  requires SameSizeArray<Array> T dot(const Array &other) const {
     auto v1 = this->begin();
     auto v2 = other.begin();
 
     static constexpr bool v1Complex = org::simple::core::is_complex<T>::value;
     static constexpr bool v2Complex = org::simple::core::is_complex<
-        typename BaseArrayTest<Array>::data_type>::value;
+        typename concept_base_array<Array>::data_type>::value;
 
     if constexpr (v1Complex) {
       T sum = 0;
@@ -396,8 +348,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   }
 };
 
-template <typename T, size_t N>
-using NumArray = BaseNumArray<T, ArrayInline<T, N>>;
+template <typename T, size_t N> using NumArray = BaseNumArray<T, Array<T, N>>;
 
 } // namespace org::simple::util
 

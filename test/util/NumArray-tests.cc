@@ -16,7 +16,7 @@ constexpr size_t BIGGER = 16;
 typedef NumArray<double, SIZE> Numa;
 typedef NumArray<double, SMALLER> NumaSmall;
 typedef NumArray<double, BIGGER> NumaBig;
-typedef ArrayInline<double, SIZE> Array10;
+typedef Array<double, SIZE> Array10;
 
 }
 

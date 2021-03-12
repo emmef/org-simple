@@ -29,19 +29,18 @@
 
 namespace org::simple::util {
 
-// TODO Mark move constructors as noexcept
 // TODO Allow for alignment in ArrayConstRef with constructor check
 // TODO Allow for alignment in ArraySlice with constructor check
-// TODO Rename ArrayConstRef to ArrayConstSlice?
 
-template <typename T, size_t S, size_t A, typename C> class BaseArray;
-template <typename T> class ArraySlice;
-template <typename T, size_t A = 0> class ArrayHeap;
+template <typename T, size_t S, size_t A, typename C> class AbstractArray;
+template <typename T> class ArrayDataRef;
+template <typename T, size_t A = 0> class ArrayAllocated;
+template <typename T, size_t S, size_t A = 0> class Array;
 
-template <class T> class BaseArrayTestHelper {
+template <class T> class test_helper_is_base_array {
 
   template <typename T1, size_t S1, size_t A1, typename C1>
-  static constexpr bool try_subst(const BaseArray<T1, S1, A1, C1> *) {
+  static constexpr bool try_subst(const AbstractArray<T1, S1, A1, C1> *) {
     return true;
   }
 
@@ -53,43 +52,75 @@ public:
   static constexpr bool value = try_subst(static_cast<const T *>(nullptr));
 };
 
-template <class T, bool = BaseArrayTestHelper<T>::value> class BaseArrayTest {
-public:
+template <class Array, bool = test_helper_is_base_array<Array>::value>
+struct concept_base_array {
   static constexpr size_t FIXED_CAPACITY = 0;
   static constexpr size_t ALIGNAS = 0;
   static constexpr bool value = false;
   using data_type = void;
 
-  template <typename Target> static constexpr bool compatible() {
+  template <typename Target> static constexpr bool compatible_type() {
     return false;
   }
 };
 
-template <class T> class BaseArrayTest<T, true> {
-
-public:
-  static constexpr size_t FIXED_CAPACITY = T::FIXED_CAPACITY;
-  static constexpr size_t ALIGNAS = T::ALIGNAS;
+template <class Array> struct concept_base_array<Array, true> {
+  static constexpr size_t FIXED_CAPACITY = Array::FIXED_CAPACITY;
+  static constexpr size_t ALIGNAS = Array::ALIGNAS;
   static constexpr bool value = true;
-  using data_type = typename T::data_type;
+  using data_type = typename Array::data_type;
 
-  template <typename Target> static constexpr bool compatible() {
-    return std::is_nothrow_convertible_v<data_type, Target>;
-  }
+  template <typename Target>
+  static constexpr bool is_type_compatible =
+      std::is_nothrow_convertible_v<data_type, Target>;
 };
 
+template <class Array> concept is_base_array = concept_base_array<Array>::value;
+
 template <class Array, typename T>
-concept ArrayCompatible = BaseArrayTest<Array>::template compatible<T>();
+concept is_type_compat_array =
+    concept_base_array<Array>::template is_type_compatible<T>;
 
 template <class Array, typename T, size_t FIXED_CAPACITY>
-concept ArrayFixedCompatible =
-    BaseArrayTest<Array>::template compatible<T>() &&
-    BaseArrayTest<Array>::FIXED_CAPACITY != 0 && FIXED_CAPACITY != 0;
+concept is_type_compat_fixed_arrays =
+    concept_base_array<Array>::template is_type_compatible<T>
+            &&concept_base_array<Array>::FIXED_CAPACITY != 0 &&
+    FIXED_CAPACITY != 0;
+
+template <class Array, typename T, size_t FIXED_CAPACITY>
+concept is_type_compat_same_size_arrays =
+    concept_base_array<Array>::template is_type_compatible<T>
+            &&FIXED_CAPACITY != 0 &&
+    concept_base_array<Array>::FIXED_CAPACITY == FIXED_CAPACITY;
+
+template <class Array, typename T, size_t FIXED_CAPACITY>
+concept is_type_compat_le_size_arrays =
+    concept_base_array<Array>::template is_type_compatible<T>
+            &&FIXED_CAPACITY != 0 &&
+    concept_base_array<Array>::FIXED_CAPACITY <= FIXED_CAPACITY;
+
+template <class Array, typename T, size_t FIXED_CAPACITY>
+concept is_type_compat_lt_size_arrays =
+    concept_base_array<Array>::template is_type_compatible<T>
+            &&FIXED_CAPACITY != 0 &&
+    concept_base_array<Array>::FIXED_CAPACITY < FIXED_CAPACITY;
+
+template <class Array, typename T, size_t FIXED_CAPACITY>
+concept is_type_compat_ge_size_arrays =
+    concept_base_array<Array>::template is_type_compatible<T>
+            &&FIXED_CAPACITY != 0 &&
+    concept_base_array<Array>::FIXED_CAPACITY >= FIXED_CAPACITY;
+
+template <class Array, typename T, size_t FIXED_CAPACITY>
+concept is_type_compat_gt_size_arrays =
+    concept_base_array<Array>::template is_type_compatible<T>
+            &&FIXED_CAPACITY != 0 &&
+    concept_base_array<Array>::FIXED_CAPACITY > FIXED_CAPACITY;
 
 /**
- * ArrayBase implements basic array behavior that a subclass can inherit. To do
- * that, the subclass must pass a delegate class as the last parameter \c C and
- * implement the following three methods: <table>
+ * AbstractArray implements basic array behavior that a subclass can inherit. To
+ * do that, the subclass must pass a delegate class as the last parameter \c C
+ * and implement the following three methods: <table>
  *   <tr><td><code>array_capacity()</code></td><td>Returns the current capacity
  * of the array and is ignored if #FIXED_CAPACITY is non-zero. The method must
  * be const.</td></tr>
@@ -104,7 +135,7 @@ concept ArrayFixedCompatible =
  * coincide with the data of another array, \c false otherwise.
  * @tparam C The delegate class that needs to implement the
  */
-template <typename T, size_t S, size_t A, typename C> class BaseArray {
+template <typename T, size_t S, size_t A, typename C> class AbstractArray {
   static_assert(A == 0 || org::simple::core::alignment_is_valid<T>(A));
   static_assert(
       S == 0 ||
@@ -164,37 +195,28 @@ public:
     }
   }
 
-  bool is_valid_calacity(size_t capacity) const {
+  static constexpr bool is_valid_capacity(size_t capacity) {
     return Size::IsValid::value(capacity);
   }
 
   // Raw element access
 
-  const T &data(size_t offset) const { return begin()[offset]; }
-  const T &operator[](size_t offset) const { return data(offset); }
-
+  const T &data(size_t offset) const {
+    return begin()[core::Index::unsafe(offset, capacity())];
+  }
   T &data(size_t offset) {
     return begin()[core::Index::unsafe(offset, capacity())];
   }
-  T &operator[](size_t offset) {
-    return data(core::Index::unsafe(offset, capacity()));
-  }
+  const T &operator[](size_t offset) const { return data(offset); }
+  T &operator[](size_t offset) { return data(offset); }
 
   // Offset-checked element access
 
   const T &at(size_t offset) const {
-    if constexpr (FIXED_CAPACITY != 0) {
-      return begin()[org::simple::core::Index::safe(offset, FIXED_CAPACITY)];
-    } else {
-      return begin()[org::simple::core::Index::safe(offset, capacity())];
-    }
+    return begin()[org::simple::core::Index::safe(offset, capacity())];
   }
   T &at(size_t offset) {
-    if constexpr (FIXED_CAPACITY != 0) {
-      return begin()[org::simple::core::Index::safe(offset, FIXED_CAPACITY)];
-    } else {
-      return begin()[org::simple::core::Index::safe(offset, capacity())];
-    }
+    return begin()[org::simple::core::Index::safe(offset, capacity())];
   }
 
   /**
@@ -206,27 +228,34 @@ public:
    * @return \c true if copy was successful, \c false otherwise.
    */
   template <class Array>
-  requires ArrayCompatible<Array, T> bool assign(const Array &source) {
+  requires is_type_compat_array<Array, T> void assign(const Array &source) {
+    if (&source == this) {
+      return;
+    }
     if constexpr (FIXED_CAPACITY != 0) {
       if constexpr (Array::FIXED_CAPACITY != 0) {
         static_assert(FIXED_CAPACITY == Array::FIXED_CAPACITY);
       } else if (FIXED_CAPACITY != source.capacity()) {
-        return false;
+        throw std::invalid_argument(
+            "org::simple::util::BaseArray<FIXED_CAPACITY>.assign(Array<dynamic "
+            "capacity>)");
       }
     } else if constexpr (Array::FIXED_CAPACITY != 0) {
       if (capacity() != Array::FIXED_CAPACITY) {
-        return false;
+        throw std::invalid_argument("org::simple::util::BaseArray<dynamic "
+                                    "capacity>.assign(Array<FIXED_CAPACITY>)");
       }
     } else {
       if (capacity() != source.capacity()) {
-        return false;
+        throw std::invalid_argument("org::simple::util::BaseArray<dynamic "
+                                    "capacity>.assign(Array<FIXED_CAPACITY>)");
       }
       T *__restrict destination = begin();
       const T *__restrict src = source.begin();
       for (size_t i = 0; i < capacity(); i++) {
         destination[i] = src[i];
       }
-      return true;
+      return;
     }
     const size_t MOVES =
         FIXED_CAPACITY != 0 ? FIXED_CAPACITY : Array::FIXED_CAPACITY;
@@ -235,7 +264,6 @@ public:
     for (size_t i = 0; i < MOVES; i++) {
       to[i] = from[i];
     }
-    return true;
   }
 
   /**
@@ -248,10 +276,11 @@ public:
    * @return \c true if copying was successful, \c false otherwise.
    */
   template <class Array>
-  requires ArrayCompatible<Array, T> bool copy(size_t dest,
-                                               const Array &source) {
+  requires is_type_compat_array<Array, T> void copy_to(size_t dest,
+                                                       const Array &source) {
     if (dest >= capacity() || this->capacity() - dest < source.capacity()) {
-      return false;
+      throw std::invalid_argument(
+          "org::simple::util::BaseArray.copy_to(dest, source_array)");
     }
     T *__restrict to = begin();
     const size_t end = dest + source.capacity();
@@ -259,7 +288,6 @@ public:
     for (size_t src = 0, dst = dest; dst < end; src++, dst++) {
       to[dst] = wrapper[src];
     }
-    return true;
   }
 
   /**
@@ -272,8 +300,8 @@ public:
    * @return \c true if copying was successful, \c false otherwise.
    */
   template <size_t DEST, class Array>
-  requires ArrayFixedCompatible<Array, T, FIXED_CAPACITY> void
-  copy(const Array &source) {
+  requires is_type_compat_fixed_arrays<Array, T, FIXED_CAPACITY> void
+  copy_to(const Array &source) {
     static_assert(DEST < FIXED_CAPACITY &&
                   FIXED_CAPACITY - DEST >= Array::FIXED_CAPACITY);
     T *__restrict to = begin();
@@ -298,14 +326,20 @@ public:
    * @return \c true if copying was successful, \c false otherwise.
    */
   template <typename Array>
-  requires ArrayCompatible<Array, T> bool
-  copy_range(size_t dest, const Array &source, size_t start, size_t end) {
-    if (end >= source.capacity() || end < start || dest >= capacity()) {
-      return false;
+  requires is_type_compat_array<Array, T> void
+  copy_range_to(size_t dest, const Array &source, size_t start, size_t end) {
+    if (end >= source.capacity() || end < start) {
+      throw std::invalid_argument("org::simple::util::BaseArray.copy_range_to("
+                                  "dest, source, !start, !end)");
+    }
+    if (dest >= capacity()) {
+      throw std::invalid_argument("org::simple::util::BaseArray.copy_range_to(!"
+                                  "dest, source, start, end)");
     }
     const size_t last = dest + (end - start);
     if (last >= capacity()) {
-      return false;
+      throw std::invalid_argument("org::simple::util::BaseArray.copy_range_to(!"
+                                  "dest, source, !start, !end)");
     }
     T *__restrict to = begin();
     const T *__restrict from = source.begin();
@@ -313,7 +347,6 @@ public:
     for (size_t src = start, dst = dest; dst <= last; src++, dst++) {
       to[dst] = from[src];
     }
-    return true;
   }
 
   /**
@@ -330,10 +363,10 @@ public:
    * @return \c true if copying was successful, \c false otherwise.
    */
   template <size_t DEST, size_t START, size_t END, typename Array>
-  requires ArrayFixedCompatible<Array, T, FIXED_CAPACITY> void
-  copy_range(const Array &source) {
-    static_assert(!(END >= Array::FIXED_CAPACITY || END < START ||
-                    DEST >= FIXED_CAPACITY));
+  requires is_type_compat_fixed_arrays<Array, T, FIXED_CAPACITY> void
+  copy_range_to(const Array &source) {
+    static_assert(!(END >= Array::FIXED_CAPACITY || END < START));
+    static_assert(DEST < FIXED_CAPACITY);
     static constexpr size_t last = DEST + (END - START);
     static_assert(last < FIXED_CAPACITY);
     T *__restrict to = begin();
@@ -352,16 +385,16 @@ public:
    * @param end The last element to reference.
    * @return an Array slice representing the range.
    */
-  ArraySlice<T> range_ref(size_t start, size_t end) {
+  ArrayDataRef<T> range_ref(size_t start, size_t end) {
     if (end < capacity() && start <= end) {
-      return ArraySlice<T>(begin() + start, end + 1 - start);
+      return ArrayDataRef<T>(begin() + start, end + 1 - start);
     }
     throw std::out_of_range("org::simple::util::BaseArray(start,end)");
   }
 
-  const ArraySlice<T> range_ref(size_t start, size_t end) const {
+  const ArrayDataRef<T> range_ref(size_t start, size_t end) const {
     if (end < capacity() && start <= end) {
-      return ArraySlice<T>(begin() + start, end + 1 - start);
+      return ArrayDataRef<T>(begin() + start, end + 1 - start);
     }
     throw std::out_of_range("org::simple::util::BaseArray(start,end)");
   }
@@ -375,15 +408,15 @@ public:
    * @return an Array slice representing the range.
    */
   template <size_t START, size_t END>
-  requires(FIXED_CAPACITY != 0) ArraySlice<T> range_ref() {
+  requires(FIXED_CAPACITY != 0) ArrayDataRef<T> range_ref() {
     static_assert(END < FIXED_CAPACITY && START <= END);
-    return ArraySlice<T>(begin() + START, END + 1 - START);
+    return ArrayDataRef<T>(begin() + START, END + 1 - START);
   }
 
   template <size_t START, size_t END>
-  requires(FIXED_CAPACITY != 0) const ArraySlice<T> range_ref() const {
+  requires(FIXED_CAPACITY != 0) const ArrayDataRef<T> range_ref() const {
     static_assert(END < FIXED_CAPACITY && START <= END);
-    return ArraySlice<T>(begin() + START, END + 1 - START);
+    return ArrayDataRef<T>(begin() + START, END + 1 - START);
   }
 
   /**
@@ -394,9 +427,9 @@ public:
    * @param end The last element to copy.
    * @return an Array representing the range.
    */
-  const ArrayHeap<T> range_copy(size_t start, size_t end) const {
+  ArrayAllocated<T> range_copy(size_t start, size_t end) const {
     if (end < capacity() && start <= end) {
-      return ArrayHeap<T>(begin() + start, end + 1 - start);
+      return ArrayAllocated<T>(begin() + start, end + 1 - start);
     }
     throw std::out_of_range("org::simple::util::BaseArray(start,end)");
   }
@@ -410,9 +443,42 @@ public:
    * @return an Array representing the range.
    */
   template <size_t START, size_t END>
-  requires(FIXED_CAPACITY != 0) const ArrayHeap<T> range_copy() const {
+  requires(FIXED_CAPACITY != 0) Array<T, END + 1 - START> range_copy() const {
     static_assert(END < FIXED_CAPACITY && START <= END);
-    return ArrayHeap<T>(begin() + START, END + 1 - START);
+    return Array<T, END + 1 - START>(begin() + START);
+  }
+
+  /**
+   * Returns an array whose elements are a copy of the elements in the range
+   * that starts at element \c START and ends at element \c END. Compilation
+   * fails if the range exceeds the array boundaries.
+   * @tparam START The first element to copy.
+   * @tparam END The last element to copy.
+   * @return an Array representing the range.
+   */
+  template <size_t START, size_t END>
+  requires(FIXED_CAPACITY !=
+           0) const ArrayAllocated<T> range_copy_local() const {
+    static_assert(END < FIXED_CAPACITY && START <= END);
+    return ArrayAllocated<T>(begin() + START, END + 1 - START);
+  }
+
+  AbstractArray &operator<<(const T *source) {
+    const T *__restrict src = core::Dereference::safe(source);
+    T *__restrict dst = this->begin();
+    for (size_t i = 0; i < this->capacity(); i++) {
+      dst[i] += src[i];
+    }
+    return *this;
+  }
+
+  const AbstractArray &operator>>(T *destination) const {
+    T *__restrict dst = core::Dereference::safe(destination);
+    const T *__restrict src = this->begin();
+    for (size_t i = 0; i < this->capacity(); i++) {
+      dst[i] += src[i];
+    }
+    return *this;
   }
 };
 
@@ -432,9 +498,9 @@ template <typename T, size_t S> static constexpr size_t eff_capacity() {
 
 using namespace helper;
 
-template <typename T, size_t S, size_t A = 0>
-class ArrayInline : public BaseArray<T, eff_capacity<T, S>(), eff_align<T>(A),
-                                     ArrayInline<T, S, A>> {
+template <typename T, size_t S, size_t A>
+class Array : public AbstractArray<T, eff_capacity<T, S>(), eff_align<T>(A),
+                                   Array<T, S, A>> {
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
@@ -444,23 +510,30 @@ class ArrayInline : public BaseArray<T, eff_capacity<T, S>(), eff_align<T>(A),
   const T *array_data() const { return &data_[0]; }
 
 public:
-  typedef BaseArray<T, eff_capacity<T, S>(), eff_align<T>(A),
-                    ArrayInline<T, S, A>>
+  typedef AbstractArray<T, eff_capacity<T, S>(), eff_align<T>(A),
+                        Array<T, S, A>>
       Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   using Super::FIXED_CAPACITY;
   friend Super;
 
-  ArrayInline() = default;
-  ArrayInline(const ArrayInline &) = default;
-  ArrayInline(ArrayInline &&) = default;
+  Array() = default;
+  Array(const Array &) = default;
+  Array(Array &&) noexcept = default;
+
+  template <class Array>
+  requires is_type_compat_array<Array, T> Array(const Array &source) {
+    this->assign(source);
+  }
+
+  Array(const T *source) { this->operator<<(source); }
 };
 
 template <typename T, size_t S, size_t A = 0>
-class ArrayConstAlloc
-    : public BaseArray<T, eff_capacity<T, S>(), eff_align<T>(A),
-                       ArrayConstAlloc<T, S, A>> {
+class ArrayAllocatedFixedSize
+    : public AbstractArray<T, eff_capacity<T, S>(), eff_align<T>(A),
+                           ArrayAllocatedFixedSize<T, S, A>> {
 public:
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
@@ -474,26 +547,40 @@ public:
   const T *array_data() const { return data_->data_; }
 
 public:
-  typedef BaseArray<T, eff_capacity<T, S>(), eff_align<T>(A),
-                    ArrayConstAlloc<T, S, A>>
+  typedef AbstractArray<T, eff_capacity<T, S>(), eff_align<T>(A),
+                        ArrayAllocatedFixedSize<T, S, A>>
       Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   using Super::FIXED_CAPACITY;
   friend Super;
 
-  ArrayConstAlloc() : data_(new T[Super::SizeMetric::Valid::value(S)]) {}
+  ArrayAllocatedFixedSize()
+      : data_(new T[Super::SizeMetric::Valid::value(S)]) {}
 
-  ArrayConstAlloc(const ArrayConstAlloc &source) : data_(new DataStruct) {
+  ArrayAllocatedFixedSize(const ArrayAllocatedFixedSize &source)
+      : data_(new DataStruct) {
     for (size_t i = 0; i < Super::constSize(); i++) {
       data_[i] = source.data_[i];
     }
   }
 
-  ArrayConstAlloc(ArrayConstAlloc &&source) : data_(source.data_) {
+  ArrayAllocatedFixedSize(ArrayAllocatedFixedSize &&source) noexcept
+      : data_(source.data_) {
     source.data_ = nullptr;
   }
-  ~ArrayConstAlloc() {
+
+  template <class Array>
+  requires is_type_compat_array<Array, T>
+  ArrayAllocatedFixedSize(const Array &source) : ArrayAllocatedFixedSize() {
+    this->assign(source);
+  }
+
+  ArrayAllocatedFixedSize(const T *source) : ArrayAllocatedFixedSize() {
+    this->operator<<(source);
+  }
+
+  ~ArrayAllocatedFixedSize() {
     delete data_;
     data_ = nullptr;
   }
@@ -503,8 +590,9 @@ private:
 };
 
 template <typename T, size_t S>
-class ArrayConstRef
-    : public BaseArray<T, eff_capacity<T, S>(), 0, ArrayConstRef<T, S>> {
+class ArrayDataRefFixedSize
+    : public AbstractArray<T, eff_capacity<T, S>(), 0,
+                           ArrayDataRefFixedSize<T, S>> {
 
   T *data_;
 
@@ -512,19 +600,22 @@ class ArrayConstRef
   const T *array_data() const { return data_; }
 
 public:
-  typedef BaseArray<T, eff_capacity<T, S>(), 0, ArrayConstRef<T, S>> Super;
+  typedef AbstractArray<T, eff_capacity<T, S>(), 0, ArrayDataRefFixedSize<T, S>>
+      Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   using Super::FIXED_CAPACITY;
   friend Super;
 
-  ArrayConstRef() = delete;
-  ArrayConstRef(T *data) : data_(core::Dereference::checked(data)) {}
-  ArrayConstRef(const ArrayConstRef &source) : data_(source.data_) {}
+  ArrayDataRefFixedSize() = delete;
+  ArrayDataRefFixedSize(T *data) : data_(core::Dereference::checked(data)) {}
+  ArrayDataRefFixedSize(const ArrayDataRefFixedSize &source)
+      : data_(source.data_) {}
+  ArrayDataRefFixedSize(ArrayDataRefFixedSize &&source) noexcept = default;
 };
 
 template <typename T>
-class ArraySlice : public BaseArray<T, 0, 0, ArraySlice<T>> {
+class ArrayDataRef : public AbstractArray<T, 0, 0, ArrayDataRef<T>> {
 
   T *data_;
   size_t capacity_;
@@ -534,21 +625,23 @@ class ArraySlice : public BaseArray<T, 0, 0, ArraySlice<T>> {
   const T *array_data() const { return data_; }
 
 public:
-  typedef BaseArray<T, 0, 0, ArraySlice<T>> Super;
+  typedef AbstractArray<T, 0, 0, ArrayDataRef<T>> Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   friend Super;
 
-  ArraySlice() = delete;
-  ArraySlice(T *data, size_t size)
+  ArrayDataRef() = delete;
+  ArrayDataRef(T *data, size_t capacity)
       : data_(core::Dereference::checked(data)),
-        capacity_(Super::Size::Valid::value(size)) {}
-  ArraySlice(const ArraySlice &source)
+        capacity_(Super::Size::Valid::value(capacity)) {}
+  ArrayDataRef(const ArrayDataRef &source)
       : data_(source.data_), capacity_(source.capacity_) {}
+  ArrayDataRef(ArrayDataRef &&source) noexcept = default;
 };
 
 template <typename T, size_t A>
-class ArrayHeap : public BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T, A>> {
+class ArrayAllocated
+    : public AbstractArray<T, 0, eff_align<T>(A), ArrayAllocated<T, A>> {
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
@@ -566,20 +659,22 @@ class ArrayHeap : public BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T, A>> {
   }
 
 public:
-  typedef BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T, A>> Super;
+  typedef AbstractArray<T, 0, eff_align<T>(A), ArrayAllocated<T, A>> Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   friend Super;
 
-  ArrayHeap(size_t size) : data_(size) {}
-  ArrayHeap(const T *source, size_t size) : data_(size) {
+  ArrayAllocated(size_t size) : data_(size) {}
+
+  ArrayAllocated(const T *source, size_t size) : data_(size) {
     T *to = this->begin();
     for (size_t i = 0; i < data_.capacity(); i++) {
       to[i] = source[i];
     }
   }
+
   template <class Array>
-  requires ArrayCompatible<Array, T> ArrayHeap(const Array &source)
+  requires is_type_compat_array<Array, T> ArrayAllocated(const Array &source)
       : data_(source.capacity()) {
     T *to = data_.data();
     const T *from = source.begin();
@@ -587,7 +682,12 @@ public:
       to[i] = from[i];
     }
   }
-  ArrayHeap(ArrayHeap &&source) : data_(std::move(source.data_)) {}
+  ArrayAllocated(ArrayAllocated &&source) noexcept
+      : data_(std::move(source.data_)) {}
+
+  ArrayAllocated(size_t capacity, const T *source) : ArrayAllocated(capacity) {
+    this->operator<<(source);
+  }
 
 private:
   core::AlignedAlloc<T, eff_align<T>(A)> data_;

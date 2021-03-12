@@ -13,8 +13,8 @@ namespace {
 
 typedef double value;
 static constexpr size_t SIZE = 10;
-typedef ArrayInline<value, SIZE> Array10;
-typedef ArraySlice<value> Slice;
+typedef Array<value, SIZE> Array10;
+typedef ArrayDataRef<value> Slice;
 
 class TestA {};
 
@@ -47,7 +47,7 @@ struct A {};
 
 template <class Array>
 void testAlignmentValues() {
-  typedef BaseArrayTest<Array> Test;
+  typedef concept_base_array<Array> Test;
   if (Test::FIXED_CAPACITY == 0) {
     return;
   }
@@ -68,7 +68,7 @@ void testAlignmentValues() {
 
 template <class Array>
 void testAlignmentValuesDataStruct() {
-  typedef BaseArrayTest<Array> Test;
+  typedef concept_base_array<Array> Test;
   if (Test::FIXED_CAPACITY == 0) {
     return;
   }
@@ -89,9 +89,9 @@ void testAlignmentValuesDataStruct() {
 
 template <size_t SZ, size_t ALIGN>
 void testAlignmentValuesHeap() {
-  ArrayHeap<int32_t, ALIGN> heap(SZ);
+  ArrayAllocated<int32_t, ALIGN> heap(SZ);
 
-  typedef BaseArrayTest<ArrayHeap<int32_t, ALIGN>> Test;
+  typedef concept_base_array<ArrayAllocated<int32_t, ALIGN>> Test;
   typedef typename Test::data_type data_type;
 
   BOOST_CHECK_EQUAL(0, Test::FIXED_CAPACITY);
@@ -109,7 +109,7 @@ void testAlignmentValuesHeap() {
 BOOST_AUTO_TEST_SUITE(org_simple_util_BaseArray)
 
 BOOST_AUTO_TEST_CASE(testArray10IsBaseArray) {
-  BOOST_CHECK((BaseArrayTest<Array10>::value));
+  BOOST_CHECK((concept_base_array<Array10>::value));
 }
 
 BOOST_AUTO_TEST_CASE(testArray10Size10) {
@@ -122,15 +122,15 @@ BOOST_AUTO_TEST_CASE(testArray10COnstSize10) {
 }
 
 BOOST_AUTO_TEST_CASE(testCompatibility) {
-  typedef ArraySlice<TestA *> ASlice;
-  typedef ArraySlice<TestB *> BSlice;
-  typedef BaseArrayTest<ASlice> ATest;
-  typedef BaseArrayTest<BSlice> BTest;
+  typedef ArrayDataRef<TestA *> ASlice;
+  typedef ArrayDataRef<TestB *> BSlice;
+  typedef concept_base_array<ASlice> ATest;
+  typedef concept_base_array<BSlice> BTest;
 
-  BOOST_CHECK_EQUAL(true, ATest::compatible<ATest::data_type>());
-  BOOST_CHECK_EQUAL(true, BTest::compatible<BTest::data_type>());
-  BOOST_CHECK_EQUAL(true, BTest::compatible<ATest::data_type>());
-  BOOST_CHECK_EQUAL(false, ATest::compatible<BTest::data_type>());
+  BOOST_CHECK_EQUAL(true, ATest::is_type_compatible<ATest::data_type>);
+  BOOST_CHECK_EQUAL(true, BTest::is_type_compatible<BTest::data_type>);
+  BOOST_CHECK_EQUAL(true, BTest::is_type_compatible<ATest::data_type>);
+  BOOST_CHECK_EQUAL(false, ATest::is_type_compatible<BTest::data_type>);
 }
 
 BOOST_AUTO_TEST_CASE(testArray10SetAndGetValues) {
@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE(testArray10TestCopy) {
   fillWithIndex<Array10>(source);
   Array10 destination;
   fillWithZero<Array10>(destination);
-  BOOST_CHECK(destination.copy(0, source));
+  BOOST_CHECK_NO_THROW(destination.copy_to(0, source));
 
   for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t{i}, destination[i]);
@@ -184,15 +184,15 @@ BOOST_AUTO_TEST_CASE(testArray10TestCopy) {
 BOOST_AUTO_TEST_CASE(testArray10TestCopyOffsetPlusSizeTooLarge) {
   Array10 source;
   Array10 destination;
-  BOOST_CHECK(!destination.copy(1, source));
+  BOOST_CHECK_THROW(destination.copy_to(1, source), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(testArray10TestCopyArray5At0) {
   Array10 destination;
   fillWithZero<Array10>(destination);
-  ArrayInline<double, 5> source;
-  fillWithIndex<ArrayInline<double, 5>>(source);
-  BOOST_CHECK(destination.copy(0, source));
+  Array<double, 5> source;
+  fillWithIndex<Array<double, 5>>(source);
+  BOOST_CHECK_NO_THROW(destination.copy_to(0, source));
   size_t i = 0;
   for (; i < source.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t{i}, destination[i]);
@@ -205,9 +205,9 @@ BOOST_AUTO_TEST_CASE(testArray10TestCopyArray5At0) {
 BOOST_AUTO_TEST_CASE(testArray10TestStaticCopyArray5At0) {
   Array10 destination;
   fillWithZero<Array10>(destination);
-  ArrayInline<double, 5> source;
-  fillWithIndex<ArrayInline<double, 5>>(source);
-  destination.copy<0>(source);
+  Array<double, 5> source;
+  fillWithIndex<Array<double, 5>>(source);
+  destination.copy_to<0>(source);
   size_t i = 0;
   for (; i < source.capacity(); i++) {
     BOOST_CHECK_EQUAL(size_t{i}, destination[i]);
@@ -220,9 +220,9 @@ BOOST_AUTO_TEST_CASE(testArray10TestStaticCopyArray5At0) {
 BOOST_AUTO_TEST_CASE(testArray10TestCopyArray5At5) {
   Array10 destination;
   fillWithZero<Array10>(destination);
-  ArrayInline<double, 5> source;
-  fillWithIndex<ArrayInline<double, 5>>(source);
-  BOOST_CHECK(destination.copy(5, source));
+  Array<double, 5> source;
+  fillWithIndex<Array<double, 5>>(source);
+  BOOST_CHECK_NO_THROW(destination.copy_to(5, source));
   size_t i = 0;
   for (; i < 5; i++) {
     BOOST_CHECK_EQUAL(size_t{0}, destination[i]);
@@ -235,9 +235,9 @@ BOOST_AUTO_TEST_CASE(testArray10TestCopyArray5At5) {
 BOOST_AUTO_TEST_CASE(testArray10TestStaticCopyArray5At5) {
   Array10 destination;
   fillWithZero<Array10>(destination);
-  ArrayInline<double, 5> source;
-  fillWithIndex<ArrayInline<double, 5>>(source);
-  destination.copy<5>(source);
+  Array<double, 5> source;
+  fillWithIndex<Array<double, 5>>(source);
+  destination.copy_to<5>(source);
   size_t i = 0;
   for (; i < 5; i++) {
     BOOST_CHECK_EQUAL(size_t{0}, destination[i]);
@@ -250,23 +250,23 @@ BOOST_AUTO_TEST_CASE(testArray10TestStaticCopyArray5At5) {
 BOOST_AUTO_TEST_CASE(testArray10TestCopyArray5At6Fails) {
   Array10 destination;
   fillWithZero<Array10>(destination);
-  ArrayInline<double, 5> source;
-  fillWithIndex<ArrayInline<double, 5>>(source);
-  BOOST_CHECK(!destination.copy(6, source));
+  Array<double, 5> source;
+  fillWithIndex<Array<double, 5>>(source);
+  BOOST_CHECK_THROW(destination.copy_to(6, source), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(testArray10CopyRangeFailStartAboveEndMustFail) {
   Array10 destination;
   fillWithZero<Array10>(destination);
   Array10 source;
-  BOOST_CHECK(!destination.copy_range(0, source, 4, 3));
+  BOOST_CHECK_THROW(destination.copy_range_to(0, source, 4, 3), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(testArray10CopyRangeFailEndIsSizeMustFail) {
   Array10 destination;
   fillWithZero<Array10>(destination);
   Array10 source;
-  BOOST_CHECK(!destination.copy_range(0, source, 4, source.capacity()));
+  BOOST_CHECK_THROW(destination.copy_range_to(0, source, 4, source.capacity()), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(testArray10CopyRange4to6at0) {
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyRange4to6at0) {
   fillWithZero<Array10>(destination);
   Array10 source;
   fillWithIndex<Array10>(source);
-  BOOST_CHECK(destination.copy_range(0, source, 4, 6));
+  BOOST_CHECK_NO_THROW(destination.copy_range_to(0, source, 4, 6));
   double expected[] = {4, 5, 6, 0, 0, 0, 0, 0, 0, 0};
   for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
@@ -286,7 +286,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyStaticRange4to6at0) {
   fillWithZero<Array10>(destination);
   Array10 source;
   fillWithIndex<Array10>(source);
-  destination.copy_range<0, 4, 6>(source);
+  destination.copy_range_to<0, 4, 6>(source);
   double expected[] = {4, 5, 6, 0, 0, 0, 0, 0, 0, 0};
   for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
@@ -298,7 +298,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyRange4to6at3) {
   fillWithZero<Array10>(destination);
   Array10 source;
   fillWithIndex<Array10>(source);
-  BOOST_CHECK(destination.copy_range(3, source, 4, 6));
+  BOOST_CHECK_NO_THROW(destination.copy_range_to(3, source, 4, 6));
   double expected[] = {0, 0, 0, 4, 5, 6, 0, 0, 0, 0};
   for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
@@ -310,7 +310,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyStaticRange4to6at3) {
   fillWithZero<Array10>(destination);
   Array10 source;
   fillWithIndex<Array10>(source);
-  destination.copy_range<3, 4, 6>(source);
+  destination.copy_range_to<3, 4, 6>(source);
   double expected[] = {0, 0, 0, 4, 5, 6, 0, 0, 0, 0};
   for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
@@ -322,7 +322,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyRange4to6at7) {
   fillWithZero<Array10>(destination);
   Array10 source;
   fillWithIndex<Array10>(source);
-  BOOST_CHECK(destination.copy_range(7, source, 4, 6));
+  BOOST_CHECK_NO_THROW(destination.copy_range_to(7, source, 4, 6));
   double expected[] = {0, 0, 0, 0, 0, 0, 0, 4, 5, 6};
   for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
@@ -334,7 +334,7 @@ BOOST_AUTO_TEST_CASE(testArray10CopyStaticRange4to6at7) {
   fillWithZero<Array10>(destination);
   Array10 source;
   fillWithIndex<Array10>(source);
-  destination.copy_range<7, 4, 6>(source);
+  destination.copy_range_to<7, 4, 6>(source);
   double expected[] = {0, 0, 0, 0, 0, 0, 0, 4, 5, 6};
   for (size_t i = 0; i < destination.capacity(); i++) {
     BOOST_CHECK_EQUAL(expected[i], destination[i]);
@@ -364,7 +364,7 @@ BOOST_AUTO_TEST_CASE(testArrayStaticRangeCopy4To6) {
 }
 
 BOOST_AUTO_TEST_CASE(testSliceIsBaseArray) {
-  BOOST_CHECK((BaseArrayTest<Slice>::value));
+  BOOST_CHECK((concept_base_array<Slice>::value));
 }
 
 template <typename T> static constexpr size_t effective_alignment(size_t A) {
@@ -372,93 +372,93 @@ template <typename T> static constexpr size_t effective_alignment(size_t A) {
 }
 
 BOOST_AUTO_TEST_CASE(testTestArrayBase) {
-  using Fix = ArrayInline<int, 4, 7>;
-  BOOST_CHECK_EQUAL(true, BaseArrayTest<Fix>::value);
-  BOOST_CHECK_EQUAL(true, BaseArrayTest<Fix::Super>::value);
-  BOOST_CHECK_EQUAL(false, BaseArrayTest<A>::value);
+  using Fix = Array<int, 4, 7>;
+  BOOST_CHECK_EQUAL(true, concept_base_array<Fix>::value);
+  BOOST_CHECK_EQUAL(true, concept_base_array<Fix::Super>::value);
+  BOOST_CHECK_EQUAL(false, concept_base_array<A>::value);
   BOOST_CHECK_EQUAL(sizeof(int) * 4, sizeof(Fix));
 }
 
 
 BOOST_AUTO_TEST_CASE(testArrayInline_1_0) {
-  testAlignmentValues<ArrayInline<int32_t, 1, 0>>();
+  testAlignmentValues<Array<int32_t, 1, 0>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_4_0) {
-  testAlignmentValues<ArrayInline<int32_t, 4, 0>>();
+  testAlignmentValues<Array<int32_t, 4, 0>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_7_0) {
-  testAlignmentValues<ArrayInline<int32_t, 7, 0>>();
+  testAlignmentValues<Array<int32_t, 7, 0>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_8_0) {
-  testAlignmentValues<ArrayInline<int32_t, 8, 0>>();
+  testAlignmentValues<Array<int32_t, 8, 0>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_9_0) {
-  testAlignmentValues<ArrayInline<int32_t, 9, 0>>();
+  testAlignmentValues<Array<int32_t, 9, 0>>();
 }
 
 
 BOOST_AUTO_TEST_CASE(testArrayInline_1_1) {
-  testAlignmentValues<ArrayInline<int32_t, 1, 1>>();
+  testAlignmentValues<Array<int32_t, 1, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_4_1) {
-  testAlignmentValues<ArrayInline<int32_t, 4, 1>>();
+  testAlignmentValues<Array<int32_t, 4, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_7_1) {
-  testAlignmentValues<ArrayInline<int32_t, 7, 1>>();
+  testAlignmentValues<Array<int32_t, 7, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_8_1) {
-  testAlignmentValues<ArrayInline<int32_t, 8, 1>>();
+  testAlignmentValues<Array<int32_t, 8, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_9_1) {
-  testAlignmentValues<ArrayInline<int32_t, 9, 1>>();
+  testAlignmentValues<Array<int32_t, 9, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_1_4) {
-  testAlignmentValues<ArrayInline<int32_t, 1, 4>>();
+  testAlignmentValues<Array<int32_t, 1, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_4_4) {
-  testAlignmentValues<ArrayInline<int32_t, 4, 4>>();
+  testAlignmentValues<Array<int32_t, 4, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_7_4) {
-  testAlignmentValues<ArrayInline<int32_t, 7, 4>>();
+  testAlignmentValues<Array<int32_t, 7, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_8_4) {
-  testAlignmentValues<ArrayInline<int32_t, 8, 4>>();
+  testAlignmentValues<Array<int32_t, 8, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_9_4) {
-  testAlignmentValues<ArrayInline<int32_t, 9, 4>>();
+  testAlignmentValues<Array<int32_t, 9, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_1_32) {
-  testAlignmentValues<ArrayInline<int32_t, 1, 32>>();
+  testAlignmentValues<Array<int32_t, 1, 32>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_4_32) {
-  testAlignmentValues<ArrayInline<int32_t, 4, 32>>();
+  testAlignmentValues<Array<int32_t, 4, 32>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_7_32) {
-  testAlignmentValues<ArrayInline<int32_t, 7, 32>>();
+  testAlignmentValues<Array<int32_t, 7, 32>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_8_32) {
-  testAlignmentValues<ArrayInline<int32_t, 8, 32>>();
+  testAlignmentValues<Array<int32_t, 8, 32>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayInline_9_32) {
-  testAlignmentValues<ArrayInline<int32_t, 9, 32>>();
+  testAlignmentValues<Array<int32_t, 9, 32>>();
 }
 
 
@@ -466,84 +466,84 @@ BOOST_AUTO_TEST_CASE(testArrayInline_9_32) {
 
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_1_0) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 1, 0>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 1, 0>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_4_0) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 4, 0>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 4, 0>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_7_0) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 7, 0>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 7, 0>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_8_0) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 8, 0>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 8, 0>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_9_0) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 9, 0>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 9, 0>>();
 }
 
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_1_1) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 1, 1>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 1, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_4_1) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 4, 1>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 4, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_7_1) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 7, 1>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 7, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_8_1) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 8, 1>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 8, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_9_1) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 9, 1>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 9, 1>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_1_4) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 1, 4>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 1, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_4_4) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 4, 4>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 4, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_7_4) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 7, 4>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 7, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_8_4) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 8, 4>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 8, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_9_4) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 9, 4>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 9, 4>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_1_32) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 1, 32>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 1, 32>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_4_32) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 4, 32>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 4, 32>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_7_32) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 7, 32>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 7, 32>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_8_32) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 8, 32>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 8, 32>>();
 }
 
 BOOST_AUTO_TEST_CASE(testArrayConstAlloc_9_32) {
-  testAlignmentValuesDataStruct<ArrayConstAlloc<int32_t, 9, 32>>();
+  testAlignmentValuesDataStruct<ArrayAllocatedFixedSize<int32_t, 9, 32>>();
 }
 
 
