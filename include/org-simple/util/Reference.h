@@ -68,7 +68,7 @@ public:
   UntypedRefCountPointer(const UntypedRefCountPointer &) = delete;
   UntypedRefCountPointer(UntypedRefCountPointer &&) = delete;
 
-  bool add_ref() noexcept { return count_.fetch_add(1) >= 1; }
+  bool add_ref() { return count_.fetch_add(1) >= 1; }
 
   ptrdiff_t del_ref_no_destroy() noexcept { return count_.fetch_sub(1); }
 
@@ -111,7 +111,7 @@ public:
   TypedRefCountPointer(const TypedRefCountPointer &) = delete;
   TypedRefCountPointer(TypedRefCountPointer &&) = delete;
 
-  T *get() noexcept { return static_cast<T *>(get_ptr()); }
+  T *get() { return static_cast<T *>(get_ptr()); }
 
   ~TypedRefCountPointer() noexcept override {
     if (del_ref_no_destroy() >= 1) {
@@ -150,9 +150,9 @@ public:
     return *this;
   }
 
-  T *get() const noexcept { return ptr_->get(); }
+  T *get() const { return ptr_->get(); }
 
-  T *operator->() noexcept { return ptr_->get(); }
+  T *operator->() { return ptr_->get(); }
 
   ~Reference() {
     // Destroy when leaving scope: no queueing

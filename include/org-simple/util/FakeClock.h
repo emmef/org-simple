@@ -36,18 +36,18 @@ struct FakeClock {
 
   static constexpr bool is_steady = false;
 
-  static time_point now() noexcept { return time_point() + duration(get_count()); };
+  static time_point now() { return time_point() + duration(get_count()); };
 
-  static void set_now(duration ticks_since_epoch) noexcept {
+  static void set_now(duration ticks_since_epoch) {
     set_count(ticks_since_epoch.count());
   };
 
   template <typename R, typename P>
-  static void set_now(std::chrono::duration<R,P> ticks_since_epoch) noexcept {
+  static void set_now(std::chrono::duration<R, P> ticks_since_epoch) {
     set_count(std::chrono::duration_cast<duration>(ticks_since_epoch).count());
   };
 
-  static void set_now(time_point time) noexcept {
+  static void set_now(time_point time) {
     set_count(time.time_since_epoch().count());
   };
 
@@ -55,21 +55,19 @@ struct FakeClock {
     control_count(new_count, Control::SET);
   }
 
-  static int64_t get_count() {
-    return control_count(0, Control::GET);
-  }
+  static int64_t get_count() { return control_count(0, Control::GET); }
 
   static int64_t add_get_count(int64_t value) {
     return control_count(value, Control::ADD);
   }
 
   // Map to C API
-  static std::time_t to_time_t(const time_point &__t) noexcept {
+  static std::time_t to_time_t(const time_point &__t) {
     return std::time_t(
         duration_cast<std::chrono::seconds>(__t.time_since_epoch()).count());
   }
 
-  static time_point from_time_t(std::time_t __t) noexcept {
+  static time_point from_time_t(std::time_t __t) {
     typedef std::chrono::time_point<FakeClock, std::chrono::seconds> __from;
     return time_point_cast<FakeClock::duration>(
         __from(std::chrono::seconds(__t)));
@@ -79,7 +77,7 @@ private:
   enum class Control { SET, GET, ADD };
   static int64_t control_count(int64_t value, Control ctrl) {
     static thread_local int64_t count_;
-    switch(ctrl) {
+    switch (ctrl) {
     case Control::SET:
       count_ = value;
       break;

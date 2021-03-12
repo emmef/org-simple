@@ -41,7 +41,7 @@ template <typename T>
 static constexpr bool is_valid_size_type =
     std::is_unsigned_v<T> &&
     std::numeric_limits<T>::max() <= std::numeric_limits<size_t>::max();
-}
+} // namespace org::simple::traits
 
 namespace org::simple::core {
 
@@ -104,7 +104,7 @@ template <typename size_type>
 requires(
     is_valid_size_type<
         size_type>) static constexpr bool is_valid_number_of_size_bits(unsigned
-                                                                             bits) {
+                                                                           bits) {
   return bits <= sizeof(size_type) * 8;
 }
 
@@ -184,12 +184,11 @@ struct SizeValueBase {
      */
     template <typename T>
     requires(is_valid_size_type<T>) static constexpr bool value_with_limit(
-        T value, size_type size_limit) noexcept {
+        T value, size_type size_limit) {
       return is_within(value, size_type(1), size_limit);
     }
     template <typename T>
-    requires(is_valid_size_type<T>) static constexpr bool value(
-        T value) noexcept {
+    requires(is_valid_size_type<T>) static constexpr bool value(T value) {
       return value_with_limit(value, limit);
     }
 
@@ -199,13 +198,16 @@ struct SizeValueBase {
      */
 
     template <typename T>
-    requires(is_valid_size_type<size_type>) static constexpr bool index_with_limit(
-        T value, size_type size_limit) noexcept {
+    requires(
+        is_valid_size_type<
+            size_type>) static constexpr bool index_with_limit(T value,
+                                                               size_type
+                                                                   size_limit) {
       return is_within(value, size_type(0), size_limit - 1);
     }
     template <typename T>
     requires(is_valid_size_type<size_type>) static constexpr bool index(
-        T value) noexcept {
+        T value) {
       return index_with_limit(value, limit);
     }
 
@@ -215,14 +217,16 @@ struct SizeValueBase {
      * @return true if the sum represents a valid size, false otherwise.
      */
     template <typename T>
-    requires(is_valid_size_type<size_type>) static constexpr bool sum_with_limit(
-        T v1, T v2, size_type size_limit) noexcept {
+    requires(is_valid_size_type<
+             size_type>) static constexpr bool sum_with_limit(T v1, T v2,
+                                                              size_type
+                                                                  size_limit) {
       return v1 > 0 ? v1 <= size_limit && size_limit - v1 >= v2
                     : v2 > 0 && v2 <= size_limit;
     }
     template <typename T>
-    requires(is_valid_size_type<size_type>) static constexpr bool sum(
-        T v1, T v2) noexcept {
+    requires(is_valid_size_type<size_type>) static constexpr bool sum(T v1,
+                                                                      T v2) {
       return sum_with_limit(v1, v2, limit);
     }
 
@@ -232,13 +236,16 @@ struct SizeValueBase {
      * @return true if the product represents a valid size, false otherwise.
      */
     template <typename T>
-    requires(is_valid_size_type<size_type>) static constexpr bool product_with_limit(
-        T v1, T v2, size_type size_limit) noexcept {
+    requires(
+        is_valid_size_type<
+            size_type>) static constexpr bool product_with_limit(T v1, T v2,
+                                                                 size_type
+                                                                     size_limit) {
       return v1 > 0 && v2 > 0 && size_limit / v1 >= v2;
     }
     template <typename T>
     requires(is_valid_size_type<size_type>) static constexpr bool product(
-        T v1, T v2) noexcept {
+        T v1, T v2) {
       return product_with_limit(v1, v2, limit);
     }
 
@@ -247,15 +254,16 @@ struct SizeValueBase {
      * @return true if mask if valid, false otherwise.
      */
     template <typename T>
-    requires(is_valid_size_type<size_type>) static constexpr bool mask_with_limit(
-        T mask, size_type size_limit) noexcept {
+    requires(is_valid_size_type<
+             size_type>) static constexpr bool mask_with_limit(T mask,
+                                                               size_type
+                                                                   size_limit) {
       return size_limit > 1
                  ? mask <= size_limit - 1 && Bits<size_type>::fill(mask) == mask
                  : false;
     }
     template <typename T>
-    requires(is_valid_size_type<size_type>) static constexpr bool mask(
-        T mask) noexcept {
+    requires(is_valid_size_type<size_type>) static constexpr bool mask(T mask) {
       return mask_with_limit(mask, limit);
     }
   };
@@ -311,8 +319,7 @@ struct SizeValueBase {
     }
 
     template <typename T>
-    requires(is_valid_size_type<size_type>) static constexpr T
-        sum(T v1, T v2) {
+    requires(is_valid_size_type<size_type>) static constexpr T sum(T v1, T v2) {
       return sum_with_limit(v1, v2, limit);
     }
 

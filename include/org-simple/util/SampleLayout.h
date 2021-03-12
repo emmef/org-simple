@@ -51,7 +51,7 @@ struct SampleLayout {
    */
   template <typename S, size_t CHANNELS, size_t FRAMES>
   static void channel_buffers_to_interleaved(S const **channel_ptr,
-                                             S *&interleaved_output) noexcept {
+                                             S *&interleaved_output) {
     for (size_t frame = 0; frame < FRAMES; frame++) {
       for (size_t channel = 0; channel < CHANNELS; channel++) {
         *interleaved_output++ = *channel_ptr[channel]++;
@@ -83,9 +83,8 @@ struct SampleLayout {
    * loop.
    */
   template <typename S, size_t CHANNELS, size_t FRAMES>
-  static void
-  channel_buffers_to_frames(S const **channel_ptr,
-                            NumArray<S, CHANNELS> *&frames) noexcept {
+  static void channel_buffers_to_frames(S const **channel_ptr,
+                                        NumArray<S, CHANNELS> *&frames) {
     for (size_t frame = 0; frame < FRAMES; frame++) {
       NumArray<S, CHANNELS> &output = *frames++;
       for (size_t channel = 0; channel < CHANNELS; channel++) {
@@ -119,7 +118,7 @@ struct SampleLayout {
    */
   template <typename S, size_t CHANNELS, size_t FRAMES>
   static void interleaved_to_channel_buffers(const S *&interleaved_input,
-                                             S **channel_ptr) noexcept {
+                                             S **channel_ptr) {
     for (size_t frame = 0; frame < FRAMES; frame++) {
       for (size_t channel = 0; channel < CHANNELS; channel++) {
         *channel_ptr[channel]++ = *interleaved_input++;
@@ -128,11 +127,9 @@ struct SampleLayout {
   }
 
   /**
-   * Move sampples from a consecutive array of FRAME frames with each CHANNELS samples, to CHANNEL channel-buffers with each FRAME samples. For
-   * example, if the input looks like :
-   * <pre>
-   *   Frame 0: 11 21
-   *   Frame 1: 12 22
+   * Move sampples from a consecutive array of FRAME frames with each CHANNELS
+   * samples, to CHANNEL channel-buffers with each FRAME samples. For example,
+   * if the input looks like : <pre> Frame 0: 11 21 Frame 1: 12 22
    * </pre>
    * The channel buffer would look like:
    * <pre>
@@ -149,8 +146,7 @@ struct SampleLayout {
    */
   template <typename S, size_t CHANNELS, size_t FRAMES>
   static void interleaved_to_channel_buffers(
-      const NumArray<S, CHANNELS> *&interleaved_input,
-      S **channel_ptr) noexcept {
+      const NumArray<S, CHANNELS> *&interleaved_input, S **channel_ptr) {
     for (size_t frame = 0; frame < FRAMES; frame++) {
       const NumArray<S, CHANNELS> &input = *interleaved_input++;
       for (size_t channel = 0; channel < CHANNELS; channel++) {

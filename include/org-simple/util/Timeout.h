@@ -31,7 +31,7 @@ namespace org::simple::util {
 
 class Timeout {
 public:
-  virtual void start() noexcept {}
+  virtual void start() {}
   virtual ~Timeout() = default;
   [[nodiscard]] virtual bool timed_out() = 0;
 };
@@ -83,10 +83,10 @@ public:
     return clock::now() > deadline_;
   }
 
-  [[nodiscard]] time_point deadline() const noexcept { return deadline_; }
-  [[nodiscard]] time_point timeout() const noexcept { return timeout_; }
+  [[nodiscard]] time_point deadline() const { return deadline_; }
+  [[nodiscard]] time_point timeout() const { return timeout_; }
 
-  virtual void execute_policy( [[maybe_unused]] time_point now) { };
+  virtual void execute_policy([[maybe_unused]] time_point now){};
 
 private:
   duration timeout_;
@@ -117,9 +117,8 @@ public:
   TimeoutSlicedSleep(const TimeoutSlicedSleep &source)
       : TimeoutSlicedSleep(source.timeout, source.slice_) {}
 
-  TimeoutSlicedSleep(const TimeoutSlicedSleep &&source) noexcept
+  TimeoutSlicedSleep(const TimeoutSlicedSleep &&source)
       : TimeoutSlicedSleep(source.timeout, source.slice_) {}
-
 
   void execute_policy(time_point) override {
     time_point dl = deadline();
@@ -127,7 +126,7 @@ public:
     last_sleep_ = clock::now();
   }
 
-  duration slice() const noexcept { return slice_; }
+  duration slice() const { return slice_; }
 
 private:
   time_point last_sleep_;

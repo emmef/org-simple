@@ -92,11 +92,11 @@ concept ArrayFixedCompatible =
  * implement the following three methods: <table>
  *   <tr><td><code>array_capacity()</code></td><td>Returns the current capacity
  * of the array and is ignored if #FIXED_CAPACITY is non-zero. The method must
- * be const and nothrow.</td></tr>
+ * be const.</td></tr>
  *   <tr><td><code>array_data()</code></td><td>Returns the location of the data
- * with a const qualifier. The method must be declared const noexcept.</td></tr>
+ * with a const qualifier. The method must be declared const.</td></tr>
  *   <tr><td><code>array_data()</code></td><td>Returns the location of the data
- * without a const qualifier. The method must be declared noexcept.</td></tr>
+ * without a const qualifier.</td></tr>
  * </table>
  * @tparam T The element type
  * @tparam S The fixed capacity or zero if the capacity is not fixed.
@@ -121,7 +121,7 @@ public:
 
   // raw data access
 
-  inline const T *begin() const noexcept {
+  inline const T *begin() const {
     const T *ptr = static_cast<const delegate_type *>(this)->array_data();
     if constexpr (ALIGNAS != 0) {
       return std::assume_aligned<ALIGNAS, const T>(ptr);
@@ -130,7 +130,7 @@ public:
     }
   }
 
-  inline T *begin() noexcept {
+  inline T *begin() {
     T *ptr = static_cast<delegate_type *>(this)->array_data();
     if constexpr (ALIGNAS != 0) {
       return std::assume_aligned<ALIGNAS, T>(ptr);
@@ -138,7 +138,7 @@ public:
     return ptr;
   }
 
-  inline const T *end() const noexcept {
+  inline const T *end() const {
     if constexpr (ALIGNAS != 0 && FIXED_CAPACITY != 0 &&
                   (FIXED_CAPACITY % ALIGNAS == 0)) {
       return std::assume_aligned<ALIGNAS, const T>(begin() + FIXED_CAPACITY);
@@ -146,7 +146,7 @@ public:
     return begin() + capacity();
   }
 
-  inline T *end() noexcept {
+  inline T *end() {
     if constexpr (ALIGNAS != 0 && FIXED_CAPACITY != 0 &&
                   (FIXED_CAPACITY % ALIGNAS == 0)) {
       return std::assume_aligned<ALIGNAS, T>(begin() + FIXED_CAPACITY);
@@ -156,7 +156,7 @@ public:
 
   // capacity
 
-  size_t capacity() const noexcept {
+  size_t capacity() const {
     if constexpr (FIXED_CAPACITY != 0) {
       return FIXED_CAPACITY;
     } else {
@@ -170,11 +170,15 @@ public:
 
   // Raw element access
 
-  const T &data(size_t offset) const noexcept { return begin()[offset]; }
-  const T &operator[](size_t offset) const noexcept { return data(offset); }
+  const T &data(size_t offset) const { return begin()[offset]; }
+  const T &operator[](size_t offset) const { return data(offset); }
 
-  T &data(size_t offset) noexcept { return begin()[offset]; }
-  T &operator[](size_t offset) noexcept { return data(offset); }
+  T &data(size_t offset) {
+    return begin()[core::Index::unsafe(offset, capacity())];
+  }
+  T &operator[](size_t offset) {
+    return data(core::Index::unsafe(offset, capacity()));
+  }
 
   // Offset-checked element access
 
@@ -202,7 +206,7 @@ public:
    * @return \c true if copy was successful, \c false otherwise.
    */
   template <class Array>
-  requires ArrayCompatible<Array, T> bool assign(const Array &source) noexcept {
+  requires ArrayCompatible<Array, T> bool assign(const Array &source) {
     if constexpr (FIXED_CAPACITY != 0) {
       if constexpr (Array::FIXED_CAPACITY != 0) {
         static_assert(FIXED_CAPACITY == Array::FIXED_CAPACITY);
@@ -436,8 +440,8 @@ class ArrayInline : public BaseArray<T, eff_capacity<T, S>(), eff_align<T>(A),
   static_assert(std::is_trivially_move_assignable_v<T>);
   alignas(eff_align<T>(A)) T data_[S];
 
-  T *array_data() noexcept { return &data_[0]; }
-  const T *array_data() const noexcept { return &data_[0]; }
+  T *array_data() { return &data_[0]; }
+  const T *array_data() const { return &data_[0]; }
 
 public:
   typedef BaseArray<T, eff_capacity<T, S>(), eff_align<T>(A),
@@ -466,8 +470,8 @@ public:
     alignas(eff_align<T>(A)) T data_[S];
   };
 
-  T *array_data() noexcept { return data_->data_; }
-  const T *array_data() const noexcept { return data_->data_; }
+  T *array_data() { return data_->data_; }
+  const T *array_data() const { return data_->data_; }
 
 public:
   typedef BaseArray<T, eff_capacity<T, S>(), eff_align<T>(A),
@@ -504,8 +508,8 @@ class ArrayConstRef
 
   T *data_;
 
-  T *array_data() noexcept { return data_; }
-  const T *array_data() const noexcept { return data_; }
+  T *array_data() { return data_; }
+  const T *array_data() const { return data_; }
 
 public:
   typedef BaseArray<T, eff_capacity<T, S>(), 0, ArrayConstRef<T, S>> Super;
@@ -525,9 +529,9 @@ class ArraySlice : public BaseArray<T, 0, 0, ArraySlice<T>> {
   T *data_;
   size_t capacity_;
 
-  size_t array_capacity() const noexcept { return capacity_; }
-  T *array_data() noexcept { return data_; }
-  const T *array_data() const noexcept { return data_; }
+  size_t array_capacity() const { return capacity_; }
+  T *array_data() { return data_; }
+  const T *array_data() const { return data_; }
 
 public:
   typedef BaseArray<T, 0, 0, ArraySlice<T>> Super;
@@ -549,9 +553,9 @@ class ArrayHeap : public BaseArray<T, 0, eff_align<T>(A), ArrayHeap<T, A>> {
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
 
-  size_t array_capacity() const noexcept { return data_.capacity(); }
-  T *array_data() noexcept { return data_.data(); }
-  const T *array_data() const noexcept { return data_.data(); }
+  size_t array_capacity() const { return data_.capacity(); }
+  T *array_data() { return data_.data(); }
+  const T *array_data() const { return data_.data(); }
 
   static constexpr T *allocate(size_t size) {
     const size_t sz = Size::Valid::value(size);

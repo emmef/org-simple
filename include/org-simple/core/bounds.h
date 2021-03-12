@@ -29,14 +29,14 @@ namespace org::simple::core {
 
 template <typename T>
 [[nodiscard]] static constexpr bool is_within(const T v, const T min,
-                                              const T max) noexcept {
+                                              const T max) {
   static_assert(std::is_arithmetic_v<T>);
   return v >= min && v <= max;
 }
 
 template <typename T, typename V>
 [[nodiscard]] static constexpr bool is_within(const V v, const T min,
-                                              const T max) noexcept {
+                                              const T max) {
   if constexpr (std::is_floating_point_v<T> || std::is_floating_point_v<V>) {
     return v >= min && v <= max;
   } else if constexpr (std::is_unsigned_v<T>) {
@@ -49,8 +49,7 @@ template <typename T, typename V>
     if constexpr (std::is_unsigned_v<V>) {
       return v <= static_cast<V>(std::numeric_limits<T>::max()) &&
              static_cast<T>(v) >= min && static_cast<T>(v) <= max;
-    }
-    else {
+    } else {
       return v >= min && v <= max;
     }
   }
@@ -58,14 +57,14 @@ template <typename T, typename V>
 
 template <typename T>
 [[nodiscard]] static constexpr bool is_within_excl(const T v, const T min,
-                                                   const T max) noexcept {
+                                                   const T max) {
   static_assert(std::is_arithmetic_v<T>);
   return v > min && v < max;
 }
 
 template <typename T, typename V>
 [[nodiscard]] static constexpr bool is_within_excl(const V v, const T min,
-                                                   const T max) noexcept {
+                                                   const T max) {
   if constexpr (std::is_floating_point_v<T> || std::is_floating_point_v<V>) {
     return v > min && v < max;
   } else if constexpr (std::is_unsigned_v<T>) {
@@ -78,8 +77,7 @@ template <typename T, typename V>
     if constexpr (std::is_unsigned_v<V>) {
       return v <= static_cast<V>(std::numeric_limits<T>::max()) &&
              static_cast<T>(v) > min && static_cast<T>(v) < max;
-    }
-    else {
+    } else {
       return v > min && v < max;
     }
   }

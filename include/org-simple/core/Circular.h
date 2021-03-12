@@ -37,13 +37,13 @@ template <typename size_type, size_type size_limit>
 struct CircularAlgoBase<WrappingType::BIT_MASK, size_type, size_limit> {
   typedef SizeValueBase<size_type, size_limit> size_metric;
 
-  static constexpr size_type elements(size_t mask) noexcept { return mask + 1; }
+  static constexpr size_type elements(size_t mask) { return mask + 1; }
 
   [[nodiscard]] static constexpr size_t value_for_elements(size_type elements) {
     return size_metric::Valid::mask_for_elements(elements);
   }
 
-  static constexpr size_type elements_for_allocation(size_t elements) noexcept {
+  static constexpr size_type elements_for_allocation(size_t elements) {
     return CircularAlgoBase<WrappingType::BIT_MASK, size_type,
                             size_limit>::elements(value_for_elements(elements));
   }
@@ -53,57 +53,55 @@ struct CircularAlgoBase<WrappingType::BIT_MASK, size_type, size_limit> {
   }
 
   [[nodiscard]] static constexpr size_type wrapped(size_type to_wrap,
-                                                   size_t mask) noexcept {
+                                                   size_t mask) {
     return to_wrap & mask;
   }
 
   [[nodiscard]] static constexpr size_type unsafe_inc(size_type index,
-                                                      size_t mask) noexcept {
+                                                      size_t mask) {
     return wrapped(index + 1, mask);
   }
 
-  [[nodiscard]] static constexpr size_type inc(size_type index,
-                                               size_t mask) noexcept {
+  [[nodiscard]] static constexpr size_type inc(size_type index, size_t mask) {
     return unsafe_inc(index, mask);
   }
 
   [[nodiscard]] static constexpr size_type unsafe_dec(size_type index,
-                                                      size_t mask) noexcept {
+                                                      size_t mask) {
     return wrapped(index - 1, mask);
   }
 
-  [[nodiscard]] static constexpr size_type dec(size_type index,
-                                               size_t mask) noexcept {
+  [[nodiscard]] static constexpr size_type dec(size_type index, size_t mask) {
     return unsafe_dec(index, mask);
   }
 
   [[nodiscard]] static constexpr size_type
-  unsafe_add(size_type index, size_type delta, size_t mask) noexcept {
+  unsafe_add(size_type index, size_type delta, size_t mask) {
     return wrapped(index + delta, mask);
   }
 
   [[nodiscard]] static constexpr size_type add(size_type index, size_type delta,
-                                               size_t mask) noexcept {
+                                               size_t mask) {
     return unsafe_add(index, delta, mask);
   }
 
   [[nodiscard]] static constexpr size_type
-  unsafe_sub(size_type index, size_type delta, size_t mask) noexcept {
+  unsafe_sub(size_type index, size_type delta, size_t mask) {
     return wrapped(index - delta, mask);
   }
 
   [[nodiscard]] static constexpr size_type sub(size_type index, size_type delta,
-                                               size_t mask) noexcept {
+                                               size_t mask) {
     return unsafe_sub(index, delta, mask);
   }
 
   [[nodiscard]] static constexpr size_type
-  unsafe_diff(size_type hi, size_type lo, size_t mask) noexcept {
+  unsafe_diff(size_type hi, size_type lo, size_t mask) {
     return (hi > lo ? hi : hi + mask + 1) - lo;
   }
 
   [[nodiscard]] static constexpr size_type diff(size_type hi, size_type lo,
-                                                size_t mask) noexcept {
+                                                size_t mask) {
     return unsafe_diff(hi, lo, mask);
   }
 };
@@ -113,13 +111,13 @@ struct CircularAlgoBase<WrappingType::MODULO, size_type, size_limit> {
 
   typedef SizeValueBase<size_type, size_limit> size_metric;
 
-  static constexpr size_type elements(size_t size) noexcept { return size; }
+  static constexpr size_type elements(size_t size) { return size; }
 
   [[nodiscard]] static constexpr size_t value_for_elements(size_type elements) {
     return size_metric::Valid::value(elements);
   }
 
-  static constexpr size_type elements_for_allocation(size_t elements) noexcept {
+  static constexpr size_type elements_for_allocation(size_t elements) {
     return CircularAlgoBase<WrappingType::MODULO, size_type,
                             size_limit>::elements(value_for_elements(elements));
   }
@@ -129,57 +127,55 @@ struct CircularAlgoBase<WrappingType::MODULO, size_type, size_limit> {
   }
 
   [[nodiscard]] static constexpr size_type wrapped(size_type to_wrap,
-                                                   size_t size) noexcept {
+                                                   size_t size) {
     return to_wrap % size;
   }
 
   [[nodiscard]] static constexpr size_type unsafe_inc(size_type index,
-                                                      size_t size) noexcept {
+                                                      size_t size) {
     return wrapped(index + 1, size);
   }
 
-  [[nodiscard]] static constexpr size_type inc(size_type index,
-                                               size_t size) noexcept {
+  [[nodiscard]] static constexpr size_type inc(size_type index, size_t size) {
     return unsafe_inc(wrapped(index, size), size);
   }
 
   [[nodiscard]] static constexpr size_type unsafe_dec(size_type index,
-                                                      size_t size) noexcept {
+                                                      size_t size) {
     return wrapped(size + index - 1, size);
   }
 
-  [[nodiscard]] static constexpr size_type dec(size_type index,
-                                               size_t size) noexcept {
+  [[nodiscard]] static constexpr size_type dec(size_type index, size_t size) {
     return unsafe_dec(wrapped(index, size), size);
   }
 
   [[nodiscard]] static constexpr size_type
-  unsafe_add(size_type index, size_type delta, size_t size) noexcept {
+  unsafe_add(size_type index, size_type delta, size_t size) {
     return wrapped(index + delta, size);
   }
 
   [[nodiscard]] static constexpr size_type add(size_type index, size_type delta,
-                                               size_t size) noexcept {
+                                               size_t size) {
     return unsafe_add(wrapped(index, size), wrapped(delta, size), size);
   }
 
   [[nodiscard]] static constexpr size_type
-  unsafe_sub(size_type index, size_type delta, size_t size) noexcept {
+  unsafe_sub(size_type index, size_type delta, size_t size) {
     return wrapped(index + size - delta, size);
   }
 
   [[nodiscard]] static constexpr size_type sub(size_type index, size_type delta,
-                                               size_t size) noexcept {
+                                               size_t size) {
     return unsafe_sub(wrapped(index, size), wrapped(delta, size), size);
   }
 
   [[nodiscard]] static constexpr size_type
-  unsafe_diff(size_type hi, size_type lo, size_t size) noexcept {
+  unsafe_diff(size_type hi, size_type lo, size_t size) {
     return (hi > lo ? hi : hi + size) - lo;
   }
 
   [[nodiscard]] static constexpr size_type diff(size_type hi, size_type lo,
-                                                size_t size) noexcept {
+                                                size_t size) {
     return unsafe_diff(wrapped(hi, size), wrapped(lo, size), size);
   }
 };
@@ -198,54 +194,49 @@ struct CircularBase {
 
     explicit Metric(size_t elements) : value_(value_for_elements(elements)) {}
 
-    size_type elements() const noexcept { return circular::elements(value_); }
+    size_type elements() const { return circular::elements(value_); }
 
-    [[nodiscard]] size_type wrapped(size_type to_wrap) const noexcept {
+    [[nodiscard]] size_type wrapped(size_type to_wrap) const {
       return circular::wrapped(to_wrap, value_);
     }
 
-    [[nodiscard]] size_type unsafe_inc(size_type index) const noexcept {
+    [[nodiscard]] size_type unsafe_inc(size_type index) const {
       return circular::unsafe_inc(index, value_);
     }
 
-    [[nodiscard]] size_type inc(size_type index) const noexcept {
+    [[nodiscard]] size_type inc(size_type index) const {
       return circular::inc(index, value_);
     }
 
-    [[nodiscard]] size_type unsafe_dec(size_type index) const noexcept {
+    [[nodiscard]] size_type unsafe_dec(size_type index) const {
       return circular::unsafe_dec(index, value_);
     }
 
-    [[nodiscard]] size_type dec(size_type index) const noexcept {
+    [[nodiscard]] size_type dec(size_type index) const {
       return circular::dec(index, value_);
     }
 
-    [[nodiscard]] size_type unsafe_add(size_type index,
-                                       size_type delta) const noexcept {
+    [[nodiscard]] size_type unsafe_add(size_type index, size_type delta) const {
       return circular::unsafe_add(index, delta, value_);
     }
 
-    [[nodiscard]] size_type add(size_type index,
-                                size_type delta) const noexcept {
+    [[nodiscard]] size_type add(size_type index, size_type delta) const {
       return circular::add(index, delta, value_);
     }
 
-    [[nodiscard]] size_type unsafe_sub(size_type index,
-                                       size_type delta) const noexcept {
+    [[nodiscard]] size_type unsafe_sub(size_type index, size_type delta) const {
       return circular::unsafe_sub(index, delta, value_);
     }
 
-    [[nodiscard]] size_type sub(size_type index,
-                                size_type delta) const noexcept {
+    [[nodiscard]] size_type sub(size_type index, size_type delta) const {
       return circular::sub(index, delta, value_);
     }
 
-    [[nodiscard]] size_type unsafe_diff(size_type hi,
-                                        size_type lo) const noexcept {
+    [[nodiscard]] size_type unsafe_diff(size_type hi, size_type lo) const {
       return circular::unsafe_diff(hi, lo, value_);
     }
 
-    [[nodiscard]] size_type diff(size_type hi, size_type lo) const noexcept {
+    [[nodiscard]] size_type diff(size_type hi, size_type lo) const {
       return circular::diff(hi, lo, value_);
     }
 
@@ -266,60 +257,54 @@ struct CircularBase {
     static_assert(circular::is_valid_elements(ELEMENTS));
     static constexpr size_type VALUE = circular::value_for_elements(ELEMENTS);
 
-    static constexpr size_type elements() noexcept {
-      return circular::elements(VALUE);
-    }
+    static constexpr size_type elements() { return circular::elements(VALUE); }
 
-    [[nodiscard]] static constexpr size_type
-    wrapped(size_type to_wrap) noexcept {
+    [[nodiscard]] static constexpr size_type wrapped(size_type to_wrap) {
       return circular::wrapped(to_wrap, VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type
-    unsafe_inc(size_type index) noexcept {
+    [[nodiscard]] static constexpr size_type unsafe_inc(size_type index) {
       return circular::unsafe_inc(index, VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type inc(size_type index) noexcept {
+    [[nodiscard]] static constexpr size_type inc(size_type index) {
       return circular::inc(index, VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type
-    unsafe_dec(size_type index) noexcept {
+    [[nodiscard]] static constexpr size_type unsafe_dec(size_type index) {
       return circular::unsafe_dec(index, VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type dec(size_type index) noexcept {
+    [[nodiscard]] static constexpr size_type dec(size_type index) {
       return circular::dec(index, VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type
-    unsafe_add(size_type index, size_type delta) noexcept {
+    [[nodiscard]] static constexpr size_type unsafe_add(size_type index,
+                                                        size_type delta) {
       return circular::unsafe_add(index, delta, VALUE);
     }
 
     [[nodiscard]] static constexpr size_type add(size_type index,
-                                                 size_type delta) noexcept {
+                                                 size_type delta) {
       return circular::add(index, delta, VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type
-    unsafe_sub(size_type index, size_type delta) noexcept {
+    [[nodiscard]] static constexpr size_type unsafe_sub(size_type index,
+                                                        size_type delta) {
       return circular::unsafe_sub(index, delta, VALUE);
     }
 
     [[nodiscard]] static constexpr size_type sub(size_type index,
-                                                 size_type delta) noexcept {
+                                                 size_type delta) {
       return circular::sub(index, delta, VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type
-    unsafe_diff(size_type hi, size_type lo) noexcept {
+    [[nodiscard]] static constexpr size_type unsafe_diff(size_type hi,
+                                                         size_type lo) {
       return circular::unsafe_diff(hi, lo, VALUE);
     }
 
-    [[nodiscard]] static constexpr size_type diff(size_type hi,
-                                                  size_type lo) noexcept {
+    [[nodiscard]] static constexpr size_type diff(size_type hi, size_type lo) {
       return circular::diff(hi, lo, VALUE);
     }
   };
@@ -333,54 +318,49 @@ struct CircularBase {
     static_assert(circular::is_valid_elements(ELEMENTS));
     static constexpr size_type value_ = circular::value_for_elements(ELEMENTS);
 
-    size_type elements() const noexcept { return circular::elements(value_); }
+    size_type elements() const { return circular::elements(value_); }
 
-    [[nodiscard]] size_type wrapped(size_type to_wrap) const noexcept {
+    [[nodiscard]] size_type wrapped(size_type to_wrap) const {
       return circular::wrapped(to_wrap, value_);
     }
 
-    [[nodiscard]] size_type unsafe_inc(size_type index) const noexcept {
+    [[nodiscard]] size_type unsafe_inc(size_type index) const {
       return circular::unsafe_inc(index, value_);
     }
 
-    [[nodiscard]] size_type inc(size_type index) const noexcept {
+    [[nodiscard]] size_type inc(size_type index) const {
       return circular::inc(index, value_);
     }
 
-    [[nodiscard]] size_type unsafe_dec(size_type index) const noexcept {
+    [[nodiscard]] size_type unsafe_dec(size_type index) const {
       return circular::unsafe_dec(index, value_);
     }
 
-    [[nodiscard]] size_type dec(size_type index) const noexcept {
+    [[nodiscard]] size_type dec(size_type index) const {
       return circular::dec(index, value_);
     }
 
-    [[nodiscard]] size_type unsafe_add(size_type index,
-                                       size_type delta) const noexcept {
+    [[nodiscard]] size_type unsafe_add(size_type index, size_type delta) const {
       return circular::unsafe_add(index, delta, value_);
     }
 
-    [[nodiscard]] size_type add(size_type index,
-                                size_type delta) const noexcept {
+    [[nodiscard]] size_type add(size_type index, size_type delta) const {
       return circular::add(index, delta, value_);
     }
 
-    [[nodiscard]] size_type unsafe_sub(size_type index,
-                                       size_type delta) const noexcept {
+    [[nodiscard]] size_type unsafe_sub(size_type index, size_type delta) const {
       return circular::unsafe_sub(index, delta, value_);
     }
 
-    [[nodiscard]] size_type sub(size_type index,
-                                size_type delta) const noexcept {
+    [[nodiscard]] size_type sub(size_type index, size_type delta) const {
       return circular::sub(index, delta, value_);
     }
 
-    [[nodiscard]] size_type unsafe_diff(size_type hi,
-                                        size_type lo) const noexcept {
+    [[nodiscard]] size_type unsafe_diff(size_type hi, size_type lo) const {
       return circular::unsafe_diff(hi, lo, value_);
     }
 
-    [[nodiscard]] size_type diff(size_type hi, size_type lo) const noexcept {
+    [[nodiscard]] size_type diff(size_type hi, size_type lo) const {
       return circular::diff(hi, lo, value_);
     }
   };

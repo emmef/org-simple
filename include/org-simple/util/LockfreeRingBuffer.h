@@ -37,19 +37,19 @@ struct LockFreeRingBuffer {
         ::org::simple::core::WrappingType::BIT_MASK, S>;
 
   public:
-    size_t capacity() const noexcept { return Metric::elements(); }
-    size_t size() const noexcept { return write_at - read_at; }
-    bool empty() const noexcept { return size() == 0; }
-    bool full() const noexcept { return size() == capacity(); }
-    size_t read_ptr() const noexcept { return read_at; }
-    size_t write_ptr() const noexcept { return write_at; }
+    size_t capacity() const { return Metric::elements(); }
+    size_t size() const { return write_at - read_at; }
+    bool empty() const { return size() == 0; }
+    bool full() const { return size() == capacity(); }
+    size_t read_ptr() const { return read_at; }
+    size_t write_ptr() const { return write_at; }
 
     /**
      * Pushes \c value on the queue, which fails if the queue is full.
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write(const T &value, T *const data) noexcept {
+    bool write(const T &value, T *const data) {
       size_t wr = write_at;
       size_t rd = read_at;
       if (wr - rd >= capacity()) {
@@ -67,7 +67,7 @@ struct LockFreeRingBuffer {
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write_if_empty_reset(const T &value, T *const data) noexcept {
+    bool write_if_empty_reset(const T &value, T *const data) {
       size_t wr = write_at;
       size_t rd = read_at;
       size_t elements = wr - rd;
@@ -96,7 +96,7 @@ struct LockFreeRingBuffer {
      * @returns \c true if push was successful, \c false otherwise.
      */
     bool write_if_empty_reset_total(const T &value, T *const data,
-                                    std::atomic_size_t &total) noexcept {
+                                    std::atomic_size_t &total) {
       size_t wr = write_at;
       size_t rd = read_at;
       size_t elements = wr - rd;
@@ -124,7 +124,7 @@ struct LockFreeRingBuffer {
      * @param value Contains the shifted value on success.
      * @returns \c true if shift was successful, \c false otherwise
      */
-    bool read(T &value, const T *const data) noexcept {
+    bool read(T &value, const T *const data) {
       size_t rd = read_at;
       size_t wr = write_at;
       if (wr <= rd) {
@@ -145,19 +145,19 @@ struct LockFreeRingBuffer {
   public:
     BaseMonotonic(const Metric &metric__) : metric(metric__) {}
 
-    size_t capacity() const noexcept { return metric.elements(); }
-    size_t size() const noexcept { return write_at - read_at; }
-    bool empty() const noexcept { return size() == 0; }
-    bool full() const noexcept { return size() == capacity(); }
-    size_t read_ptr() const noexcept { return read_at; }
-    size_t write_ptr() const noexcept { return write_at; }
+    size_t capacity() const { return metric.elements(); }
+    size_t size() const { return write_at - read_at; }
+    bool empty() const { return size() == 0; }
+    bool full() const { return size() == capacity(); }
+    size_t read_ptr() const { return read_at; }
+    size_t write_ptr() const { return write_at; }
 
     /**
      * Pushes \c value on the queue, which fails if the queue is full.
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write(const T &value, T *const data) noexcept {
+    bool write(const T &value, T *const data) {
       size_t wr = write_at;
       size_t rd = read_at;
       if (wr - rd >= capacity()) {
@@ -175,7 +175,7 @@ struct LockFreeRingBuffer {
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write_if_empty_reset(const T &value, T *const data) noexcept {
+    bool write_if_empty_reset(const T &value, T *const data) {
       size_t wr = write_at;
       size_t rd = read_at;
       size_t elements = wr - rd;
@@ -204,7 +204,7 @@ struct LockFreeRingBuffer {
      * @returns \c true if push was successful, \c false otherwise.
      */
     bool write_if_empty_reset_total(const T &value, T *const data,
-                                    std::atomic_size_t &total) noexcept {
+                                    std::atomic_size_t &total) {
       size_t wr = write_at;
       size_t rd = read_at;
       size_t elements = wr - rd;
@@ -232,7 +232,7 @@ struct LockFreeRingBuffer {
      * @param value Contains the shifted value on success.
      * @returns \c true if shift was successful, \c false otherwise
      */
-    bool read(T &value, const T *const data) noexcept {
+    bool read(T &value, const T *const data) {
       size_t rd = read_at;
       size_t wr = write_at;
       if (wr <= rd) {
@@ -264,23 +264,21 @@ struct LockFreeRingBuffer {
     T data[S];
 
   public:
-    size_t capacity() const noexcept { return base.capacity(); }
-    size_t size() const noexcept { return base.size(); }
-    bool empty() const noexcept { return base.empty(); }
-    bool full() const noexcept { return base.full(); }
-    size_t read_ptr() const noexcept { return base.read_ptr(); }
-    size_t write_ptr() const noexcept { return base.write_ptr(); }
+    size_t capacity() const { return base.capacity(); }
+    size_t size() const { return base.size(); }
+    bool empty() const { return base.empty(); }
+    bool full() const { return base.full(); }
+    size_t read_ptr() const { return base.read_ptr(); }
+    size_t write_ptr() const { return base.write_ptr(); }
 
-    void zero() noexcept {
-      std::memset(data, 0, sizeof(data));
-    }
+    void zero() { std::memset(data, 0, sizeof(data)); }
     /**
      * Pushes \c value on the queue, which fails if the queue is full.
      *
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write(const T &value) noexcept { return base.write(value, data); }
+    bool write(const T &value) { return base.write(value, data); }
 
     /**
      * Pushes \c value on the queue, which fails if the queue is full, and if
@@ -289,7 +287,7 @@ struct LockFreeRingBuffer {
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write_if_empty_reset(const T &value) noexcept {
+    bool write_if_empty_reset(const T &value) {
       return base.write_if_empty_reset(value, data);
     }
 
@@ -301,8 +299,7 @@ struct LockFreeRingBuffer {
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write_if_empty_reset_total(const T &value,
-                                    std::atomic_size_t &total) noexcept {
+    bool write_if_empty_reset_total(const T &value, std::atomic_size_t &total) {
       return base.write_if_empty_reset_total(value, data, total);
     }
 
@@ -312,7 +309,7 @@ struct LockFreeRingBuffer {
      * @param value Contains the shifted value on success.
      * @returns \c true if shift was successful, \c false otherwise
      */
-    bool read(T &value) noexcept { return base.read(value, data); }
+    bool read(T &value) { return base.read(value, data); }
   };
 
   /**
@@ -334,14 +331,14 @@ struct LockFreeRingBuffer {
 
   public:
     using Metric = M;
-    Monotonic(const Metric &metric, T * data__) : base(metric), data(data__) {}
+    Monotonic(const Metric &metric, T *data__) : base(metric), data(data__) {}
 
-    size_t capacity() const noexcept { return base.capacity(); }
-    size_t size() const noexcept { return base.size(); }
-    bool empty() const noexcept { return base.empty(); }
-    bool full() const noexcept { return base.full(); }
-    size_t read_ptr() const noexcept { return base.read_ptr(); }
-    size_t write_ptr() const noexcept { return base.write_ptr(); }
+    size_t capacity() const { return base.capacity(); }
+    size_t size() const { return base.size(); }
+    bool empty() const { return base.empty(); }
+    bool full() const { return base.full(); }
+    size_t read_ptr() const { return base.read_ptr(); }
+    size_t write_ptr() const { return base.write_ptr(); }
 
     /**
      * Pushes \c value on the queue, which fails if the queue is full.
@@ -349,7 +346,7 @@ struct LockFreeRingBuffer {
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write(const T &value) noexcept { return base.write(value, data); }
+    bool write(const T &value) { return base.write(value, data); }
 
     /**
      * Pushes \c value on the queue, which fails if the queue is full, and if
@@ -358,7 +355,7 @@ struct LockFreeRingBuffer {
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write_if_empty_reset(const T &value) noexcept {
+    bool write_if_empty_reset(const T &value) {
       return base.write_if_empty_reset(value, data);
     }
 
@@ -370,8 +367,7 @@ struct LockFreeRingBuffer {
      * @param value The value to push.
      * @returns \c true if push was successful, \c false otherwise.
      */
-    bool write_if_empty_reset_total(const T &value,
-                                    std::atomic_size_t &total) noexcept {
+    bool write_if_empty_reset_total(const T &value, std::atomic_size_t &total) {
       return base.write_if_empty_reset_total(value, data, total);
     }
 

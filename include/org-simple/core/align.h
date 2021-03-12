@@ -207,8 +207,8 @@ public:
     source.disown();
   }
 
-  [[nodiscard]] T *data() const noexcept { return data_; }
-  [[nodiscard]] size_t capacity() const noexcept { return capacity_; }
+  [[nodiscard]] T *data() const { return data_; }
+  [[nodiscard]] size_t capacity() const { return capacity_; }
 
   ~AlignedAlloc() {
     if (data_) {

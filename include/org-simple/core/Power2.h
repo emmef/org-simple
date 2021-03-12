@@ -29,14 +29,14 @@ template <typename unsigned_type = size_t> struct Power2For {
   /**
    * @return true if value is a power of two, false otherwise.
    */
-  static constexpr bool is(const unsigned_type value) noexcept {
+  static constexpr bool is(const unsigned_type value) {
     return value >= 2 && is_minus_one(value - 1);
   }
 
   /**
    * @return true if value is a power of two minus one, false otherwise.
    */
-  static constexpr bool is_minus_one(const unsigned_type value) noexcept {
+  static constexpr bool is_minus_one(const unsigned_type value) {
     return value != 0 && Bits<unsigned_type>::fill(value) == value;
   }
 
@@ -44,8 +44,7 @@ template <typename unsigned_type = size_t> struct Power2For {
    * @return value if it is a power of two, the next greater power of
    * two if that fits inside unsigned_type and zero otherwise.
    */
-  static constexpr unsigned_type
-  same_or_bigger(const unsigned_type value) noexcept {
+  static constexpr unsigned_type same_or_bigger(const unsigned_type value) {
     return value <= 2 ? 2 : Bits<unsigned_type>::fill(value - 1) + 1;
   }
 
@@ -86,7 +85,7 @@ struct Power2 {
    * @return true if value is a power of two, false otherwise.
    */
   template <typename size_type>
-  static constexpr bool is(const size_type value) noexcept {
+  static constexpr bool is(const size_type value) {
     return Power2For<size_type>::is(value);
   }
 
@@ -94,7 +93,7 @@ struct Power2 {
    * @return true if value is a power of two minus one, false otherwise.
    */
   template <typename size_type>
-  static constexpr bool is_minus_one(const size_type value) noexcept {
+  static constexpr bool is_minus_one(const size_type value) {
     return Power2For<size_type>::is_minus_one(value);
   }
 
@@ -103,7 +102,7 @@ struct Power2 {
    * two if that fits inside unsigned_type and zero otherwise.
    */
   template <typename size_type>
-  static constexpr size_type same_or_bigger(const size_type value) noexcept {
+  static constexpr size_type same_or_bigger(const size_type value) {
     return Power2For<size_type>::same_or_bigger(value);
   }
 

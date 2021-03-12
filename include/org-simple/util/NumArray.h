@@ -116,21 +116,21 @@ template <typename T, class S> struct BaseNumArray : public S {
   typedef T value_type;
   static constexpr size_t elements = FIXED_CAPACITY;
 
-  void zero() noexcept {
+  void zero() {
     auto data = this->begin();
     for (size_t i = 0; i < this->capacity(); i++) {
       data[i] = 0;
     }
   }
 
-  void fill(T v) noexcept {
+  void fill(T v) {
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] = v;
     }
   }
 
-  BaseNumArray &plus(T v) noexcept {
+  BaseNumArray &plus(T v) {
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] += v;
@@ -156,7 +156,7 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   template <class Array>
   requires NotSmallerArray<Array> BaseNumArray &
-  operator<<(const Array &source) noexcept {
+  operator<<(const Array &source) {
     auto data = this->begin();
     auto o = source.begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
@@ -166,7 +166,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   }
 
   template <typename X>
-  requires SmallerArray<X> BaseNumArray &operator<<(const X &source) noexcept {
+  requires SmallerArray<X> BaseNumArray &operator<<(const X &source) {
     size_t i;
     auto data = this->begin();
     auto o = source.begin();
@@ -181,7 +181,7 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   template <typename Array, size_t START, size_t SRC_ELEM>
   requires ValidForGraftArray<START, SRC_ELEM> BaseNumArray &
-  graft(const Array &source) noexcept {
+  graft(const Array &source) {
     auto data = this->begin();
     auto o = source.begin();
 
@@ -193,7 +193,7 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   // Negate
 
-  BaseNumArray operator-() const noexcept {
+  BaseNumArray operator-() const {
     BaseNumArray r;
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
@@ -202,7 +202,7 @@ template <typename T, class S> struct BaseNumArray : public S {
     return r;
   }
 
-  BaseNumArray &negate() noexcept {
+  BaseNumArray &negate() {
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] = -data[i];
@@ -212,9 +212,9 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   // Add another array
 
-  template <class Array> requires BaseArrayTest<Array>::value
-  BaseNumArray &operator+=(const Array &source) noexcept
-      requires SameSizeArray<Array> {
+  template <class Array>
+  requires BaseArrayTest<Array>::value BaseNumArray &
+  operator+=(const Array &source) requires SameSizeArray<Array> {
     auto data = this->begin();
     auto o = source.begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
@@ -223,24 +223,26 @@ template <typename T, class S> struct BaseNumArray : public S {
     return *this;
   }
 
-  template <class Array> requires BaseArrayTest<Array>::value
-  BaseNumArray operator+(const Array &o) const noexcept {
+  template <class Array>
+  requires BaseArrayTest<Array>::value BaseNumArray
+  operator+(const Array &o) const {
     BaseNumArray r = *this;
     r += o;
     return r;
   }
 
-  template <class Array> requires BaseArrayTest<Array>::value
-  friend BaseNumArray &operator+(const Array &o,
-                                 BaseNumArray &&a) noexcept {
+  template <class Array>
+  requires BaseArrayTest<Array>::value friend BaseNumArray &
+  operator+(const Array &o, BaseNumArray &&a) {
     a += o;
     return a;
   }
 
   // Subtract an array
 
-  template <class Array> requires BaseArrayTest<Array>::value
-  BaseNumArray &operator-=(const Array &source) noexcept {
+  template <class Array>
+  requires BaseArrayTest<Array>::value BaseNumArray &
+  operator-=(const Array &source) {
     auto data = this->begin();
     auto o = source.begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
@@ -249,7 +251,7 @@ template <typename T, class S> struct BaseNumArray : public S {
     return *this;
   }
 
-  BaseNumArray operator-(const BaseNumArray &o) const noexcept {
+  BaseNumArray operator-(const BaseNumArray &o) const {
     BaseNumArray r = *this;
     r -= o;
     return r;
@@ -257,27 +259,26 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   template <class Array>
   requires BaseArrayTest<Array>::value BaseNumArray
-  operator-(const Array &o) const noexcept {
+  operator-(const Array &o) const {
     BaseNumArray r = *this;
     r -= o;
     return r;
   }
 
-  friend BaseNumArray &operator-(const BaseNumArray &o,
-                                 BaseNumArray &&a) noexcept {
+  friend BaseNumArray &operator-(const BaseNumArray &o, BaseNumArray &&a) {
     a -= o;
     return a;
   }
 
   template <class Array>
-  friend BaseNumArray &operator-(const Array &o, BaseNumArray &&a) noexcept {
+  friend BaseNumArray &operator-(const Array &o, BaseNumArray &&a) {
     a += o;
     return a;
   }
 
   // Multiply by scalar
 
-  BaseNumArray &operator*=(T v) noexcept {
+  BaseNumArray &operator*=(T v) {
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] *= v;
@@ -285,7 +286,7 @@ template <typename T, class S> struct BaseNumArray : public S {
     return *this;
   }
 
-  BaseNumArray operator*(T v) const noexcept {
+  BaseNumArray operator*(T v) const {
     BaseNumArray r;
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
@@ -294,18 +295,16 @@ template <typename T, class S> struct BaseNumArray : public S {
     return r;
   }
 
-  friend BaseNumArray operator*(T v, const BaseNumArray &a) noexcept {
-    return a * v;
-  }
+  friend BaseNumArray operator*(T v, const BaseNumArray &a) { return a * v; }
 
-  friend BaseNumArray &operator*(T v, BaseNumArray &&a) noexcept {
+  friend BaseNumArray &operator*(T v, BaseNumArray &&a) {
     a *= v;
     return a;
   }
 
   // Divide by scalar
 
-  BaseNumArray &operator/=(T v) noexcept {
+  BaseNumArray &operator/=(T v) {
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] /= v;
@@ -313,7 +312,7 @@ template <typename T, class S> struct BaseNumArray : public S {
     return *this;
   }
 
-  BaseNumArray operator/(T v) const noexcept {
+  BaseNumArray operator/(T v) const {
     auto data = this->begin();
     BaseNumArray r;
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
@@ -322,11 +321,9 @@ template <typename T, class S> struct BaseNumArray : public S {
     return r;
   }
 
-  friend BaseNumArray operator/(T v, const BaseNumArray &a) noexcept {
-    return a / v;
-  }
+  friend BaseNumArray operator/(T v, const BaseNumArray &a) { return a / v; }
 
-  friend BaseNumArray &operator/(T v, BaseNumArray &&a) noexcept {
+  friend BaseNumArray &operator/(T v, BaseNumArray &&a) {
     a /= v;
     return a;
   }
@@ -336,7 +333,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   // Dot product
 
   template <class Array>
-  requires ArrayCompatible<Array, T> T dot(const Array &other) const noexcept {
+  requires ArrayCompatible<Array, T> T dot(const Array &other) const {
     auto v1 = this->begin();
     auto v2 = other.begin();
 
@@ -368,10 +365,10 @@ template <typename T, class S> struct BaseNumArray : public S {
   // Squared absolute value (norm)
 
   typename org::simple::core::is_complex<T>::real_type
-  squared_absolute() const noexcept {
+  squared_absolute() const {
     if constexpr (org::simple::core::is_complex<T>::value) {
       typename org::simple::core::is_complex<T>::value_type sum = 0;
-      const T * p = this->begin();
+      const T *p = this->begin();
       for (size_t i = 0; i < FIXED_CAPACITY; i++) {
         sum += std::norm(p[i]);
       }
@@ -388,7 +385,7 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   template <typename Array>
   requires ValidForCrossProductArray<Array>
-      BaseNumArray cross_product(const Array &source) const noexcept {
+      BaseNumArray cross_product(const Array &source) const {
     BaseNumArray r;
     auto data = this->begin();
     auto o = source.begin();

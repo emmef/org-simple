@@ -32,10 +32,11 @@ namespace org::simple::core {
  * @tparam unsigned_type An integral, unsigned type.
  */
 template <typename unsigned_type = size_t> class Bits {
-  static_assert(std::is_integral_v<unsigned_type> && !std::is_signed_v<unsigned_type>,
+  static_assert(std::is_integral_v<unsigned_type> &&
+                    !std::is_signed_v<unsigned_type>,
                 "Power2:: Type must be an integral, unsigned type");
 
-  template <int N> static constexpr unsigned_type fillN(unsigned_type n) noexcept {
+  template <int N> static constexpr unsigned_type fillN(unsigned_type n) {
     return N < 2 ? n : fillN<N / 2>(n) | (fillN<N / 2>(n) >> (N / 2));
   };
 
@@ -51,7 +52,7 @@ public:
    * @return value with all bits set that are less significant than the most
    * significant bit.
    */
-  static constexpr unsigned_type fill(unsigned_type value) noexcept {
+  static constexpr unsigned_type fill(unsigned_type value) {
     return fillN<8 * sizeof(unsigned_type)>(value);
   };
 
@@ -60,7 +61,7 @@ public:
    * zero. The number of the least significant bit is zero.
    * @return the number of the most significant bit set, or -1 if value is zero.
    */
-  static constexpr int most_significant(unsigned_type value) noexcept {
+  static constexpr int most_significant(unsigned_type value) {
     int bit = sizeof(unsigned_type) * 8 - 1;
     while (bit >= 0 && (value & (unsigned_type(1) << bit)) == 0) {
       bit--;
@@ -75,7 +76,7 @@ public:
    * the second most significant bit.
    * @return the number of the most significant bit set, or -1 if value is zero.
    */
-  static constexpr int most_significant_single(unsigned_type value) noexcept {
+  static constexpr int most_significant_single(unsigned_type value) {
     int bit = sizeof(unsigned_type) * 8 - 1;
     while (bit >= 0 && (value & (unsigned_type(1) << bit)) == 0) {
       bit--;
@@ -98,8 +99,7 @@ public:
    * specified index. The minimum returned mask is 1.
    * @return the bit mask that includes index.
    */
-  static constexpr unsigned_type
-  bit_mask_including(unsigned_type index) noexcept {
+  static constexpr unsigned_type bit_mask_including(unsigned_type index) {
     return index < 2 ? 1 : fill(index);
   }
 
@@ -108,8 +108,7 @@ public:
    * the specified index. The minimum returned mask is 1.
    * @return the bit mask that includes index.
    */
-  static constexpr unsigned_type
-  bit_mask_not_exceeding(unsigned_type index) noexcept {
+  static constexpr unsigned_type bit_mask_not_exceeding(unsigned_type index) {
     return index < 2 ? 0 : fill(index) == index ? index : fill(index) >> 1;
   }
 
@@ -118,10 +117,9 @@ public:
    * maximum value of unsigned_type if that is smaller.
    * @return the maximum size
    */
-  static constexpr unsigned_type
-  max_value_for_bits(unsigned size_bits) noexcept {
+  static constexpr unsigned_type max_value_for_bits(unsigned size_bits) {
     return size_bits >= type_bits ? std::numeric_limits<unsigned_type>::max()
-                                       : unsigned_type(1) << size_bits;
+                                  : unsigned_type(1) << size_bits;
   }
 };
 
