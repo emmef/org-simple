@@ -29,11 +29,8 @@
 
 namespace org::simple::util {
 
-// TODO Allow for alignment in ArrayConstRef with constructor check
-// TODO Allow for alignment in ArraySlice with constructor check
-
 template <typename T, size_t S, size_t A, typename C> class AbstractArray;
-template <typename T> class ArrayDataRef;
+template <typename T, size_t A = 0> class ArrayDataRef;
 template <typename T, size_t A = 0> class ArrayAllocated;
 template <typename T, size_t S, size_t A = 0> class Array;
 
@@ -485,7 +482,7 @@ public:
 namespace helper {
 
 template <typename T> static constexpr size_t eff_align(size_t A) {
-  return org::simple::core::alignment_get_correct<T>(A);
+  return A == 0 ? A : org::simple::core::alignment_get_correct<T>(A);
 }
 
 template <typename T, size_t S> static constexpr size_t eff_capacity() {
@@ -589,9 +586,9 @@ private:
   DataStruct *data_;
 };
 
-template <typename T, size_t S>
+template <typename T, size_t S, size_t A = 0>
 class ArrayDataRefFixedSize
-    : public AbstractArray<T, eff_capacity<T, S>(), 0,
+    : public AbstractArray<T, eff_capacity<T, S>(), eff_align<A>(),
                            ArrayDataRefFixedSize<T, S>> {
 
   T *data_;
@@ -599,8 +596,16 @@ class ArrayDataRefFixedSize
   T *array_data() { return data_; }
   const T *array_data() const { return data_; }
 
+  T * check_valid_data(T * data) {
+    T * r = core::Dereference::checked(data);
+    if (A == 0 || core::alignment_matches((uintptr_t)data, eff_align<A>())) {
+      return r;
+    };
+    throw std::invalid_argument("org::simple::util::ArrayDataRefFixedSize(data): not aligned");
+  }
+
 public:
-  typedef AbstractArray<T, eff_capacity<T, S>(), 0, ArrayDataRefFixedSize<T, S>>
+  typedef AbstractArray<T, eff_capacity<T, S>(), eff_align<A>(), ArrayDataRefFixedSize<T, S>>
       Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
@@ -608,14 +613,14 @@ public:
   friend Super;
 
   ArrayDataRefFixedSize() = delete;
-  ArrayDataRefFixedSize(T *data) : data_(core::Dereference::checked(data)) {}
+  ArrayDataRefFixedSize(T *data) : data_(check_valid_data(data)) {}
   ArrayDataRefFixedSize(const ArrayDataRefFixedSize &source)
       : data_(source.data_) {}
   ArrayDataRefFixedSize(ArrayDataRefFixedSize &&source) noexcept = default;
 };
 
-template <typename T>
-class ArrayDataRef : public AbstractArray<T, 0, 0, ArrayDataRef<T>> {
+template <typename T, size_t A>
+class ArrayDataRef : public AbstractArray<T, 0, eff_align<A>(), ArrayDataRef<T>> {
 
   T *data_;
   size_t capacity_;
@@ -624,15 +629,23 @@ class ArrayDataRef : public AbstractArray<T, 0, 0, ArrayDataRef<T>> {
   T *array_data() { return data_; }
   const T *array_data() const { return data_; }
 
+  T * check_valid_data(T * data) {
+    T * r = core::Dereference::checked(data);
+    if (A == 0 || core::alignment_matches((uintptr_t)data, eff_align<A>())) {
+      return r;
+    };
+    throw std::invalid_argument("org::simple::util::ArrayDataRef(data): not aligned");
+  }
+
 public:
-  typedef AbstractArray<T, 0, 0, ArrayDataRef<T>> Super;
+  typedef AbstractArray<T, 0, eff_align<A>(), ArrayDataRef<T>> Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   friend Super;
 
   ArrayDataRef() = delete;
   ArrayDataRef(T *data, size_t capacity)
-      : data_(core::Dereference::checked(data)),
+      : data_(check_valid_data(data)),
         capacity_(Super::Size::Valid::value(capacity)) {}
   ArrayDataRef(const ArrayDataRef &source)
       : data_(source.data_), capacity_(source.capacity_) {}
