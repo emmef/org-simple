@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_BASEARRAY_H
-#define ORG_SIMPLE_BASEARRAY_H
+#ifndef ORG_SIMPLE_ARRAY_H
+#define ORG_SIMPLE_ARRAY_H
 /*
  * org-simple/util/BaseArray.h
  *
@@ -695,4 +695,4 @@ private:
 
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_BASEARRAY_H
+#endif // ORG_SIMPLE_ARRAY_H

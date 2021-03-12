@@ -4,7 +4,7 @@
 
 #include "test-helper.h"
 #include <iostream>
-#include <org-simple/util/BaseArray.h>
+#include <org-simple/util/Array.h>
 #include <typeinfo>
 
 using namespace org::simple::util;
