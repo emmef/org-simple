@@ -226,9 +226,9 @@ public:
    * @return \c true if copy was successful, \c false otherwise.
    */
   template <class Array>
-  requires is_type_compat_array<Array, T> void assign(const Array &source) {
+  requires is_type_compat_array<Array, T> AbstractArray &assign(const Array &source) {
     if ((const void*)&source == (const void*)this) {
-      return;
+      return *this;
     }
     if constexpr (FIXED_CAPACITY != 0) {
       if constexpr (Array::FIXED_CAPACITY != 0) {
@@ -253,7 +253,7 @@ public:
       for (size_t i = 0; i < capacity(); i++) {
         destination[i] = src[i];
       }
-      return;
+      return *this;
     }
     const size_t MOVES =
         FIXED_CAPACITY != 0 ? FIXED_CAPACITY : Array::FIXED_CAPACITY;
@@ -262,6 +262,7 @@ public:
     for (size_t i = 0; i < MOVES; i++) {
       to[i] = from[i];
     }
+    return *this;
   }
 
   /**

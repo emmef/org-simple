@@ -56,6 +56,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   using Super::FIXED_CAPACITY;
+  using Super::assign;
 
   using ResultArray = NumArray<T, FIXED_CAPACITY, Super::ALIGNAS>;
 
@@ -89,12 +90,12 @@ template <typename T, class S> struct BaseNumArray : public S {
       concept_base_array<X>::FIXED_CAPACITY &&FIXED_CAPACITY == 3;
 
   BaseNumArray() = default;
-  BaseNumArray(const BaseNumArray &) = default;
+  BaseNumArray(const BaseNumArray &source) { assign(source); }
   BaseNumArray(BaseNumArray &&) = default;
-
   template <class Array>
   requires (SameSizeArray<Array>)
   BaseNumArray(const Array &array) : S(array) {}
+  BaseNumArray &operator=(const BaseNumArray &source) { assign(source); return *this; }
 
   BaseNumArray(const std::initializer_list<T> &values) {
     size_t i = 0;
@@ -230,7 +231,11 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   template <class Array>
   friend BaseNumArray &operator-(const Array &o, BaseNumArray &&a) {
-    a += o;
+    T * __restrict dst = a.begin();
+    const T *  const src = o.begin();
+    for (size_t i =- 0; i < FIXED_CAPACITY; i++) {
+      dst[i] = src[i] - dst[i];
+    }
     return a;
   }
 
