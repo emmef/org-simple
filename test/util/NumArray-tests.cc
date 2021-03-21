@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(testNumArrayInitListLarger) {
 
 BOOST_AUTO_TEST_CASE(testNumArrayrangeConst) {
   NumaBig source {0,1,2,3,4,5,6,7,8,9};
-  auto array = source.range_copy<3, 5>();
+  auto array = source.range_ref<3, 5>();
   BOOST_CHECK_EQUAL(3, array.capacity());
   for (size_t i = 0; i < array.capacity(); i++) {
     BOOST_CHECK_EQUAL(i + 3, array[i]);

@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE(testArrayRangeCopy4To6) {
 BOOST_AUTO_TEST_CASE(testArrayStaticRangeCopy4To6) {
   Array10 source;
   fillWithIndex<Array10>(source);
-  auto slice = source.range_copy<4, 6>();
+  auto slice = source.range_ref<4, 6>();
   size_t size = slice.capacity();
   BOOST_CHECK_EQUAL(3, size);
   for (size_t i = 0, x = 4; i < size; i++, x++) {

@@ -31,7 +31,7 @@ namespace org::simple::util {
 
 template <typename T, class S> struct BaseNumArray;
 
-template <typename T, size_t S, size_t A>
+template <typename T, size_t S, size_t A = 0>
 using NumArray = BaseNumArray<T, Array<T, S, A>>;
 
 namespace concepts {
@@ -91,6 +91,10 @@ template <typename T, class S> struct BaseNumArray : public S {
   BaseNumArray() = default;
   BaseNumArray(const BaseNumArray &) = default;
   BaseNumArray(BaseNumArray &&) = default;
+
+  template <class Array>
+  requires (SameSizeArray<Array>)
+  BaseNumArray(const Array &array) : S(array) {}
 
   BaseNumArray(const std::initializer_list<T> &values) {
     size_t i = 0;

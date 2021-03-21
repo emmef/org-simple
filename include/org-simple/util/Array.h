@@ -227,7 +227,7 @@ public:
    */
   template <class Array>
   requires is_type_compat_array<Array, T> void assign(const Array &source) {
-    if (&source == this) {
+    if ((const void*)&source == (const void*)this) {
       return;
     }
     if constexpr (FIXED_CAPACITY != 0) {
@@ -630,7 +630,7 @@ public:
 
 template <typename T, size_t A>
 class ArrayDataRef
-    : public AbstractArray<T, 0, eff_align<A>(), ArrayDataRef<T>> {
+    : public AbstractArray<T, 0, eff_align<T>(A), ArrayDataRef<T>> {
 
   T *data_;
   size_t capacity_;
@@ -641,7 +641,7 @@ class ArrayDataRef
 
   T *check_valid_data(T *data) {
     T *r = core::Dereference::checked(data);
-    if (A == 0 || core::alignment_matches((uintptr_t)data, eff_align<A>())) {
+    if (A == 0 || core::alignment_matches((uintptr_t)data, eff_align<T>(A))) {
       return r;
     };
     throw std::invalid_argument(
@@ -649,7 +649,7 @@ class ArrayDataRef
   }
 
 public:
-  typedef AbstractArray<T, 0, eff_align<A>(), ArrayDataRef<T>> Super;
+  typedef AbstractArray<T, 0, eff_align<T>(A), ArrayDataRef<T>> Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   friend Super;
