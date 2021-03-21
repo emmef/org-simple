@@ -31,6 +31,9 @@ namespace org::simple::util {
 
 template <typename T, class S> struct BaseNumArray;
 
+template <typename T, size_t S, size_t A>
+using NumArray = BaseNumArray<T, Array<T, S, A>>;
+
 namespace concepts {
 
 using namespace org::simple::core;
@@ -53,6 +56,8 @@ template <typename T, class S> struct BaseNumArray : public S {
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   using Super::FIXED_CAPACITY;
+
+  using ResultArray = NumArray<T, FIXED_CAPACITY, Super::ALIGNAS>;
 
   template <typename X>
   static constexpr bool SameSizeArray =
@@ -80,7 +85,8 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   template <typename X>
   static constexpr bool ValidForCrossProductArray =
-      FIXED_CAPACITY == concept_base_array<X>::FIXED_CAPACITY &&FIXED_CAPACITY == 3;
+      FIXED_CAPACITY ==
+      concept_base_array<X>::FIXED_CAPACITY &&FIXED_CAPACITY == 3;
 
   BaseNumArray() = default;
   BaseNumArray(const BaseNumArray &) = default;
@@ -156,8 +162,8 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   // Negate
 
-  BaseNumArray operator-() const {
-    BaseNumArray r;
+  ResultArray operator-() const {
+    ResultArray r;
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       r[i] = -data[i];
@@ -176,10 +182,9 @@ template <typename T, class S> struct BaseNumArray : public S {
   // Add another array
 
   template <class Array>
-  requires SameSizeArray<Array> BaseNumArray &
-  operator+=(const Array &source) {
-    T * __restrict data = this->begin();
-    const T * __restrict o = source.begin();
+  requires SameSizeArray<Array> BaseNumArray &operator+=(const Array &source) {
+    T *__restrict data = this->begin();
+    const T *__restrict o = source.begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] += o[i];
     }
@@ -187,9 +192,8 @@ template <typename T, class S> struct BaseNumArray : public S {
   }
 
   template <class Array>
-  requires SameSizeArray<Array> BaseNumArray
-  operator+(const Array &o) const {
-    BaseNumArray r = *this;
+  requires SameSizeArray<Array> ResultArray operator+(const Array &o) const {
+    ResultArray r = *this;
     r += o;
     return r;
   }
@@ -204,10 +208,9 @@ template <typename T, class S> struct BaseNumArray : public S {
   // Subtract an array
 
   template <class Array>
-  requires SameSizeArray<Array> BaseNumArray &
-  operator-=(const Array &source) {
-    T * __restrict data = this->begin();
-    const T * __restrict o = source.begin();
+  requires SameSizeArray<Array> BaseNumArray &operator-=(const Array &source) {
+    T *__restrict data = this->begin();
+    const T *__restrict o = source.begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       data[i] -= o[i];
     }
@@ -215,9 +218,8 @@ template <typename T, class S> struct BaseNumArray : public S {
   }
 
   template <class Array>
-  requires SameSizeArray<Array> BaseNumArray
-  operator-(const Array &o) const {
-    BaseNumArray r = *this;
+  requires SameSizeArray<Array> ResultArray operator-(const Array &o) const {
+    ResultArray r = *this;
     r -= o;
     return r;
   }
@@ -238,8 +240,8 @@ template <typename T, class S> struct BaseNumArray : public S {
     return *this;
   }
 
-  BaseNumArray operator*(T v) const {
-    BaseNumArray r;
+  ResultArray operator*(T v) const {
+    ResultArray r;
     auto data = this->begin();
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       r[i] = data[i] * v;
@@ -247,7 +249,7 @@ template <typename T, class S> struct BaseNumArray : public S {
     return r;
   }
 
-  friend BaseNumArray operator*(T v, const BaseNumArray &a) { return a * v; }
+  friend ResultArray operator*(T v, const BaseNumArray &a) { return a * v; }
 
   friend BaseNumArray &operator*(T v, BaseNumArray &&a) {
     a *= v;
@@ -264,16 +266,16 @@ template <typename T, class S> struct BaseNumArray : public S {
     return *this;
   }
 
-  BaseNumArray operator/(T v) const {
+  ResultArray operator/(T v) const {
     auto data = this->begin();
-    BaseNumArray r;
+    ResultArray r;
     for (size_t i = 0; i < FIXED_CAPACITY; i++) {
       r[i] = data[i] / v;
     }
     return r;
   }
 
-  friend BaseNumArray operator/(T v, const BaseNumArray &a) { return a / v; }
+  friend ResultArray operator/(T v, const BaseNumArray &a) { return a / v; }
 
   friend BaseNumArray &operator/(T v, BaseNumArray &&a) {
     a /= v;
@@ -347,8 +349,6 @@ template <typename T, class S> struct BaseNumArray : public S {
     return r;
   }
 };
-
-template <typename T, size_t N> using NumArray = BaseNumArray<T, Array<T, N>>;
 
 } // namespace org::simple::util
 
