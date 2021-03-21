@@ -114,6 +114,10 @@ concept is_type_compat_gt_size_arrays =
             &&FIXED_CAPACITY != 0 &&
     concept_base_array<Array>::FIXED_CAPACITY > FIXED_CAPACITY;
 
+using org::simple::core::alignment_is_valid;
+using org::simple::core::Index;
+using org::simple::core::SizeValue;
+
 /**
  * AbstractArray implements basic array behavior that a subclass can inherit. To
  * do that, the subclass must pass a delegate class as the last parameter \c C
@@ -133,19 +137,20 @@ concept is_type_compat_gt_size_arrays =
  * @tparam C The delegate class that needs to implement the
  */
 template <typename T, size_t S, size_t A, typename C> class AbstractArray {
-  static_assert(A == 0 || org::simple::core::alignment_is_valid<T>(A));
-  static_assert(
-      S == 0 ||
-      org::simple::core::SizeValue::Elements<sizeof(T)>::IsValid::value(S));
+  static_assert(A == 0 || alignment_is_valid<T>(A));
+  static_assert(S == 0 || SizeValue::Elements<sizeof(T)>::IsValid::value(S));
 
 public:
   static constexpr size_t ALIGNAS =
       org::simple::core::alignment_get_correct<T>(A);
   static constexpr size_t FIXED_CAPACITY = S;
+  template <size_t OFFSET>
+  static constexpr size_t
+      offset_alignment = ALIGNAS != 0 && (OFFSET % ALIGNAS == 0) ? ALIGNAS : 0;
 
   using data_type = T;
   using delegate_type = C;
-  typedef org::simple::core::SizeValue::Elements<sizeof(T)> Size;
+  typedef SizeValue::Elements<sizeof(T)> Size;
 
   // raw data access
 
@@ -199,22 +204,18 @@ public:
   // Raw element access
 
   const T &data(size_t offset) const {
-    return begin()[core::Index::unsafe(offset, capacity())];
+    return begin()[Index::unsafe(offset, capacity())];
   }
-  T &data(size_t offset) {
-    return begin()[core::Index::unsafe(offset, capacity())];
-  }
+  T &data(size_t offset) { return begin()[Index::unsafe(offset, capacity())]; }
   const T &operator[](size_t offset) const { return data(offset); }
   T &operator[](size_t offset) { return data(offset); }
 
   // Offset-checked element access
 
   const T &at(size_t offset) const {
-    return begin()[org::simple::core::Index::safe(offset, capacity())];
+    return begin()[Index::safe(offset, capacity())];
   }
-  T &at(size_t offset) {
-    return begin()[org::simple::core::Index::safe(offset, capacity())];
-  }
+  T &at(size_t offset) { return begin()[Index::safe(offset, capacity())]; }
 
   /**
    * Copies all the elements from \c source to this array if they both have the
@@ -405,15 +406,19 @@ public:
    * @return an Array slice representing the range.
    */
   template <size_t START, size_t END>
-  requires(FIXED_CAPACITY != 0) ArrayDataRef<T> range_ref() {
+  requires(FIXED_CAPACITY !=
+           0) ArrayDataRef<T, offset_alignment<START>> range_ref() {
     static_assert(END < FIXED_CAPACITY && START <= END);
-    return ArrayDataRef<T>(begin() + START, END + 1 - START);
+    return ArrayDataRef<T, offset_alignment<START>>(begin() + START,
+                                                    END + 1 - START);
   }
 
   template <size_t START, size_t END>
-  requires(FIXED_CAPACITY != 0) const ArrayDataRef<T> range_ref() const {
+  requires(FIXED_CAPACITY !=
+           0) const ArrayDataRef<T, offset_alignment<START>> range_ref() const {
     static_assert(END < FIXED_CAPACITY && START <= END);
-    return ArrayDataRef<T>(begin() + START, END + 1 - START);
+    return ArrayDataRef<T, offset_alignment<START>>(begin() + START,
+                                                    END + 1 - START);
   }
 
   /**
@@ -424,9 +429,9 @@ public:
    * @param end The last element to copy.
    * @return an Array representing the range.
    */
-  ArrayAllocated<T> range_copy(size_t start, size_t end) const {
+  ArrayAllocated<T, ALIGNAS> range_copy(size_t start, size_t end) const {
     if (end < capacity() && start <= end) {
-      return ArrayAllocated<T>(begin() + start, end + 1 - start);
+      return ArrayAllocated<T, ALIGNAS>(begin() + start, end + 1 - start);
     }
     throw std::out_of_range("org::simple::util::BaseArray(start,end)");
   }
@@ -440,9 +445,11 @@ public:
    * @return an Array representing the range.
    */
   template <size_t START, size_t END>
-  requires(FIXED_CAPACITY != 0) Array<T, END + 1 - START> range_copy() const {
+  requires(FIXED_CAPACITY != 0)
+      Array<T, END + 1 - START, offset_alignment<START>> range_copy_array()
+          const {
     static_assert(END < FIXED_CAPACITY && START <= END);
-    return Array<T, END + 1 - START>(begin() + START);
+    return Array<T, END + 1 - START, offset_alignment<START>>(begin() + START);
   }
 
   /**
@@ -455,9 +462,9 @@ public:
    */
   template <size_t START, size_t END>
   requires(FIXED_CAPACITY !=
-           0) const ArrayAllocated<T> range_copy_local() const {
+           0) const ArrayAllocated<T, ALIGNAS> range_copy_heap() const {
     static_assert(END < FIXED_CAPACITY && START <= END);
-    return ArrayAllocated<T>(begin() + START, END + 1 - START);
+    return ArrayAllocated<T, ALIGNAS>(begin() + START, END + 1 - START);
   }
 
   AbstractArray &operator<<(const T *source) {
@@ -596,16 +603,18 @@ class ArrayDataRefFixedSize
   T *array_data() { return data_; }
   const T *array_data() const { return data_; }
 
-  T * check_valid_data(T * data) {
-    T * r = core::Dereference::checked(data);
+  T *check_valid_data(T *data) {
+    T *r = core::Dereference::checked(data);
     if (A == 0 || core::alignment_matches((uintptr_t)data, eff_align<A>())) {
       return r;
     };
-    throw std::invalid_argument("org::simple::util::ArrayDataRefFixedSize(data): not aligned");
+    throw std::invalid_argument(
+        "org::simple::util::ArrayDataRefFixedSize(data): not aligned");
   }
 
 public:
-  typedef AbstractArray<T, eff_capacity<T, S>(), eff_align<A>(), ArrayDataRefFixedSize<T, S>>
+  typedef AbstractArray<T, eff_capacity<T, S>(), eff_align<A>(),
+                        ArrayDataRefFixedSize<T, S>>
       Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
@@ -620,7 +629,8 @@ public:
 };
 
 template <typename T, size_t A>
-class ArrayDataRef : public AbstractArray<T, 0, eff_align<A>(), ArrayDataRef<T>> {
+class ArrayDataRef
+    : public AbstractArray<T, 0, eff_align<A>(), ArrayDataRef<T>> {
 
   T *data_;
   size_t capacity_;
@@ -629,12 +639,13 @@ class ArrayDataRef : public AbstractArray<T, 0, eff_align<A>(), ArrayDataRef<T>>
   T *array_data() { return data_; }
   const T *array_data() const { return data_; }
 
-  T * check_valid_data(T * data) {
-    T * r = core::Dereference::checked(data);
+  T *check_valid_data(T *data) {
+    T *r = core::Dereference::checked(data);
     if (A == 0 || core::alignment_matches((uintptr_t)data, eff_align<A>())) {
       return r;
     };
-    throw std::invalid_argument("org::simple::util::ArrayDataRef(data): not aligned");
+    throw std::invalid_argument(
+        "org::simple::util::ArrayDataRef(data): not aligned");
   }
 
 public:
