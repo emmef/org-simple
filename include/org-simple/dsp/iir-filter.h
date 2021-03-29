@@ -26,8 +26,6 @@
 
 namespace org::simple::iir {
 
-enum class FeedbackSign { POSITIVE, NEGATIVE };
-
 /**
  * Filters a single sample using the feed forward coefficients \c ff_coeffs,
  * feed backward coefficients \c fb_coeffs, sample histories for input and
@@ -44,8 +42,7 @@ enum class FeedbackSign { POSITIVE, NEGATIVE };
  * @param x The sample to filter
  * @return The filtered sample value.
  */
-template <typename S, typename C, size_t ORDER,
-          FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C, size_t ORDER>
 S filter_single_fo(S *__restrict xHistory, S *__restrict yHistory,
                    const C *__restrict ff_coeffs, const C *__restrict fb_coeffs,
                    const S x) {
@@ -61,11 +58,7 @@ S filter_single_fo(S *__restrict xHistory, S *__restrict yHistory,
     X = xN1;
     yHistory[i] = Y;
     Y = yN1;
-    if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-      yN0 += xN1 * ff_coeffs[j] + yN1 * fb_coeffs[j];
-    } else {
-      yN0 += xN1 * ff_coeffs[j] - yN1 * fb_coeffs[j];
-    }
+    yN0 += xN1 * ff_coeffs[j] - yN1 * fb_coeffs[j];
   }
   yN0 += ff_coeffs[0] * x;
 
@@ -90,7 +83,7 @@ S filter_single_fo(S *__restrict xHistory, S *__restrict yHistory,
  * @param x The sample to filter
  * @return The filtered sample value.
  */
-template <typename S, typename C, FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C>
 S filter_single(size_t order, S *__restrict xHistory, S *__restrict yHistory,
                 const C *__restrict ff_coeffs, const C *__restrict fb_coeffs,
                 const S x) {
@@ -106,11 +99,7 @@ S filter_single(size_t order, S *__restrict xHistory, S *__restrict yHistory,
     X = xN1;
     yHistory[i] = Y;
     Y = yN1;
-    if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-      yN0 += xN1 * ff_coeffs[j] + yN1 * fb_coeffs[j];
-    } else {
-      yN0 += xN1 * ff_coeffs[j] - yN1 * fb_coeffs[j];
-    }
+    yN0 += xN1 * ff_coeffs[j] - yN1 * fb_coeffs[j];
   }
   yN0 += ff_coeffs[0] * x;
 
@@ -136,8 +125,7 @@ S filter_single(size_t order, S *__restrict xHistory, S *__restrict yHistory,
  * @param out The output sample buffer, that must at least have a length of \c
  * count + \c ORDER.
  */
-template <typename S, typename C, size_t ORDER,
-          FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C, size_t ORDER>
 void filter_forward_foo(size_t count, const C *__restrict ff_coeffs,
                         const C *__restrict fb_coeffs, const S *__restrict in,
                         S *__restrict out) {
@@ -145,11 +133,7 @@ void filter_forward_foo(size_t count, const C *__restrict ff_coeffs,
   for (size_t n = ORDER; n < end; n++) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= ORDER; j++) {
-      if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-        yN += in[n - j] * ff_coeffs[j] + out[n - j] * fb_coeffs[j];
-      } else {
-        yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
-      }
+      yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
     }
     out[n] = yN;
   }
@@ -173,8 +157,7 @@ void filter_forward_foo(size_t count, const C *__restrict ff_coeffs,
  * @param out The output sample buffer, that must at least have a length of \c
  * count.
  */
-template <typename S, typename C, size_t ORDER,
-          FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C, size_t ORDER>
 void filter_forward_fzp(size_t count, const C *__restrict ff_coeffs,
                         const C *__restrict fb_coeffs, const S *__restrict in,
                         S *__restrict out) {
@@ -182,11 +165,7 @@ void filter_forward_fzp(size_t count, const C *__restrict ff_coeffs,
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= ORDER; j++) {
       if (j <= n) {
-        if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-          yN += in[n - j] * ff_coeffs[j] + out[n - j] * fb_coeffs[j];
-        } else {
-          yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
-        }
+        yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
       }
     }
     out[n] = yN;
@@ -194,11 +173,7 @@ void filter_forward_fzp(size_t count, const C *__restrict ff_coeffs,
   for (size_t n = ORDER; n < count; n++) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= ORDER; j++) {
-      if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-        yN += in[n - j] * ff_coeffs[j] + out[n - j] * fb_coeffs[j];
-      } else {
-        yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
-      }
+      yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
     }
     out[n] = yN;
   }
@@ -221,7 +196,7 @@ void filter_forward_fzp(size_t count, const C *__restrict ff_coeffs,
  * @param out The output sample buffer, that must at least have a length of \c
  * count + \c ORDER.
  */
-template <typename S, typename C, FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C>
 void filter_forward_oo(size_t order, size_t count,
                        const C *__restrict ff_coeffs,
                        const C *__restrict fb_coeffs, const S *__restrict in,
@@ -230,11 +205,7 @@ void filter_forward_oo(size_t order, size_t count,
   for (size_t n = order; n < end; n++) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= order; j++) {
-      if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-        yN += in[n - j] * ff_coeffs[j] + out[n - j] * fb_coeffs[j];
-      } else {
-        yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
-      }
+      yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
     }
     out[n] = yN;
   }
@@ -258,7 +229,7 @@ void filter_forward_oo(size_t order, size_t count,
  * @param out The output sample buffer, that must at least have a length of \c
  * count.
  */
-template <typename S, typename C, FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C>
 void filter_forward_zp(size_t order, size_t count,
                        const C *__restrict ff_coeffs,
                        const C *__restrict fb_coeffs, const S *__restrict in,
@@ -267,11 +238,7 @@ void filter_forward_zp(size_t order, size_t count,
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= order; j++) {
       if (j <= n) {
-        if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-          yN += in[n - j] * ff_coeffs[j] + out[n - j] * fb_coeffs[j];
-        } else {
-          yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
-        }
+        yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
       }
     }
     out[n] = yN;
@@ -279,11 +246,7 @@ void filter_forward_zp(size_t order, size_t count,
   for (size_t n = order; n < count; n++) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= order; j++) {
-      if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-        yN += in[n - j] * ff_coeffs[j] + out[n - j] * fb_coeffs[j];
-      } else {
-        yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
-      }
+      yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
     }
     out[n] = yN;
   }
@@ -306,8 +269,7 @@ void filter_forward_zp(size_t order, size_t count,
  * @param out The output sample buffer, that must at least have a length of \c
  * count + \c ORDER.
  */
-template <typename S, typename C, size_t ORDER,
-          FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C, size_t ORDER>
 void filter_backward_foo(size_t count, const C *__restrict ff_coeffs,
                          const C *__restrict fb_coeffs, const S *__restrict in,
                          S *__restrict out) {
@@ -315,11 +277,7 @@ void filter_backward_foo(size_t count, const C *__restrict ff_coeffs,
   for (ptrdiff_t n = count - 1; n >= 0; n--) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= ORDER; j++) {
-      if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-        yN += in[n + j] * ff_coeffs[j] + out[n + j] * fb_coeffs[j];
-      } else {
-        yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
-      }
+      yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
     }
     out[n] = yN;
   }
@@ -343,8 +301,7 @@ void filter_backward_foo(size_t count, const C *__restrict ff_coeffs,
  * @param out The output sample buffer, that must at least have a length of \c
  * count.
  */
-template <typename S, typename C, size_t ORDER,
-          FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C, size_t ORDER>
 void filter_backward_fzp(size_t count, const C *__restrict ff_coeffs,
                          const C *__restrict fb_coeffs, const S *__restrict in,
                          S *__restrict out) {
@@ -356,11 +313,7 @@ void filter_backward_fzp(size_t count, const C *__restrict ff_coeffs,
     for (size_t j = 1; j <= ORDER; j++) {
       ptrdiff_t i = n + j;
       if (i <= start) {
-        if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-          yN += in[i] * ff_coeffs[j] + out[i] * fb_coeffs[j];
-        } else {
-          yN += in[i] * ff_coeffs[j] - out[i] * fb_coeffs[j];
-        }
+        yN += in[i] * ff_coeffs[j] - out[i] * fb_coeffs[j];
       }
     }
     out[n] = yN;
@@ -368,11 +321,7 @@ void filter_backward_fzp(size_t count, const C *__restrict ff_coeffs,
   for (; n >= 0; n--) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= ORDER; j++) {
-      if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-        yN += in[n + j] * ff_coeffs[j] + out[n + j] * fb_coeffs[j];
-      } else {
-        yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
-      }
+      yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
     }
     out[n] = yN;
   }
@@ -395,7 +344,7 @@ void filter_backward_fzp(size_t count, const C *__restrict ff_coeffs,
  * @param out The output sample buffer, that must at least have a length of \c
  * count + \c ORDER.
  */
-template <typename S, typename C, FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C>
 void filter_backward_oo(size_t order, size_t count,
                         const C *__restrict ff_coeffs,
                         const C *__restrict fb_coeffs, const S *__restrict in,
@@ -403,11 +352,7 @@ void filter_backward_oo(size_t order, size_t count,
   for (ptrdiff_t n = count - 1; n >= 0; n--) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= order; j++) {
-      if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-        yN += in[n + j] * ff_coeffs[j] + out[n + j] * fb_coeffs[j];
-      } else {
-        yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
-      }
+      yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
     }
     out[n] = yN;
   }
@@ -431,7 +376,7 @@ void filter_backward_oo(size_t order, size_t count,
  * @param out The output sample buffer, that must at least have a length of \c
  * count.
  */
-template <typename S, typename C, FeedbackSign FB_SIGN = FeedbackSign::POSITIVE>
+template <typename S, typename C>
 void filter_backward_zp(size_t order, size_t count,
                         const C *__restrict ff_coeffs,
                         const C *__restrict fb_coeffs, const S *__restrict in,
@@ -444,11 +389,7 @@ void filter_backward_zp(size_t order, size_t count,
     for (size_t j = 1; j <= order; j++) {
       ptrdiff_t i = n + j;
       if (i <= start) {
-        if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-          yN += in[i] * ff_coeffs[j] + out[i] * fb_coeffs[j];
-        } else {
-          yN += in[i] * ff_coeffs[j] - out[i] * fb_coeffs[j];
-        }
+        yN += in[i] * ff_coeffs[j] - out[i] * fb_coeffs[j];
       }
     }
     out[n] = yN;
@@ -456,11 +397,7 @@ void filter_backward_zp(size_t order, size_t count,
   for (; n >= 0; n--) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= order; j++) {
-      if constexpr (FB_SIGN == FeedbackSign::POSITIVE) {
-        yN += in[n + j] * ff_coeffs[j] + out[n + j] * fb_coeffs[j];
-      } else {
-        yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
-      }
+      yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
     }
     out[n] = yN;
   }
