@@ -25,9 +25,10 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost REQUIRED COMPONENTS unit_test_framework)
 find_package(Threads)
 
-set(PROJECT_HEADERS include/org-simple/core/debug.h include/org-simple/core/Bits.h include/org-simple/core/Power2.h include/org-simple/core/bounds.h include/org-simple/core/Index.h include/org-simple/core/Circular.h include/org-simple/util/Reference.h include/org-simple/util/Timeout.h include/org-simple/util/FakeClock.h include/org-simple/util/NumArray.h include/org-simple/util/Array.h include/org-simple/util/NumArray.h include/org-simple/util/LockfreeRingBuffer.h include/org-simple/util/SampleLayout.h include/org-simple/core/number_traits.h include/org-simple/dsp/iir-filter.h)
+set(PROJECT_HEADERS include/org-simple/core/debug.h include/org-simple/core/Bits.h include/org-simple/core/Power2.h include/org-simple/core/bounds.h include/org-simple/core/Index.h include/org-simple/core/Circular.h include/org-simple/util/Reference.h include/org-simple/util/Timeout.h include/org-simple/util/FakeClock.h include/org-simple/util/NumArray.h include/org-simple/util/Array.h include/org-simple/util/NumArray.h include/org-simple/util/LockfreeRingBuffer.h include/org-simple/util/SampleLayout.h include/org-simple/core/number_traits.h include/org-simple/dsp/iir-filter.h include/org-simple/dsp/iir-coefficients.h)
 set(PROJECT_SRC ${PROJECT_HEADERS} src/org-simple/placeholder.cc include/org-simple/core/align.h)
 set(PROJECT_TESTS ${PROJECT_HEADERS} test/test-helper.h test/test.cc test/util/OwnedReference.h test/util/OwnedReference.cc test/util/OwnedReference-tests.cc test/core/bounds-tests.cc test/core/Power2-tests.cc test/core/Circular-tests.cc test/core/Bits-tests.cc test/util/Timeout-tests.cc test/util/Reference-tests.cc test/util/RefCount-tests.cc test/core/Index-tests.cc test/boost-unit-tests.h test/util/FakeClock-tests.cc test/core/SizeMetric-tests.cc test/util/Array-tests.cc test/util/NumArray-tests.cc test/util/LockFreeRingBufferTests.cc test/util/SampleLayoutTests.cc test/core/Numbers-tests.cc test/core/Align-tests.cc test/dsp/iir-filter-tests.cc)
+set(PROJECT_EXPERIMENTS ${PROJECT_HEADERS} experiment/experiments.cc)
 
 # Create the library
 
@@ -84,3 +85,10 @@ add_executable(${TEST_PROJECT} ${PROJECT_TESTS})
 target_include_directories(${TEST_PROJECT} BEFORE PRIVATE ${PROJECT_HEADERS})
 target_link_libraries(${TEST_PROJECT} ${PROJECT_NAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 include_directories(${TEST_PROJECT} ${CMAKE_SOURCE_DIR}/include)
+
+# Create module for experiments and tests that are not part of the normal tests.
+set(EXPERIMENT_PROJECT "experiments")
+add_executable(${EXPERIMENT_PROJECT} ${PROJECT_EXPERIMENTS})
+target_include_directories(${EXPERIMENT_PROJECT} BEFORE PRIVATE ${PROJECT_HEADERS})
+target_link_libraries(${EXPERIMENT_PROJECT} ${PROJECT_NAME})
+include_directories(${EXPERIMENT_PROJECT} ${CMAKE_SOURCE_DIR}/include)
