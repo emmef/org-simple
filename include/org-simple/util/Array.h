@@ -26,6 +26,7 @@
 #include <org-simple/core/Size.h>
 #include <org-simple/core/align.h>
 #include <stdexcept>
+#include <memory>
 
 namespace org::simple::util {
 
