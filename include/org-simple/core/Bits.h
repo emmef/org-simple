@@ -38,7 +38,7 @@ template <typename unsigned_type = size_t> class Bits {
 
   template <int N> static constexpr unsigned_type fillN(unsigned_type n) {
     return N < 2 ? n : fillN<N / 2>(n) | (fillN<N / 2>(n) >> (N / 2));
-  };
+  }
 
 public:
   /**
