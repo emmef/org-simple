@@ -23,12 +23,28 @@
 
 #include <cstddef>
 #include <org-simple/core/Index.h>
+#include <org-simple/core/denormal.h>
 #include <org-simple/util/Array.h>
 
 namespace org::simple::iir {
 
 using namespace org::simple::core;
 using namespace org::simple::util;
+using namespace org::simple::denormal;
+
+/**
+ * Libraries can have different conventions for calculation and applying
+ * feedback-coefficients, the coefficients applied to historic output samples.
+ *
+ * This library adds the historic outputs to the newly calculated output, after
+ * multiplying them with the feedback-coefficients.
+ *
+ * If coefficients are obtained from a library that assumes subtraction of the
+ * products of historic outputs and their feedback-coefficients, you MUST
+ * provide FeedbackConvention#SUBTRACT when setting the coefficient or negate
+ * the sign yourself.
+ */
+enum class FeedbackConvention { ADD, SUBTRACT };
 
 template <typename T> class CoefficientsSetter {
 protected:
@@ -46,8 +62,10 @@ public:
     return *this;
   }
 
-  CoefficientsSetter &setFB(size_t i, T value) {
-    setValidY(Index::checked(i, getCoefficients()), value);
+  CoefficientsSetter &setFB(size_t i, T value,
+                            FeedbackConvention conv = FeedbackConvention::ADD) {
+    setValidY(Index::checked(i, getCoefficients()),
+              conv == FeedbackConvention::ADD ? value : -value);
     return *this;
   }
 
@@ -59,7 +77,6 @@ public:
       setter.setValidFB(i, 0.0);
     }
   }
-
 };
 
 /**
@@ -84,9 +101,7 @@ class CoefficientsGetter {
   }
 
   template <size_t Z = FIXED_ORDER>
-  requires(Z != 0) static constexpr size_t getOrder() {
-    return FIXED_ORDER;
-  }
+  requires(Z != 0) static constexpr size_t getOrder() { return FIXED_ORDER; }
 
   /**
    * Filters a single input, using the history of inputs and outputs for the
@@ -116,11 +131,11 @@ class CoefficientsGetter {
       xN0 = xN1;
       out_history[i] = Y;
       Y = yN1;
-      yN0 += xN1 * getFF(j) - yN1 * getFB(j);
+      yN0 += xN1 * getFF(j) + yN1 * getFB(j);
     }
     yN0 += getFF(0) * input;
 
-    out_history[0] = yN0;
+    out_history[0] = flush_to_zero(yN0);
 
     return yN0;
   }
@@ -145,9 +160,9 @@ class CoefficientsGetter {
     for (size_t n = getOrder(); n < end; n++) {
       S yN = getFF(0) * in[n];
       for (size_t j = 1; j <= getOrder(); j++) {
-        yN += in[n - j] * getFF(j) - out[n - j] * getFB(j);
+        yN += in[n - j] * getFF(j) + out[n - j] * getFB(j);
       }
-      out[n] = yN;
+      out[n] = flush_to_zero(yN);
     }
   }
 
@@ -168,17 +183,17 @@ class CoefficientsGetter {
       S yN = getFF(0) * in[n];
       for (size_t j = 1; j <= getOrder(); j++) {
         if (j <= n) {
-          yN += in[n - j] * getFF(j) - out[n - j] * getFB(j);
+          yN += in[n - j] * getFF(j) + out[n - j] * getFB(j);
         }
       }
-      out[n] = yN;
+      out[n] = flush_to_zero(yN);
     }
     for (size_t n = getOrder(); n < count; n++) {
       S yN = getFF(0) * in[n];
       for (size_t j = 1; j <= getOrder(); j++) {
-        yN += in[n - j] * getFF(j) - out[n - j] * getFB(j);
+        yN += in[n - j] * getFF(j) + out[n - j] * getFB(j);
       }
-      out[n] = yN;
+      out[n] = flush_to_zero(yN);
     }
   }
 
@@ -202,9 +217,9 @@ class CoefficientsGetter {
     for (ptrdiff_t n = count - 1; n >= 0; n--) {
       S yN = getFF(0) * in[n];
       for (size_t j = 1; j <= getOrder(); j++) {
-        yN += in[n + j] * getFF(j) - out[n + j] * getFB(j);
+        yN += in[n + j] * getFF(j) + out[n + j] * getFB(j);
       }
-      out[n] = yN;
+      out[n] = flush_to_zero(yN);
     }
   }
 
@@ -229,17 +244,17 @@ class CoefficientsGetter {
       for (size_t j = 1; j <= getOrder(); j++) {
         ptrdiff_t i = n + j;
         if (i <= start) {
-          yN += in[i] * getFF(j) - out[i] * getFB(j);
+          yN += in[i] * getFF(j) + out[i] * getFB(j);
         }
       }
-      out[n] = yN;
+      out[n] = flush_to_zero(yN);
     }
     for (; n >= 0; n--) {
       S yN = getFF(0) * in[n];
       for (size_t j = 1; j <= getOrder(); j++) {
-        yN += in[n + j] * getFF(j) - out[n + j] * getFB(j);
+        yN += in[n + j] * getFF(j) + out[n + j] * getFB(j);
       }
-      out[n] = yN;
+      out[n] = flush_to_zero(yN);
     }
   }
 };
@@ -253,23 +268,17 @@ class FixedOrderCoefficients
   static_assert(O <= 32, "Filter order cannot exceed 32.");
   static constexpr size_t FF = 0;
   static constexpr size_t FB = O + 1;
-  Array<C,2 * (O +  1), A> coeffs;
+  Array<C, 2 * (O + 1), A> coeffs;
 
   void setValidFF(size_t i, C value) override { coeffs[i + FF] = value; }
-  void setValidFB(size_t i, C value) override { coeffs[i + FB] = value;}
+  void setValidFB(size_t i, C value) override { coeffs[i + FB] = value; }
 
 public:
-  inline const C &getFB(size_t i) const {
-    return coeffs[i + FB];
-  }
+  inline const C &getFB(size_t i) const { return coeffs[i + FB]; }
 
-  inline const C &getFF(size_t i) const {
-    return coeffs[i + FF];
-  }
+  inline const C &getFF(size_t i) const { return coeffs[i + FF]; }
 
-  size_t getOrder() const {
-    return O;
-  }
+  size_t getOrder() const { return O; }
 };
 
 template <typename C, size_t O, size_t A = 0>
@@ -281,25 +290,19 @@ class FixedOrderCoefficientsRef
   static_assert(O <= 32, "Filter order cannot exceed 32.");
   static constexpr size_t FF = 0;
   static constexpr size_t FB = O + 1;
-  ArrayDataRefFixedSize<C,2 * (O +  1), A> coeffs;
+  ArrayDataRefFixedSize<C, 2 * (O + 1), A> coeffs;
 
   void setValidFF(size_t i, C value) override { coeffs[i + FF] = value; }
-  void setValidFB(size_t i, C value) override { coeffs[i + FB] = value;}
+  void setValidFB(size_t i, C value) override { coeffs[i + FB] = value; }
 
 public:
-  FixedOrderCoefficientsRef(C * const pool_location) : coeffs(pool_location) {}
+  FixedOrderCoefficientsRef(C *const pool_location) : coeffs(pool_location) {}
 
-  inline const C &getFB(size_t i) const {
-    return coeffs[i + FB];
-  }
+  inline const C &getFB(size_t i) const { return coeffs[i + FB]; }
 
-  inline const C &getFF(size_t i) const {
-    return coeffs[i + FF];
-  }
+  inline const C &getFF(size_t i) const { return coeffs[i + FF]; }
 
-  size_t getOrder() const {
-    return O;
-  }
+  size_t getOrder() const { return O; }
 };
 
 // ArrayDataRefFixedSize

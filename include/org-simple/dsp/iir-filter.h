@@ -23,8 +23,11 @@
 
 #include <cstddef>
 #include <type_traits>
+#include <org-simple/core/denormal.h>
 
 namespace org::simple::iir {
+
+using namespace org::simple::denormal;
 
 /**
  * Filters a single sample using the feed forward coefficients \c ff_coeffs,
@@ -62,7 +65,7 @@ S filter_single_fo(S *__restrict xHistory, S *__restrict yHistory,
   }
   yN0 += ff_coeffs[0] * x;
 
-  yHistory[0] = yN0;
+  yHistory[0] = flush_to_zero(yN0);
 
   return yN0;
 }
@@ -103,7 +106,7 @@ S filter_single(size_t order, S *__restrict xHistory, S *__restrict yHistory,
   }
   yN0 += ff_coeffs[0] * x;
 
-  yHistory[0] = yN0;
+  yHistory[0] = flush_to_zero(yN0);
 
   return yN0;
 }
@@ -135,7 +138,7 @@ void filter_forward_foo(size_t count, const C *__restrict ff_coeffs,
     for (size_t j = 1; j <= ORDER; j++) {
       yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
 }
 
@@ -168,14 +171,14 @@ void filter_forward_fzp(size_t count, const C *__restrict ff_coeffs,
         yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
       }
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
   for (size_t n = ORDER; n < count; n++) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= ORDER; j++) {
       yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
 }
 
@@ -207,7 +210,7 @@ void filter_forward_oo(size_t order, size_t count,
     for (size_t j = 1; j <= order; j++) {
       yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
 }
 
@@ -241,14 +244,14 @@ void filter_forward_zp(size_t order, size_t count,
         yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
       }
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
   for (size_t n = order; n < count; n++) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= order; j++) {
       yN += in[n - j] * ff_coeffs[j] - out[n - j] * fb_coeffs[j];
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
 }
 
@@ -279,7 +282,7 @@ void filter_backward_foo(size_t count, const C *__restrict ff_coeffs,
     for (size_t j = 1; j <= ORDER; j++) {
       yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
 }
 
@@ -316,14 +319,14 @@ void filter_backward_fzp(size_t count, const C *__restrict ff_coeffs,
         yN += in[i] * ff_coeffs[j] - out[i] * fb_coeffs[j];
       }
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
   for (; n >= 0; n--) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= ORDER; j++) {
       yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
 }
 
@@ -354,7 +357,7 @@ void filter_backward_oo(size_t order, size_t count,
     for (size_t j = 1; j <= order; j++) {
       yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
 }
 
@@ -392,14 +395,14 @@ void filter_backward_zp(size_t order, size_t count,
         yN += in[i] * ff_coeffs[j] - out[i] * fb_coeffs[j];
       }
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
   for (; n >= 0; n--) {
     S yN = ff_coeffs[0] * in[n];
     for (size_t j = 1; j <= order; j++) {
       yN += in[n + j] * ff_coeffs[j] - out[n + j] * fb_coeffs[j];
     }
-    out[n] = yN;
+    out[n] = flush_to_zero(yN);
   }
 }
 

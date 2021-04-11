@@ -4,8 +4,4 @@
 
 #include <org-simple/dsp/iir-filter.h>
 
-
-namespace org::simple {
-
-
-} // namespace org::simple
+// TODO Test coverage!
