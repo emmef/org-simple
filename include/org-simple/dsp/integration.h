@@ -60,13 +60,18 @@ static constexpr double integration_count_accuracy_minimum =
  * @tparam T The type of the multipliers that must represent the count.
  */
 template <typename T>
-requires(std::is_floating_point_v<T>) static constexpr T sample_count_min =
-    -1.0 /
-    log(std::numeric_limits<T>::epsilon() * integration_count_accuracy_minimum);
+requires(std::is_floating_point_v<T>) static T sample_count_min() {
+  static const T min = -1.0 / log(std::numeric_limits<T>::epsilon() *
+                                  integration_count_accuracy_minimum);
+  return min;
+}
 
-requires(std::is_floating_point_v<T>) static constexpr T sample_count_max =
-    -1.0 / log(1.0 - std::numeric_limits<T>::epsilon() *
-                         integration_count_accuracy_minimum);
+template <typename T>
+requires(std::is_floating_point_v<T>) static T sample_count_max() {
+  static const T max = -1.0 / log(1.0 - std::numeric_limits<T>::epsilon() *
+                                            integration_count_accuracy_minimum);
+  return max;
+}
 
 /**
  * Gets the history multiplier for integrating the provided number of samples.
@@ -105,10 +110,10 @@ requires(std::is_floating_point_v<T>) static constexpr T
 template <typename T>
 requires(std::is_floating_point_v<T>) static constexpr T
     sample_count_to_history_multiplier_bound(T count) {
-  return count <= -sample_count_min<T>
+  return count <= -sample_count_min<T>()
              ? 0
              : sample_count_to_history_multiplier_unchecked(
-                   std::min(count, sample_count_max<T>));
+                   std::min(count, sample_count_max<T>()));
 }
 
 /**
@@ -124,10 +129,10 @@ requires(std::is_floating_point_v<T>) static constexpr T
 template <typename T>
 requires(std::is_floating_point_v<T>) static constexpr T
     sample_count_to_history_multiplier(T count) {
-  if (count <= -sample_count_min<T>) {
+  if (count <= -sample_count_min<T>()) {
     return 0;
   }
-  if (count <= sample_count_max<T>) {
+  if (count <= sample_count_max<T>()) {
     return sample_count_to_history_multiplier_unchecked(count);
   }
   throw std::invalid_argument(
@@ -144,7 +149,7 @@ requires(std::is_floating_point_v<T>) static constexpr T
 template <typename T>
 requires(std::is_floating_point_v<T>) static constexpr T
     multiplier_to_multiplier(T multiplier) {
-  return (T)-1.0 - multiplier;
+  return (T)1.0 - multiplier;
 }
 
 template <typename T, typename S>
@@ -171,95 +176,83 @@ requires(std::is_floating_point_v<T> &&std::is_arithmetic_v<S>) inline static S
 }
 
 template <typename T> class BaseCoefficients {
-  static_assert(std::is_floating_point<T>);
+  static_assert(std::is_floating_point_v<T>);
   T history_multiplier_;
   T input_multiplier_;
 
-  Coefficients(T hm, T scale)
-      : history_multiplier_(scale * hm),
-        input_multiplier_(scale - history_multiplier_) {}
+  BaseCoefficients(T hm, T scale)
+      : history_multiplier_(hm),
+        input_multiplier_(scale * (multiplier_to_multiplier(hm))) {}
 
 public:
-  explicit Coefficients(const Coefficients &c) = default;
-  Coefficients(Coefficients &&c) noexcept = default;
+  explicit BaseCoefficients(const BaseCoefficients &c) = default;
+  BaseCoefficients(BaseCoefficients &&c) noexcept = default;
 
-  Coefficients() : Coefficients(0,1) {}
+  BaseCoefficients() : BaseCoefficients(0, 1) {}
 
-  static Coefficients from_count(T integration_sample_count, T scale = 1) {
-    return Coefficients(
+  BaseCoefficients &operator=(const BaseCoefficients &other) = default;
+
+  static BaseCoefficients from_count(T integration_sample_count, T scale = 1) {
+    return BaseCoefficients(
         sample_count_to_history_multiplier(integration_sample_count), scale);
   }
 
-  static Coefficients from_count_bound(T integration_sample_count, T scale = 1) {
-    return Coefficients(
-        sample_count_to_history_multiplier_bound(integration_sample_count), scale);
+  static BaseCoefficients from_count_bound(T integration_sample_count,
+                                           T scale = 1) {
+    return BaseCoefficients(
+        sample_count_to_history_multiplier_bound(integration_sample_count),
+        scale);
   }
 
   void set_count(T integration_sample_count, T scale = 1) {
     T hm = sample_count_to_history_multiplier(integration_sample_count);
     history_multiplier_ = scale * hm;
-    input_multiplier_ = scale  - history_multiplier_;
+    input_multiplier_ = scale - history_multiplier_;
   }
 
   void set_count_bound(T integration_sample_count, T scale = 1) {
     T hm = sample_count_to_history_multiplier_bound(integration_sample_count);
     history_multiplier_ = scale * hm;
-    input_multiplier_ = scale  - history_multiplier_;
+    input_multiplier_ = scale - history_multiplier_;
   }
 
   template <typename S>
   requires(std::is_arithmetic_v<S>) inline S
-  get_integrated(S history, S input) const {
-    return get_integrated(history_multiplier_, input_multiplier_, history,
-                          input);
+      get_integrated(S history, S input) const {
+    return org::simple::dsp::integration::get_integrated(
+        history_multiplier_, input_multiplier_, history, input);
   }
 
   template <typename S>
   requires(std::is_arithmetic_v<S>) inline void integrate(S &history,
                                                           S input) const {
-    integrate(history_multiplier_, input_multiplier_, history, input);
+    org::simple::dsp::integration::integrate<T, S>(
+        history_multiplier_, input_multiplier_, history, input);
   }
 
   template <typename S>
   requires(std::is_arithmetic_v<S>) inline S
-  integrate_and_get_flush(S &history, S input) const {
-    return integrate_and_get(history_multiplier_, input_multiplier_, history,
-                             input);
-  }
-
-  template <typename S>
-  requires(std::is_arithmetic_v<S>) inline S
-  get_integrated(S history, S input) const {
-    return get_integrated(history_multiplier_, input_multiplier_, history,
-                          input);
-  }
-
-  template <typename S>
-  requires(std::is_arithmetic_v<S>) inline void integrate(S &history,
-                                                          S input) const {
-    integrate(history_multiplier_, input_multiplier_, history, input);
-  }
-
-  template <typename S>
-  requires(std::is_arithmetic_v<S>) inline S
-  integrate_and_get(S &history, S input) const {
-    return integrate_and_get(history_multiplier_, input_multiplier_, history,
-                             input);
+      integrate_and_get(S &history, S input) const {
+    return org::simple::dsp::integration::integrate_and_get<T, S>(
+        history_multiplier_, input_multiplier_, history, input);
   }
 
   T scale() const {
-    return history_multiplier_ + input_multiplier_;
+    return input_multiplier_ /
+           org::simple::dsp::integration::multiplier_to_multiplier(
+               history_multiplier_);
   }
 
   T integration_sample_count() const {
-    T eff_multiplier = history_multiplier_ / scale();
-    return history_multiplier_to_sample_count_unchecked(eff_multiplier);
+    return history_multiplier_to_sample_count_unchecked(history_multiplier_);
   }
 
-  T history_multiplier_scaled() const { return history_multiplier_; }
+  T history_multiplier() const { return history_multiplier_; }
+  T input_multiplier() const {
+    return org::simple::dsp::integration::multiplier_to_multiplier(
+        history_multiplier_);
+  }
   T input_multiplier_scaled() const { return input_multiplier_; }
-  T history_multiplier() const { return history_multiplier_ / scale(); }
-  T input_multiplier() const { return input_multiplier_ / scale(); }
 };
 
 typedef BaseCoefficients<double> Coefficients;
