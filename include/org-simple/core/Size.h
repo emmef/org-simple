@@ -125,7 +125,7 @@ requires(is_valid_size_type<size_type>) static constexpr size_type
 
 template <typename size_type = size_t,
           size_type SIZE_LIMIT = std::numeric_limits<size_type>::max()>
-struct SizeValueBase {
+struct SizeMetricBase {
   typedef SizeType<size_type> Base;
   static_assert(
       SIZE_LIMIT > 0,
@@ -153,7 +153,7 @@ struct SizeValueBase {
   }
 
   template <size_type element_size>
-  using Elements = SizeValueBase<size_type, max_element_count(element_size)>;
+  using Elements = SizeMetricBase<size_type, max_element_count(element_size)>;
 
   template <size_type v1, size_type v2> static constexpr size_type times() {
     static_assert(v1 * v2 >= v1);
@@ -389,7 +389,7 @@ struct SizeValueBase {
   };
 };
 
-typedef SizeValueBase<size_t> SizeValue;
+typedef SizeMetricBase<size_t> SizeMetric;
 
 } // namespace org::simple::core
 

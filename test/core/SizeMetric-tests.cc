@@ -7,7 +7,7 @@
 
 using namespace org::simple::core;
 
-using Metric = SizeValueBase<size_t>;
+using Metric = SizeMetricBase<size_t>;
 using Functions = org::simple::test::FunctionTestCases;
 using TestCase = org::simple::test::AbstractValueTestCase;
 
@@ -193,7 +193,7 @@ public:
 BOOST_AUTO_TEST_SUITE(org_simple_core_SizeMetric)
 
 BOOST_AUTO_TEST_CASE(testSizeMetricBaseValues) {
-  typedef SizeValueBase<size_t> Size;
+  typedef SizeMetricBase<size_t> Size;
 
   BOOST_CHECK_EQUAL(Size::limit, ~size_t(0));
   BOOST_CHECK_EQUAL(get_max_index_value(Size::limit), ~size_t(0) - 1);
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(testSizeMetricBaseValues) {
 }
 
 BOOST_AUTO_TEST_CASE(testSizeMetricValues) {
-  typedef SizeValueBase<size_t> Size;
+  typedef SizeMetricBase<size_t> Size;
 
   BOOST_CHECK_EQUAL(Size::limit, ~size_t(0));
   BOOST_CHECK_EQUAL(get_max_index_value(Size::limit), ~size_t(0) - 1);
@@ -209,7 +209,7 @@ BOOST_AUTO_TEST_CASE(testSizeMetricValues) {
 }
 
 BOOST_AUTO_TEST_CASE(testSizeMetricElementValues) {
-  typedef SizeValueBase<size_t> Size;
+  typedef SizeMetricBase<size_t> Size;
   static constexpr size_t element_size = 13;
   typedef Size::Elements<element_size> Elements;
   BOOST_CHECK_EQUAL(Elements::limit, ~size_t(0) / element_size);
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(testSizeMetricElementValues) {
 }
 
 BOOST_AUTO_TEST_CASE(testBitLimitedSizeMetric16) {
-  typedef SizeValueBase<size_t, get_size_for_size_bits<size_t, 16>()> Size;
+  typedef SizeMetricBase<size_t, get_size_for_size_bits<size_t, 16>()> Size;
   BOOST_CHECK_EQUAL(get_size_for_size_bits<size_t>(16), 0x10000);
   BOOST_CHECK_EQUAL(Size::limit, 0x10000);
   BOOST_CHECK_EQUAL(get_max_index_value(Size::limit), 0xffff);
@@ -227,14 +227,14 @@ BOOST_AUTO_TEST_CASE(testBitLimitedSizeMetric16) {
 }
 
 BOOST_AUTO_TEST_CASE(testBitLimitedSizeMetricAll) {
-  typedef SizeValueBase<size_t, get_size_for_size_bits<size_t, sizeof(size_t) * 8>()> Size;
+  typedef SizeMetricBase<size_t, get_size_for_size_bits<size_t, sizeof(size_t) * 8>()> Size;
   BOOST_CHECK_EQUAL(Size::limit, ~size_t(0));
   BOOST_CHECK_EQUAL(get_max_index_value(Size::limit), Size::limit - 1);
   BOOST_CHECK_EQUAL(get_max_mask_from_size(Size::limit), Size::limit >> 1);
 }
 
 BOOST_AUTO_TEST_CASE(testLimitedSizeMetric) {
-  typedef SizeValueBase<size_t, 48000> Size;
+  typedef SizeMetricBase<size_t, 48000> Size;
   size_t max = 48000;
   size_t mask = Bits<size_t>::bit_mask_not_exceeding(48000);
   size_t index = max - 1;
@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(testLimitedSizeMetric) {
 }
 
 BOOST_AUTO_TEST_CASE(testPlus) {
-  typedef SizeValueBase<size_t, 48000> Size;
+  typedef SizeMetricBase<size_t, 48000> Size;
   auto result = Size::times<15u, Size::plus<13u, 16u>()>();
   BOOST_CHECK_EQUAL(result, 15 * (13u + 16u));
 }
@@ -256,11 +256,11 @@ BOOST_AUTO_TEST_CASE(sizeTestcaseToBeMovedToSeparateSizeTestCasesModule) {
   static constexpr size_t SUM = SIZE1 + SIZE2;
   static constexpr size_t PRODUCT = SIZE1 * SIZE2;
 
-  typedef SizeValueBase<size_t> Size;
+  typedef SizeMetricBase<size_t> Size;
   BOOST_CHECK_EQUAL(PRODUCT, Size::product(SIZE1, SIZE2));
   BOOST_CHECK_EQUAL(SUM, Size::sum(SIZE1, SIZE2));
 
-  typedef SizeValueBase<size_t, 100> Limited;
+  typedef SizeMetricBase<size_t, 100> Limited;
   BOOST_CHECK_EQUAL(SUM, Limited::sum(SIZE1, SIZE2));
   BOOST_CHECK_THROW(Limited::product(SIZE1, SIZE2), std::invalid_argument);
 }

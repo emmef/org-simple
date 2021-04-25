@@ -117,7 +117,7 @@ concept is_type_compat_gt_size_arrays =
 
 using org::simple::core::alignment_is_valid;
 using org::simple::core::Index;
-using org::simple::core::SizeValue;
+using org::simple::core::SizeMetric;
 
 /**
  * AbstractArray implements basic array behavior that a subclass can inherit. To
@@ -139,7 +139,7 @@ using org::simple::core::SizeValue;
  */
 template <typename T, size_t S, size_t A, typename C> class AbstractArray {
   static_assert(A == 0 || alignment_is_valid<T>(A));
-  static_assert(S == 0 || SizeValue::Elements<sizeof(T)>::IsValid::value(S));
+  static_assert(S == 0 || SizeMetric::Elements<sizeof(T)>::IsValid::value(S));
 
 public:
   static constexpr size_t ALIGNAS =
@@ -151,7 +151,7 @@ public:
 
   using data_type = T;
   using delegate_type = C;
-  typedef SizeValue::Elements<sizeof(T)> Size;
+  typedef SizeMetric::Elements<sizeof(T)> Size;
 
   // raw data access
 
@@ -496,7 +496,7 @@ template <typename T> static constexpr size_t eff_align(size_t A) {
 
 template <typename T, size_t S> static constexpr size_t eff_capacity() {
   static_assert(
-      org::simple::core::SizeValue::Elements<sizeof(T)>::IsValid::value(S));
+      org::simple::core::SizeMetric::Elements<sizeof(T)>::IsValid::value(S));
   return S;
 }
 

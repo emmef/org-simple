@@ -194,7 +194,7 @@ template <typename T, size_t ALIGNAS> class AlignedAlloc {
 
 public:
   explicit AlignedAlloc(size_t count) {
-    capacity_ = SizeValue::Elements<sizeof(T)>::Valid::value(count);
+    capacity_ = SizeMetric::Elements<sizeof(T)>::Valid::value(count);
     if constexpr (ALIGNED_ALLOC) {
       data_ = new (std::align_val_t{ALIGN}) T[capacity_];
     } else {

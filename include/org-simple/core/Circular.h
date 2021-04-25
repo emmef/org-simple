@@ -35,7 +35,7 @@ struct CircularAlgoBase;
 
 template <typename size_type, size_type size_limit>
 struct CircularAlgoBase<WrappingType::BIT_MASK, size_type, size_limit> {
-  typedef SizeValueBase<size_type, size_limit> size_metric;
+  typedef SizeMetricBase<size_type, size_limit> size_metric;
 
   static constexpr size_type elements(size_t mask) { return mask + 1; }
 
@@ -109,7 +109,7 @@ struct CircularAlgoBase<WrappingType::BIT_MASK, size_type, size_limit> {
 template <typename size_type, size_type size_limit>
 struct CircularAlgoBase<WrappingType::MODULO, size_type, size_limit> {
 
-  typedef SizeValueBase<size_type, size_limit> size_metric;
+  typedef SizeMetricBase<size_type, size_limit> size_metric;
 
   static constexpr size_type elements(size_t size) { return size; }
 
