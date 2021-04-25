@@ -51,6 +51,15 @@ public:
 
   Rate(double rate) : rate_(validated(rate)) {}
 
+  Rate(const Rate &source) = default;
+
+  Rate(Rate &&source) noexcept = default;
+
+  Rate &operator=(double rate) {
+    rate_ = validated(rate);
+    return *this;
+  }
+
   operator const double() const { return rate_; }
 
   template <typename R> bool operator>(R other) {
