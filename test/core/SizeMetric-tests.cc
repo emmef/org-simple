@@ -92,21 +92,21 @@ std::vector<org::simple::test::AbstractValueTestCase *> *generateTestCases() {
       testCases->push_back(Functions::create(
           "Metric::Valid::value", Metric::Valid::value<size_t>, i, i));
     } else {
-      testCases->push_back(Functions::create("Size::check::valid_value",
+      testCases->push_back(Functions::create("Metric::Valid::value",
                                              Metric::Valid::value<size_t>, i));
     }
     if (isValidIndex) {
       testCases->push_back(Functions::create(
-          "Metric::check::valid_index", Metric::Valid::index<size_t>, i, i));
+          "Metric::Valid::index", Metric::Valid::index<size_t>, i, i));
     } else {
-      testCases->push_back(Functions::create("Size::check::valid_index",
+      testCases->push_back(Functions::create("Metric::Valid::index",
                                              Metric::Valid::index<size_t>, i));
     }
     if (isValidMask) {
       testCases->push_back(Functions::create(
-          "Metric::check::valid_mask", Metric::Valid::mask<size_t>, i, i));
+          "Metric::Valid::mask", Metric::Valid::mask<size_t>, i, i));
     } else {
-      testCases->push_back(Functions::create("Size::check::valid_mask",
+      testCases->push_back(Functions::create("Metric::Valid::mask",
                                              Metric::Valid::mask<size_t>, i));
     }
   }
@@ -114,26 +114,46 @@ std::vector<org::simple::test::AbstractValueTestCase *> *generateTestCases() {
   for (Pair &i : productValues) {
     size_t product = i.v1 * i.v2;
     bool isValidSizeProduct = product > 0 && product <= MAX_LIMIT;
+    bool isValidSizeQuotient = i.v1 > 0 && i.v2 > 0 && i.v1 / i.v2 > 0;
+    size_t quotient = isValidSizeQuotient ? i.v1 / i.v2 : 0;
 
-    testCases->push_back(Functions::create("Metric::check::product",
+    testCases->push_back(Functions::create("Metric::IsValid::product",
                                            Metric::IsValid::product,
                                            isValidSizeProduct, i.v1, i.v2));
-    testCases->push_back(Functions::create("Metric::check::product",
+    testCases->push_back(Functions::create("Metric::IsValid::product",
                                            Metric::IsValid::product,
                                            isValidSizeProduct, i.v2, i.v1));
+    testCases->push_back(Functions::create("Metric::IsValid::quotient",
+                                           Metric::IsValid::quotient,
+                                           isValidSizeQuotient, i.v1, i.v2));
+    testCases->push_back(Functions::create("Metric::IsValid::quotient",
+                                           Metric::IsValid::quotient,
+                                           isValidSizeQuotient, i.v2, i.v1));
     if (isValidSizeProduct) {
-      testCases->push_back(Functions::create("Metric::check::valid_product",
+      testCases->push_back(Functions::create("Metric::Valid::product",
                                              Metric::Valid::product<size_t>,
                                              product, i.v1, i.v2));
-      testCases->push_back(Functions::create("Metric::check::valid_product",
+      testCases->push_back(Functions::create("Metric::Valid::product",
                                              Metric::Valid::product<size_t>,
                                              product, i.v2, i.v1));
+      testCases->push_back(Functions::create("Metric::Valid::quotient",
+                                             Metric::Valid::quotient<size_t>,
+                                             quotient, i.v1, i.v2));
+      testCases->push_back(Functions::create("Metric::Valid::quotient",
+                                             Metric::Valid::quotient<size_t>,
+                                             quotient, i.v2, i.v1));
     } else {
-      testCases->push_back(Functions::create("Metric::check::valid_product",
+      testCases->push_back(Functions::create("Metric::Valid::product",
                                              Metric::Valid::product<size_t>,
                                              i.v1, i.v2));
-      testCases->push_back(Functions::create("Metric::check::valid_product",
+      testCases->push_back(Functions::create("Metric::Valid::product",
                                              Metric::Valid::product<size_t>,
+                                             i.v2, i.v1));
+      testCases->push_back(Functions::create("Metric::Valid::quotient",
+                                             Metric::Valid::quotient<size_t>,
+                                             i.v1, i.v2));
+      testCases->push_back(Functions::create("Metric::Valid::quotient",
+                                             Metric::Valid::quotient<size_t>,
                                              i.v2, i.v1));
     }
   }
@@ -141,24 +161,42 @@ std::vector<org::simple::test::AbstractValueTestCase *> *generateTestCases() {
   for (Pair &i : sumValues) {
     size_t sum = i.v1 * i.v2;
     bool isValidSizeSum = sum > 0 && sum <= MAX_LIMIT;
+    bool isValidSizeDifference = i.v1 > i.v2;
+    size_t difference = i.v1 - i.v2;
 
-    testCases->push_back(Functions::create("Metric::check::sum",
+    testCases->push_back(Functions::create("Metric::IsValid::sum",
                                            Metric::IsValid::sum, isValidSizeSum,
                                            i.v1, i.v2));
-    testCases->push_back(Functions::create("Metric::check::sum",
+    testCases->push_back(Functions::create("Metric::IsValid::sum",
                                            Metric::IsValid::sum, isValidSizeSum,
+                                           i.v2, i.v1));
+    testCases->push_back(Functions::create("Metric::IsValid::difference",
+                                           Metric::IsValid::difference, isValidSizeDifference,
+                                           i.v1, i.v2));
+    testCases->push_back(Functions::create("Metric::IsValid::difference",
+                                           Metric::IsValid::difference, isValidSizeDifference,
                                            i.v2, i.v1));
     if (isValidSizeSum) {
       testCases->push_back(Functions::create(
-          "Metric::check::valid_product", Metric::Valid::sum, sum, i.v1, i.v2));
+          "Metric::check::valid_sum", Metric::Valid::sum, sum, i.v1, i.v2));
       testCases->push_back(Functions::create(
-          "Metric::check::valid_product", Metric::Valid::sum, sum, i.v2, i.v1));
+          "Metric::check::valid_sum", Metric::Valid::sum, sum, i.v2, i.v1));
+      testCases->push_back(Functions::create(
+          "Metric::check::valid_difference", Metric::Valid::difference, difference, i.v1, i.v2));
+      testCases->push_back(Functions::create(
+          "Metric::check::valid_difference", Metric::Valid::difference, difference, i.v2, i.v1));
     } else {
-      testCases->push_back(Functions::create("Metric::check::valid_product",
+      testCases->push_back(Functions::create("Metric::Valid::sum",
                                              Metric::Valid::sum<size_t>, i.v1,
                                              i.v2));
-      testCases->push_back(Functions::create("Metric::check::valid_product",
+      testCases->push_back(Functions::create("Metric::Valid::sum",
                                              Metric::Valid::sum<size_t>, i.v2,
+                                             i.v1));
+      testCases->push_back(Functions::create("Metric::Valid::difference",
+                                             Metric::Valid::difference<size_t>, i.v1,
+                                             i.v2));
+      testCases->push_back(Functions::create("Metric::Valid::difference",
+                                             Metric::Valid::difference<size_t>, i.v2,
                                              i.v1));
     }
   }
