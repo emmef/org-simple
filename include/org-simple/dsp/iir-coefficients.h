@@ -46,6 +46,16 @@ using namespace org::simple::denormal;
  */
 enum class FeedbackConvention { ADD, SUBTRACT };
 
+enum class FilterType {
+  ALL_PASS,
+  LOW_PASS,
+  LOW_SHELVE,
+  BAND_PASS,
+  PARAMETRIC,
+  HIGH_SHELVE,
+  HIGH_PASS
+};
+
 template <typename T> class CoefficientsSetter {
 protected:
   virtual void setValidFF(size_t i, T value) = 0;
