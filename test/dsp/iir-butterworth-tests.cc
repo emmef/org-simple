@@ -7,7 +7,7 @@
 #include <org-simple/dsp/iir-butterworth.h>
 #include <vector>
 
-using namespace org::simple::iir;
+using namespace org::simple::dsp::iir;
 
 static bool same(double v1, double v2, double epsilon = 1e-12) {
   return org::simple::test::same(v1, v2, epsilon);

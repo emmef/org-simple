@@ -26,7 +26,7 @@
 #include <org-simple/core/denormal.h>
 #include <org-simple/util/Array.h>
 
-namespace org::simple::iir {
+namespace org::simple::dsp::iir {
 
 using namespace org::simple::core;
 using namespace org::simple::util;
@@ -65,16 +65,17 @@ public:
   [[nodiscard]] virtual unsigned getOrder() const = 0;
   virtual ~CoefficientsSetter() = default;
 
-  [[nodiscard]] size_t getCoefficients() const { return getOrder() + 1; }
+  [[nodiscard]] size_t getCoefficientCount() const { return getOrder() + 1; }
+  [[nodiscard]] size_t getTotalCoefficientCount() const { return 2 * getCoefficientCount(); }
 
   CoefficientsSetter &setFF(size_t i, T value) {
-    setValidX(Index::checked(i, getCoefficients()), value);
+    setValidX(Index::checked(i, getCoefficientCount()), value);
     return *this;
   }
 
   CoefficientsSetter &setFB(size_t i, T value,
                             FeedbackConvention conv = FeedbackConvention::ADD) {
-    setValidY(Index::checked(i, getCoefficients()),
+    setValidY(Index::checked(i, getCoefficientCount()),
               conv == FeedbackConvention::ADD ? value : -value);
     return *this;
   }
@@ -317,6 +318,6 @@ public:
 
 // ArrayDataRefFixedSize
 
-} // namespace org::simple::iir
+} // namespace org::simple::dsp::iir
 
 #endif // ORG_SIMPLE_IIR_COEFFICIENTS_H
