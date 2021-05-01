@@ -49,9 +49,9 @@ public:
     return value;
   }
 
-  Rate(double rate) : rate_(validated(rate)) {}
+  constexpr Rate(double rate) : rate_(validated(rate)) {}
 
-  Rate(const Rate &source) = default;
+  constexpr Rate(const Rate &source) = default;
 
   Rate(Rate &&source) noexcept = default;
 
