@@ -120,7 +120,7 @@ struct Butterworth {
                : 1.0 / sqrt(1.0 + pow(r, -2.0 * valid_bw_order(order)));
   }
 
-  static constexpr double relativeNycquistLimitedFrequency(Rate sampleRate,
+  static double relativeNycquistLimitedFrequency(Rate sampleRate,
                                                            double frequency) {
     if (frequency > 0) {
       return std::clamp(sampleRate.relative(frequency),
