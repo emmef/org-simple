@@ -72,11 +72,6 @@ BOOST_AUTO_TEST_CASE(testSetUserTwiceMustSucceed) {
   BOOST_CHECK(manager.user(17) == org::simple::util::SignalResult::SUCCESS);
 }
 
-BOOST_AUTO_TEST_CASE(testSetUserTwiceLockFreeMustFail) {
-  SignalManager manager;
-  BOOST_CHECK(manager.lockFree().user(23) == org::simple::util::SignalResult::SUCCESS);
-  BOOST_CHECK(manager.lockFree().user(17) == org::simple::util::SignalResult::NOT_ALLOWED);
-}
 
 BOOST_AUTO_TEST_SUITE_END()
 

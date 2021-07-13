@@ -21,6 +21,7 @@
  * limitations under the License.
  */
 
+#include <algorithm>
 #include <org-simple/core/Bits.h>
 
 namespace org::simple::util {
@@ -29,27 +30,27 @@ enum class SignalType {
   /**
    * Nothing was initialised
    */
-  NONE = 0,
+  NONE,
   /**
    * The signal is user (program) defined. The program decides what the signal
    * means and a signal like this can be (re)set by the program.
    */
   USER,
   /**
+   * The signal was set to a positive_value unwrapped_value_enforce_nonzero
+   * programmatically by the process itself and should lead to termination.
+   * The program cannot overwrite or reset a signal with this type.
+   */
+  PROGRAM,
+  /**
    * The signal was set to a positive_value unwrapped_value_enforce_nonzero by
    * a signal handler and should lead to termination. The program cannot
    * overwrite or reset a signal with this type.
    */
   SYSTEM,
-  /**
-   * The signal was set to a positive_value unwrapped_value_enforce_nonzero
-   * programmatically by the process itself and should lead to termination.
-   * The program cannot overwrite or reset a signal with this type.
-   */
-  PROGRAM
 };
 
-struct Signal {
+struct SignalTypeStaticInfo {
 
   static const char *type_name(SignalType type) {
     switch (type) {
@@ -62,197 +63,218 @@ struct Signal {
     case SignalType::USER:
       return "user";
     default:
-      return "none";
+      return "invalid";
     }
   }
 
-  static Signal system(int value) { return {SignalType::SYSTEM, value}; }
+  static constexpr bool is_signal(SignalType type) {
+    return type != SignalType::NONE;
+  }
 
-  static Signal program(int value) { return {SignalType::PROGRAM, value}; }
+  static int type_to_value(SignalType type) { return static_cast<int>(type); }
 
-  static Signal user(int value) { return {SignalType::USER, value}; }
+  static bool value_to_type(SignalType &result, int value) {
+    switch (value) {
+    case static_cast<int>(SignalType::NONE):
+      result = SignalType::NONE;
+      return true;
+    case static_cast<int>(SignalType::USER):
+      result = SignalType::USER;
+      return true;
+    case static_cast<int>(SignalType::PROGRAM):
+      result = SignalType::PROGRAM;
+      return true;
+    case static_cast<int>(SignalType::SYSTEM):
+      result = SignalType::SYSTEM;
+      return true;
+    default:
+      return false;
+    }
+  }
 
-  static Signal none() { return {SignalType::NONE, 0}; }
+  static constexpr int max_value() { return MAX_TYPE_VALUE; }
 
-  static Signal unwrap(unsigned wrapped) {
-    Signal result(wrapped);
+private:
+  static_assert(static_cast<int>(SignalType::NONE) == 0);
+  static_assert(static_cast<int>(SignalType::USER) == 1);
+  static_assert(static_cast<int>(SignalType::PROGRAM) == 2);
+  static_assert(static_cast<int>(SignalType::SYSTEM) == 3);
+
+  static constexpr int MAX_TYPE_VALUE =
+      std::max(std::max(static_cast<int>(SignalType::NONE),
+                        static_cast<int>(SignalType::USER)),
+               std::max(static_cast<int>(SignalType::PROGRAM),
+                        static_cast<int>(SignalType::SYSTEM)));
+
+  static_assert(MAX_TYPE_VALUE > 1);
+};
+
+namespace helper {
+template <typename T, size_t S = sizeof(T)>
+struct AbstractSignalAssignmentType {};
+template <typename T> struct AbstractSignalAssignmentType<T, 1> {
+  typedef int16_t ext_type;
+  typedef uint16_t wrap_type;
+};
+template <typename T> struct AbstractSignalAssignmentType<T, 2> {
+  typedef int32_t ext_type;
+  typedef uint32_t wrap_type;
+};
+template <typename T> struct AbstractSignalAssignmentType<T, 4> {
+  typedef int64_t ext_type;
+  typedef uint64_t wrap_type;
+};
+
+} // End of namespace helper
+
+
+template <typename V> struct AbstractSignalValue {
+  using value_type = V;
+  using external_type =
+      typename helper::AbstractSignalAssignmentType<V>::ext_type;
+  using wrap_type = typename helper::AbstractSignalAssignmentType<V>::wrap_type;
+  static_assert(std::is_unsigned_v<value_type> &&
+                std::is_integral_v<value_type>);
+  static_assert(std::is_signed_v<external_type> &&
+                std::is_integral_v<external_type> &&
+                sizeof(external_type) > sizeof(value_type));
+
+  static constexpr value_type MAX_VALUE = ~(0);
+
+  AbstractSignalValue() : value_(0) {}
+
+  explicit AbstractSignalValue(external_type value)
+      : value_(validated_non_zero(value)) {}
+
+  explicit AbstractSignalValue(value_type value) : value_(value) {}
+
+  external_type get() const { return value_; }
+  value_type get_value() const { return value_; }
+
+  AbstractSignalValue &operator=(external_type value) {
+    value_ = validated_non_zero(value);
+    return *this;
+  }
+
+  void zero() { value_ = 0; }
+
+  static value_type validated_non_zero(external_type value) {
+    if (value > 0 && value <= static_cast<external_type>(MAX_VALUE)) {
+      return static_cast<value_type>(value);
+    }
+
+    throw std::invalid_argument("org::simple::util::SignalValue: value must be "
+                                "positive and not exceed maximum.");
+  }
+
+private:
+  value_type value_;
+};
+
+template <typename V> struct AbstractSignal {
+  typedef typename AbstractSignalValue<V>::value_type value_type;
+  typedef typename AbstractSignalValue<V>::external_type external_type;
+  typedef typename AbstractSignalValue<V>::wrap_type wrap_type;
+  static constexpr value_type MAX_VALUE = AbstractSignalValue<V>::MAX_VALUE;
+
+private:
+  static constexpr int BITS_VALUE = sizeof(value_type) * 8;
+  static constexpr int BITS_SIGNAL_TYPE =
+      org::simple::core::Bits<wrap_type>::most_significant(
+          SignalTypeStaticInfo::max_value()) +
+      1;
+  static constexpr int BITS_SIGNAL_TYPE_AND_TERMINATE = BITS_SIGNAL_TYPE + 1;
+  static constexpr int BITS_TOTAL = BITS_VALUE + BITS_SIGNAL_TYPE_AND_TERMINATE;
+  static_assert(BITS_TOTAL < sizeof(wrap_type) * 8);
+  static constexpr value_type MASK_VALUE = ~0;
+  static constexpr wrap_type FLAG_TERMINATE = static_cast<wrap_type>(1)
+                                              << sizeof(value_type) * 8;
+  static constexpr short SHIFTS_SIGNAL_TYPE = sizeof(value_type) * 8 + 1;
+
+  SignalType type_;
+  bool terminates_;
+  AbstractSignalValue<V> value_;
+
+  AbstractSignal(SignalType type, external_type value, bool terminates)
+      : type_(type), value_(value), terminates_(terminates) {}
+
+  AbstractSignal(wrap_type wrapped) {
+    if (!SignalTypeStaticInfo::value_to_type(type_,
+                                             wrapped >> SHIFTS_SIGNAL_TYPE)) {
+      throw std::invalid_argument("org::simple::util::Signal: wrapped value "
+                                  "does not represent a valid type.");
+    }
+    if (!SignalTypeStaticInfo::is_signal(type_)) {
+      terminates_ = false;
+      return;
+    }
+    unsigned msk = MASK_VALUE;
+    value_ = wrapped & msk;
+    terminates_ = (wrapped & FLAG_TERMINATE) != 0;
+  }
+
+public:
+  AbstractSignal() : type_(SignalType::NONE), terminates_(false) {}
+
+  static AbstractSignal system(external_type value, bool terminates = true) {
+    return {SignalType::SYSTEM, value, terminates};
+  }
+
+  static AbstractSignal program(external_type value, bool terminates = true) {
+    return {SignalType::PROGRAM, value, terminates};
+  }
+
+  static AbstractSignal user(external_type value, bool terminates = false) {
+    return {SignalType::USER, value, terminates};
+  }
+
+  /**
+   * @return the type name of this signal.
+   */
+  const char *type_name() const {
+    return SignalTypeStaticInfo::type_name(type_);
+  }
+
+  /**
+   * Returns the type of this signal.
+   * @return returns an org::simple::util::SignalType.
+   */
+  SignalType type() const { return type_; }
+
+  /**
+   * Returns the value of this signal. If the type is
+   * org::simple::util::SignalType::NONE, the value is zero. Otherwise it is a
+   * value between 1 and 255.
+   * @return a value between 0 and 255.
+   */
+  external_type value() const { return value_.get(); }
+
+  bool terminates() const { return terminates_; }
+
+  bool is_signal() const { return SignalTypeStaticInfo::is_signal(type_); }
+
+  bool is_valued() const { return SignalTypeStaticInfo::is_signal(type_); }
+
+  static AbstractSignal unwrap(wrap_type wrapped) {
+    AbstractSignal result(wrapped);
     return result;
   }
 
-  unsigned wrapped() const { return Validation::wrapped(*this); }
-  /**
-   * Returns the maximum signal value, that for compatibility reasons is 255.
-   * @return The maximum signal value.
-   */
-  static constexpr int max_value() { return Validation::MAX_VALUE; }
-
-  SignalType type() const { return type_; }
-
-  const char *type_name() const { return type_name(type_); }
-
-  int value() const { return value_; }
-
-  bool is_terminator() const {
-    return type_ == SignalType::SYSTEM || type_ == SignalType::PROGRAM;
+  wrap_type wrapped() const {
+    wrap_type wrapped = SignalTypeStaticInfo::type_to_value(type_);
+    wrapped <<= SHIFTS_SIGNAL_TYPE;
+    if (SignalTypeStaticInfo::is_signal(type_)) {
+      wrapped |= value_.get_value();
+    }
+    if (terminates_) {
+      wrapped |= FLAG_TERMINATE;
+    }
+    return wrapped;
   }
-
-  bool is_none() const { return type_ == SignalType::NONE; }
-
-  bool has_value() const { return is_terminator() || type_ == SignalType::USER; }
-
-  bool operator==(const Signal &other) const {
-    return type_ == other.type_ && value_ == other.value_;
-  }
-
-  static bool test_invalid_wrapped_type(unsigned &invalid_wrapped_state) {
-    return Validation::set_invalid_wrapped_type(invalid_wrapped_state);
-  }
-
-  Signal() : type_(SignalType::NONE), value_(0) {}
-
-private:
-  SignalType type_;
-  unsigned value_;
-
-  Signal(SignalType type, int value)
-      : type_(type), value_(Validation::valid_value(type_, value, false)) {}
-  Signal(unsigned wrapped)
-      : type_(Validation::unwrapped_type(wrapped)),
-        value_(Validation::unwrapped_value(type_, wrapped)) {}
-
-  struct Validation {
-    using Bits = org::simple::core::Bits<unsigned>;
-    static constexpr unsigned TYPE_COUNT = 5;
-    static constexpr SignalType TYPES[TYPE_COUNT] = {
-        SignalType::NONE, SignalType::USER, SignalType::SYSTEM,
-        SignalType::PROGRAM};
-
-    template <int N>
-    static constexpr unsigned MAX_TYPE_ENUM_VALUE_H =
-        std::max(static_cast<unsigned>(TYPES[N]), MAX_TYPE_ENUM_VALUE_H<N - 1>);
-    template <> static constexpr unsigned MAX_TYPE_ENUM_VALUE_H<-1> = 0;
-    template <>
-    static constexpr unsigned MAX_TYPE_ENUM_VALUE_H<TYPE_COUNT> =
-        MAX_TYPE_ENUM_VALUE_H<TYPE_COUNT - 1>;
-
-    static constexpr unsigned MAX_TYPE_VALUE =
-        MAX_TYPE_ENUM_VALUE_H<TYPE_COUNT>;
-    static_assert(MAX_TYPE_VALUE > 1);
-    static constexpr unsigned TYPE_MASK = Bits::fill(MAX_TYPE_VALUE);
-    static constexpr unsigned TYPE_BITS = Bits::most_significant(TYPE_MASK) + 1;
-    static_assert(TYPE_BITS <= 8);
-    static constexpr unsigned VALUE_BITS = 8;
-    static constexpr unsigned VALUE_MASK = (1u << VALUE_BITS) - 1u;
-    static constexpr int MAX_VALUE = VALUE_MASK;
-
-    static unsigned char int_to_value(int value, bool unwrapping) {
-      if (value <= 0) {
-        throw std::invalid_argument(
-            unwrapping ? "org::simple::util::Signal::Validation:: signal value "
-                         "cannot be zero."
-                       : "org::simple::util::Signal::Validation::unwrap: "
-                         "signal value cannot be zero.");
-      }
-      if (value <= MAX_VALUE) {
-        return value;
-      }
-      throw std::invalid_argument(unwrapping
-                                      ? "org::simple::util::Signal::Validation:"
-                                        " (unwrapping) signal value too large."
-                                      : "org::simple::util::Signal::Validation:"
-                                        " signal value too large.");
-    }
-
-    static unsigned char valid_value(SignalType type, int value, bool unwrapping) {
-      switch (type) {
-      case SignalType::SYSTEM:
-      case SignalType::USER:
-      case SignalType::PROGRAM:
-        return int_to_value(value, unwrapping);
-      default:
-        return 0;
-      }
-    }
-
-    static unsigned wrapped(const Signal &signal) {
-      unsigned result = static_cast<unsigned>(signal.type()) << VALUE_BITS;
-
-      switch (signal.type()) {
-      case SignalType::SYSTEM:
-      case SignalType::USER:
-      case SignalType::PROGRAM:
-        result |= VALUE_MASK & static_cast<unsigned>(signal.value());
-        return result;
-      default:
-        return result;
-      }
-    }
-
-    static SignalType unwrapped_type(unsigned wrapped) {
-      unsigned type_value = wrapped >> VALUE_BITS;
-
-      for (size_t i = 0; i < TYPE_COUNT; i++) {
-        if (static_cast<unsigned>(TYPES[i]) == type_value) {
-          return TYPES[i];
-        }
-      }
-      throw std::invalid_argument("org::simple::util::Signal::unwrap(): value "
-                                  "does not represent a valid type.");
-    }
-
-    static unsigned char unwrapped_value(SignalType type, unsigned wrapped) {
-      switch (type) {
-      case SignalType::SYSTEM:
-      case SignalType::USER:
-      case SignalType::PROGRAM:
-        return valid_value(type, wrapped & VALUE_MASK, true);
-      default:
-        return 0;
-      }
-    }
-
-    template <int selector>
-    static long long signed get_invalid_wrapped_type_helper();
-
-    template <> long long signed get_invalid_wrapped_type_helper<1>() {
-      return MAX_TYPE_VALUE + 1;
-    }
-
-    template <> long long signed get_invalid_wrapped_type_helper<2>() {
-      return -1;
-    }
-
-    template <> long long signed get_invalid_wrapped_type_helper<3>() {
-      for (unsigned type = 0; type < MAX_TYPE_VALUE; type++) {
-        bool found = false;
-        for (unsigned j = 0; j < TYPE_COUNT && !found; j++) {
-          if (static_cast<unsigned>(TYPES[type]) == type) {
-            found = true;
-          }
-        }
-        if (!found) {
-          return type;
-        }
-      }
-      return -1;
-    }
-
-    static bool set_invalid_wrapped_type(unsigned &invalid_wrapped_state) {
-      static constexpr int selector = MAX_TYPE_VALUE < TYPE_MASK    ? 1
-                                      : MAX_TYPE_VALUE < TYPE_COUNT ? 2
-                                                                    : 3;
-      static long long signed invalid_value =
-          get_invalid_wrapped_type_helper<selector>();
-      static unsigned invalid_wrapped = static_cast<unsigned>(invalid_value)
-                                        << VALUE_BITS;
-      if (invalid_value < 0) {
-        return false;
-      }
-      invalid_wrapped_state = invalid_wrapped;
-      return true;
-    }
-  };
 };
+
+typedef unsigned char default_signal_value_type;
+typedef AbstractSignal<default_signal_value_type> Signal;
 
 } // namespace org::simple::util
 

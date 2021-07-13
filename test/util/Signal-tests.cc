@@ -9,18 +9,18 @@
 
 using Sig = org::simple::util::Signal;
 using Type = org::simple::util::SignalType;
+using value_type = typename Sig::value_type;
+using ext_type = typename Sig::external_type ;
 
-static const std::vector<unsigned> wrap_test_values() {
-//  static std::atomic_flag flag = ATOMIC_FLAG_INIT;
-  std::vector<unsigned> result;
-//  if (flag.test_and_set()) {
+static const std::vector<ext_type> wrap_test_values() {
+  std::vector<ext_type> result;
     result.push_back(1u);
     result.push_back(2u);
-    result.push_back(Sig::max_value() / 4);
-    result.push_back(Sig::max_value() / 3);
-    result.push_back(Sig::max_value() / 2);
-    result.push_back(Sig::max_value() - 1);
-    result.push_back(Sig::max_value());
+    result.push_back(Sig::MAX_VALUE / 4);
+    result.push_back(Sig::MAX_VALUE / 3);
+    result.push_back(Sig::MAX_VALUE / 2);
+    result.push_back(Sig::MAX_VALUE - 1);
+    result.push_back(Sig::MAX_VALUE);
 
   return result;
 }
@@ -28,14 +28,14 @@ static const std::vector<unsigned> wrap_test_values() {
 BOOST_AUTO_TEST_SUITE(org_simple_util_Signals)
 
     BOOST_AUTO_TEST_CASE(initNone) {
-  Sig sig = Sig::none();
+  Sig sig;
 
-  BOOST_CHECK_EQUAL(0u, sig.value());
+  BOOST_CHECK_EQUAL(0, sig.value());
   BOOST_CHECK(Type::NONE ==sig.type());
 }
 
 BOOST_AUTO_TEST_CASE(initUser) {
-  unsigned value = Sig::max_value() / 2;
+  ext_type value = Sig::MAX_VALUE / 2;
   Sig sig = Sig::user(value);
 
   BOOST_CHECK_EQUAL(value, sig.value());
@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE(initUser) {
 }
 
 BOOST_AUTO_TEST_CASE(initProgram) {
-  unsigned value = Sig::max_value() / 2;
+  ext_type value = Sig::MAX_VALUE / 2;
   Sig sig = Sig::program(value);
 
   BOOST_CHECK_EQUAL(value, sig.value());
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(initProgram) {
 }
 
 BOOST_AUTO_TEST_CASE(initSystem) {
-  unsigned value = Sig::max_value() / 2;
+  ext_type value = Sig::MAX_VALUE / 2;
   Sig sig = Sig::system(value);
 
   BOOST_CHECK_EQUAL(value, sig.value());
@@ -63,13 +63,13 @@ BOOST_AUTO_TEST_CASE(initSystemWithZero) {
 }
 
 BOOST_AUTO_TEST_CASE(initSystemWithMaxPLusOne) {
-  BOOST_CHECK_THROW(Sig::system(Sig::max_value() + 1), std::invalid_argument);
+  BOOST_CHECK_THROW(Sig::system(Sig::MAX_VALUE + 1), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(initSystemWithMax) {
-  Sig sig = Sig::system(Sig::max_value());
+  Sig sig = Sig::system(Sig::MAX_VALUE);
 
-  BOOST_CHECK_EQUAL(Sig::max_value(), sig.value());
+  BOOST_CHECK_EQUAL(Sig::MAX_VALUE, sig.value());
 }
 
 BOOST_AUTO_TEST_CASE(initProgramWithZero) {
@@ -77,13 +77,13 @@ BOOST_AUTO_TEST_CASE(initProgramWithZero) {
 }
 
 BOOST_AUTO_TEST_CASE(initProgramWithMaxPLusOne) {
-  BOOST_CHECK_THROW(Sig::program(Sig::max_value() + 1), std::invalid_argument);
+  BOOST_CHECK_THROW(Sig::program(Sig::MAX_VALUE + 1), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(initProgramWithMax) {
-  Sig sig = Sig::program(Sig::max_value());
+  Sig sig = Sig::program(Sig::MAX_VALUE);
 
-  BOOST_CHECK_EQUAL(Sig::max_value(), sig.value());
+  BOOST_CHECK_EQUAL(Sig::MAX_VALUE, sig.value());
 }
 
 BOOST_AUTO_TEST_CASE(initUserWithZero) {
@@ -91,42 +91,42 @@ BOOST_AUTO_TEST_CASE(initUserWithZero) {
 }
 
 BOOST_AUTO_TEST_CASE(initUserWithMaxPLusOne) {
-  BOOST_CHECK_THROW(Sig::user(Sig::max_value() + 1), std::invalid_argument);
+  BOOST_CHECK_THROW(Sig::user(Sig::MAX_VALUE + 1), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(initUserWithMax) {
-  Sig sig = Sig::user(Sig::max_value());
+  Sig sig = Sig::user(Sig::MAX_VALUE);
 
-  BOOST_CHECK_EQUAL(Sig::max_value(), sig.value());
+  BOOST_CHECK_EQUAL(Sig::MAX_VALUE, sig.value());
 }
 
 BOOST_AUTO_TEST_CASE(checkNoTerminatorNone) {
-  Sig sig = Sig::none();
+  Sig sig;
 
-  BOOST_CHECK(!sig.is_terminator());
+  BOOST_CHECK(!sig.terminates());
 }
 
 BOOST_AUTO_TEST_CASE(checkNoTerminatorSystem) {
-  Sig sig = Sig::system(Sig::max_value() / 2);
+  Sig sig = Sig::system(Sig::MAX_VALUE / 2);
 
-  BOOST_CHECK(sig.is_terminator());
+  BOOST_CHECK(sig.terminates());
 }
 
 BOOST_AUTO_TEST_CASE(checkNoTerminatorProgram) {
-  Sig sig = Sig::program(Sig::max_value() / 2);
+  Sig sig = Sig::program(Sig::MAX_VALUE / 2);
 
-  BOOST_CHECK(sig.is_terminator());
+  BOOST_CHECK(sig.terminates());
 }
 
 BOOST_AUTO_TEST_CASE(checkNoTerminatorUser) {
-  Sig sig = Sig::user(Sig::max_value() / 2);
+  Sig sig = Sig::user(Sig::MAX_VALUE / 2);
 
-  BOOST_CHECK(!sig.is_terminator());
+  BOOST_CHECK(!sig.terminates());
 }
 
 BOOST_AUTO_TEST_CASE(wrapUnwrapNone) {
-  Sig sig = Sig::none();
-  unsigned wrapped = sig.wrapped();
+  Sig sig;
+  ext_type wrapped = sig.wrapped();
   Sig unwrapped = Sig::unwrap(wrapped);
 
   BOOST_CHECK(unwrapped.value() == sig.value());
@@ -134,26 +134,18 @@ BOOST_AUTO_TEST_CASE(wrapUnwrapNone) {
 }
 
 BOOST_AUTO_TEST_CASE(wrapUnwrapNoneSetWrappedValue) {
-  Sig sig = Sig::none();
-  unsigned wrapped = sig.wrapped();
-  wrapped |= Sig::max_value() / 2;
+  Sig sig;
+  ext_type wrapped = sig.wrapped();
+  wrapped |= Sig::MAX_VALUE / 2;
   Sig unwrapped = Sig::unwrap(wrapped);
 
   BOOST_CHECK(unwrapped.value() == sig.value());
   BOOST_CHECK(unwrapped.type() == sig.type());
 }
 
-BOOST_AUTO_TEST_CASE(unwrapInvalidType) {
-  unsigned invalidWrapped;
-  if (!Sig::test_invalid_wrapped_type(invalidWrapped)) {
-    return;
-  }
-  BOOST_CHECK_THROW(Sig::unwrap(invalidWrapped), std::invalid_argument);
-}
-
 BOOST_DATA_TEST_CASE(testSystemWrapAndUnwrap, wrap_test_values()) {
   Sig sig = Sig::system(sample);
-  unsigned wrapped = sig.wrapped();
+  ext_type wrapped = sig.wrapped();
   Sig unwrapped = Sig::unwrap(wrapped);
 
   BOOST_CHECK_EQUAL(sig.value(), unwrapped.value());
@@ -161,7 +153,7 @@ BOOST_DATA_TEST_CASE(testSystemWrapAndUnwrap, wrap_test_values()) {
 
 BOOST_DATA_TEST_CASE(testProgramWrapAndUnwrap, wrap_test_values()) {
   Sig sig = Sig::program(sample);
-  unsigned wrapped = sig.wrapped();
+  ext_type wrapped = sig.wrapped();
   Sig unwrapped = Sig::unwrap(wrapped);
 
   BOOST_CHECK_EQUAL(sig.value(), unwrapped.value());
@@ -169,7 +161,7 @@ BOOST_DATA_TEST_CASE(testProgramWrapAndUnwrap, wrap_test_values()) {
 
 BOOST_DATA_TEST_CASE(testUserWrapAndUnwrap, wrap_test_values()) {
   Sig sig = Sig::user(sample);
-  unsigned wrapped = sig.wrapped();
+  ext_type wrapped = sig.wrapped();
   Sig unwrapped = Sig::unwrap(wrapped);
 
   BOOST_CHECK_EQUAL(sig.value(), unwrapped.value());

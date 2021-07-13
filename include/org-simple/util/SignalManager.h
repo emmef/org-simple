@@ -22,18 +22,28 @@
  */
 
 #include <atomic>
-#include <condition_variable>
-#include <mutex>
+#include <chrono>
 #include <org-simple/util/Signal.h>
 
 namespace org::simple::util {
 
 enum class SignalResult { FAIL = 0, SUCCESS = 1, NOT_ALLOWED = 2 };
 
-struct AbstractSignalManager {
+template<typename V>
+class AbstractSignalManager {
+public:
+  typedef AbstractSignal<V> Signal;
+  typedef typename Signal::wrap_type wrap_type;
+  typedef typename Signal::external_type value_type;
+
+  static constexpr int DEFAULT_LOCK_FREE_RETRIES = 1000;
+  static_assert(std::atomic<wrap_type>::is_always_lock_free);
+  std::atomic<wrap_type> wrapped_signal_ = 0;
+
+public:
 
   SignalResult reset(int attempts = 0) {
-    return signal(Signal::none(), attempts);
+    return signal({}, attempts);
   }
   SignalResult system(int value, int attempts = 0) {
     return signal(Signal::system(value), attempts);
@@ -45,175 +55,14 @@ struct AbstractSignalManager {
     return signal(Signal::user(value), attempts);
   }
 
-  [[nodiscard]] bool has_signal_value() const {
-    return get_signal().has_value();
-  }
-
-  [[nodiscard]] unsigned get_signal_value() const {
-    const Signal &sig = get_signal();
-    return sig.has_value() ? sig.value() : 0;
-  }
-
-  virtual ~AbstractSignalManager() = default;
-  virtual SignalResult signal(const Signal &signal, int attempts = 0) = 0;
-  virtual Signal get_signal() const = 0;
-};
-
-class ThrowingSignalManager : public AbstractSignalManager {
-  AbstractSignalManager *delegate_;
-
-public:
-  ThrowingSignalManager(AbstractSignalManager *delegate)
-      : delegate_(delegate) {}
-
-  SignalResult signal(const Signal &signal, int attempts = 0) final {
-    SignalResult result = delegate_->signal(signal, attempts);
-    if (result == SignalResult::NOT_ALLOWED) {
-      throw std::runtime_error(
-          "org::simple::util::ThrowingAbstractSignalManager: it is not allowed "
-          "to overwrite the current set signal.");
-    }
-    return result;
-  }
-
-  Signal get_signal() const final { return delegate_->get_signal(); }
-};
-
-class SignalManager : public AbstractSignalManager {
-  static constexpr int DEFAULT_LOCK_FREE_RETRIES = 1000;
-  using Mutex = std::mutex;
-  using Lock = std::unique_lock<Mutex>;
-  mutable Mutex mutex_;
-  mutable std::condition_variable cond_;
-  static_assert(std::atomic<unsigned>::is_always_lock_free);
-  std::atomic<unsigned> wrapped_signal_ = 0;
-
-public:
-  class LockFree;
-
-  static SignalManager &instance;
-
-  static SignalManager &get_default_instance() {
-    static SignalManager manager_;
-    return manager_;
-  }
-
-  SignalManager()
-      : lock_free_(*this), throwing_(this), throwing_lock_free_(&lock_free_){};
-
-  LockFree &lockFree() { return lock_free_; };
-  ThrowingSignalManager &throwing() { return throwing_; }
-  ThrowingSignalManager &throwingLockFree() { return throwing_lock_free_; }
-
-  Signal get_signal() const final { return Signal::unwrap(wrapped_signal_); }
-
-  SignalResult signal(const Signal &signal, int attempts) final {
-    return set_signal(signal, attempts);
-  }
-
-  Signal wait() {
-    Signal result;
-    Lock lock(mutex_);
-    auto func = [this, &lock]() {
-      this->cond_.wait(lock, [this]() { return this->has_signal_value(); });
-      return true;
-    };
-    abstract_wait(result, func);
-    return result;
-  }
-
-  template <class Clock, class Duration>
-  bool
-  wait_until(Signal &result,
-             const std::chrono::time_point<Clock, Duration> &timeout_time) {
-    Lock lock(mutex_);
-    auto func = [timeout_time, this, &lock]() {
-      return this->cond_.wait_until(
-          lock, timeout_time, [this]() { return this->has_signal_value(); });
-    };
-    return abstract_wait(result, func);
-  }
-
-  template <class Rep, class Period>
-  bool wait_for(Signal &result,
-                const std::chrono::duration<Rep, Period> &rel_time) {
-    Lock lock(mutex_);
-    auto function = [rel_time, this, &lock]() {
-      return this->cond_.wait_for(
-          lock, rel_time, [this]() { return this->has_signal_value(); });
-    };
-    return abstract_wait(result, function);
-  }
-
-  class LockFree : public AbstractSignalManager {
-    SignalManager &manager_;
-
-  public:
-    explicit LockFree(SignalManager &manager) : manager_(manager) {}
-
-    SignalResult signal(const Signal &signal, int attempts) final {
-      return manager_.lock_free_set_signal(signal, attempts);
-    }
-
-    [[nodiscard]] Signal get_signal() const final {
-      return manager_.get_signal();
-    }
-
-    template <class Clock, class Duration>
-    bool
-    wait_until(Signal &result,
-               const std::chrono::time_point<Clock, Duration> &timeout_time) {
-      auto func = [timeout_time, this]() {
-        bool result = this->manager_.has_signal_value();
-        while (!result && Clock::now() < timeout_time) {
-          result = this->manager_.has_signal_value();
-        }
-        return result;
-      };
-      return manager_.abstract_wait(result, func);
-    }
-
-    bool wait_retries(Signal &result, int retries) {
-      auto func = [retries, this]() {
-        bool result = this->manager_.has_signal_value();
-        for (int i = 0; !result && i < retries; i++) {
-          result = this->manager_.has_signal_value();
-        }
-        return result;
-      };
-      return manager_.abstract_wait(result, func);
-    }
-  };
-
-private:
-  LockFree lock_free_;
-  ThrowingSignalManager throwing_;
-  ThrowingSignalManager throwing_lock_free_;
-
-  SignalResult set_signal(const Signal &signal, int retries) {
-    SignalResult result;
-    {
-      Lock lock(mutex_);
-      result = try_set_signal(signal, retries, true);
-    }
-    if (result == SignalResult::SUCCESS && signal.has_value()) {
-      cond_.notify_all();
-    }
-    return result;
-  }
-
-  SignalResult try_set_signal(const Signal &signal, int retries,
-                              bool allow_overwrite_non_terminator) {
-    int maxAttempts = retries == 0 ? DEFAULT_LOCK_FREE_RETRIES : retries;
-    unsigned newValue = signal.wrapped();
-    unsigned wrapped = wrapped_signal_;
+  SignalResult signal(const Signal &signal, int attempts)  {
+    int maxAttempts = attempts == 0 ? DEFAULT_LOCK_FREE_RETRIES : attempts;
+    wrap_type newValue = signal.wrapped();
+    wrap_type wrapped = wrapped_signal_;
     int attempt = 0;
     while (maxAttempts < 0 || attempt < maxAttempts) {
       Signal unwrapped = Signal::unwrap(wrapped);
-      bool disallowed = allow_overwrite_non_terminator
-                            ? unwrapped.is_terminator()
-                            : unwrapped.has_value();
-      if (disallowed) {
+      if (unwrapped.terminates()) {
         return SignalResult::NOT_ALLOWED;
       }
       if (wrapped_signal_.compare_exchange_weak(wrapped, newValue,
@@ -225,27 +74,78 @@ private:
     return SignalResult::FAIL;
   }
 
-  SignalResult lock_free_set_signal(const Signal &signal, int retries) {
-    return try_set_signal(signal, retries, false);
+  [[nodiscard]] bool has_signal_value() const {
+    return get_signal().is_valued();
   }
 
-  bool abstract_wait(Signal &result, std::function<bool()> wait_function) {
-    Signal sig = Signal::unwrap(wrapped_signal_);
-    if (sig.has_value()) {
-      result = sig;
+  [[nodiscard]] wrap_type get_signal_value() const {
+    const Signal &sig = get_signal();
+    return sig.is_valued() ? sig.value() : 0;
+  }
+
+  Signal get_signal() const { return Signal::unwrap(wrapped_signal_); }
+
+  template <class Clock, class Duration>
+  bool
+  wait_until(Signal &result,
+             const std::chrono::time_point<Clock, Duration> &timeout_time) {
+    auto func = [timeout_time, this](wrap_type wrapped) {
+      while (Clock::now() < timeout_time) {
+        wrap_type current = wrapped_signal_;
+        if (changed_and_set(wrapped, current)) {
+          return current;
+        }
+      }
+      return (wrap_type)0;
+    };
+    return abstract_wait(result, func);
+  }
+
+  bool wait_retries(Signal &result, int retries) {
+    auto func = [retries, this](wrap_type wrapped) {
+      for (int i = 0; i < retries; i++) {
+        wrap_type current = wrapped_signal_;
+        if (changed_and_set(wrapped, current)) {
+          return current;
+        }
+      }
+      return (wrap_type)0;
+    };
+    return abstract_wait(result, func);
+  }
+
+  static AbstractSignalManager &instance;
+
+  static AbstractSignalManager &get_default_instance() {
+    static AbstractSignalManager manager_;
+    return manager_;
+  }
+
+  AbstractSignalManager(){}
+
+private:
+
+  static bool changed_and_set(wrap_type old_value, wrap_type current_value) {
+    return current_value && current_value != old_value;
+  }
+
+  bool abstract_wait(Signal &result, std::function<wrap_type (wrap_type)> wait_function) {
+    wrap_type wrapped_result = result.wrapped();
+    wrap_type wrapped = wrapped_signal_;
+    if (changed_and_set(wrapped_result, wrapped)) {
+      result = { wrapped };
       return true;
     }
-    if (wait_function()) {
-      sig = Signal::unwrap(wrapped_signal_);
-      if (sig.has_value()) {
-        result = sig;
-        return true;
-      }
+    wrap_type after_wait_wrapped = wait_function(wrapped);
+    if (changed_and_set(wrapped_result, after_wait_wrapped)) {
+      result = { after_wait_wrapped };
+      return true;
     }
     return false;
   }
 };
 
+typedef AbstractSignalManager<default_signal_value_type> SignalManager;
 } // namespace org::simple::util
 
 #endif // ORG_SIMPLE_SIGNALMANAGER_H
