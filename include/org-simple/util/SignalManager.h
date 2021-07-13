@@ -24,7 +24,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-#include <org-simple/util/Signals.h>
+#include <org-simple/util/Signal.h>
 
 namespace org::simple::util {
 

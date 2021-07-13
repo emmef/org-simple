@@ -2,11 +2,10 @@
 // Created by michel on 11-07-21.
 //
 
-
+#include <org-simple/util/Signal.h>
 #include <ostream>
 #include <test-helper.h>
 #include <vector>
-#include <org-simple/util/Signals.h>
 
 using Sig = org::simple::util::Signal;
 using Type = org::simple::util::SignalType;

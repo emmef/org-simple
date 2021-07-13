@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_SIGNALS_H
-#define ORG_SIMPLE_SIGNALS_H
+#ifndef ORG_SIMPLE_SIGNAL_H
+#define ORG_SIMPLE_SIGNAL_H
 /*
  * org-simple/Signals.h
  *
@@ -256,4 +256,4 @@ private:
 
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_SIGNALS_H
+#endif // ORG_SIMPLE_SIGNAL_H
