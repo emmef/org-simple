@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_CASE(testInstance) {
   SignalManager manager;
   Signal sig = manager.get_signal();
 
-  BOOST_CHECK(sig.type() == org::simple::util::Signal::Type::NONE);
+  BOOST_CHECK(sig.type() == org::simple::util::SignalType::NONE);
   BOOST_CHECK(sig.value() == 0);
 }
 
@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(testSetSystemAndGet) {
   BOOST_CHECK(manager.system(value) == org::simple::util::SignalResult::SUCCESS);
 
   Signal sig = manager.get_signal();
-  BOOST_CHECK(sig.type() == org::simple::util::Signal::Type::SYSTEM);
+  BOOST_CHECK(sig.type() == org::simple::util::SignalType::SYSTEM);
   BOOST_CHECK(sig.value() == value);
 }
 
@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(testSetProgramAndGet) {
   BOOST_CHECK(manager.program(value) == org::simple::util::SignalResult::SUCCESS);
 
   Signal sig = manager.get_signal();
-  BOOST_CHECK(sig.type() == org::simple::util::Signal::Type::PROGRAM);
+  BOOST_CHECK(sig.type() == org::simple::util::SignalType::PROGRAM);
   BOOST_CHECK(sig.value() == value);
 }
 
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(testSetUserAndGet) {
   BOOST_CHECK(manager.user(value) == org::simple::util::SignalResult::SUCCESS);
 
   Signal sig = manager.get_signal();
-  BOOST_CHECK(sig.type() == org::simple::util::Signal::Type::USER);
+  BOOST_CHECK(sig.type() == org::simple::util::SignalType::USER);
   BOOST_CHECK(sig.value() == value);
 }
 

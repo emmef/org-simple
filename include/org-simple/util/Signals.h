@@ -25,53 +25,54 @@
 
 namespace org::simple::util {
 
-struct Signal {
-  enum class Type {
-    /**
-     * Nothing was initialised
-     */
-    NONE = 0,
-    /**
-     * The signal is user (program) defined. The program decides what the signal
-     * means and a signal like this can be (re)set by the program.
-     */
-    USER,
-    /**
-     * The signal was set to a positive_value unwrapped_value_enforce_nonzero by
-     * a signal handler and should lead to termination. The program cannot
-     * overwrite or reset a signal with this type.
-     */
-    SYSTEM,
-    /**
-     * The signal was set to a positive_value unwrapped_value_enforce_nonzero
-     * programmatically by the process itself and should lead to termination.
-     * The program cannot overwrite or reset a signal with this type.
-     */
-    PROGRAM
-  };
+enum class SignalType {
+  /**
+   * Nothing was initialised
+   */
+  NONE = 0,
+  /**
+   * The signal is user (program) defined. The program decides what the signal
+   * means and a signal like this can be (re)set by the program.
+   */
+  USER,
+  /**
+   * The signal was set to a positive_value unwrapped_value_enforce_nonzero by
+   * a signal handler and should lead to termination. The program cannot
+   * overwrite or reset a signal with this type.
+   */
+  SYSTEM,
+  /**
+   * The signal was set to a positive_value unwrapped_value_enforce_nonzero
+   * programmatically by the process itself and should lead to termination.
+   * The program cannot overwrite or reset a signal with this type.
+   */
+  PROGRAM
+};
 
-  static const char *type_name(Type type) {
+struct Signal {
+
+  static const char *type_name(SignalType type) {
     switch (type) {
-    case Type::NONE:
+    case SignalType::NONE:
       return "none";
-    case Type::SYSTEM:
+    case SignalType::SYSTEM:
       return "system";
-    case Type::PROGRAM:
+    case SignalType::PROGRAM:
       return "program";
-    case Type::USER:
+    case SignalType::USER:
       return "user";
     default:
       return "none";
     }
   }
 
-  static Signal system(int value) { return {Type::SYSTEM, value}; }
+  static Signal system(int value) { return {SignalType::SYSTEM, value}; }
 
-  static Signal program(int value) { return {Type::PROGRAM, value}; }
+  static Signal program(int value) { return {SignalType::PROGRAM, value}; }
 
-  static Signal user(int value) { return {Type::USER, value}; }
+  static Signal user(int value) { return {SignalType::USER, value}; }
 
-  static Signal none() { return {Type::NONE, 0}; }
+  static Signal none() { return {SignalType::NONE, 0}; }
 
   static Signal unwrap(unsigned wrapped) {
     Signal result(wrapped);
@@ -85,19 +86,19 @@ struct Signal {
    */
   static constexpr int max_value() { return Validation::MAX_VALUE; }
 
-  Type type() const { return type_; }
+  SignalType type() const { return type_; }
 
   const char *type_name() const { return type_name(type_); }
 
   int value() const { return value_; }
 
   bool is_terminator() const {
-    return type_ == Type::SYSTEM || type_ == Type::PROGRAM;
+    return type_ == SignalType::SYSTEM || type_ == SignalType::PROGRAM;
   }
 
-  bool is_none() const { return type_ == Type::NONE; }
+  bool is_none() const { return type_ == SignalType::NONE; }
 
-  bool has_value() const { return is_terminator() || type_ == Type::USER; }
+  bool has_value() const { return is_terminator() || type_ == SignalType::USER; }
 
   bool operator==(const Signal &other) const {
     return type_ == other.type_ && value_ == other.value_;
@@ -107,13 +108,13 @@ struct Signal {
     return Validation::set_invalid_wrapped_type(invalid_wrapped_state);
   }
 
-  Signal() : type_(Type::NONE), value_(0) {}
+  Signal() : type_(SignalType::NONE), value_(0) {}
 
 private:
-  Type type_;
+  SignalType type_;
   unsigned value_;
 
-  Signal(Type type, int value)
+  Signal(SignalType type, int value)
       : type_(type), value_(Validation::valid_value(type_, value, false)) {}
   Signal(unsigned wrapped)
       : type_(Validation::unwrapped_type(wrapped)),
@@ -122,8 +123,9 @@ private:
   struct Validation {
     using Bits = org::simple::core::Bits<unsigned>;
     static constexpr unsigned TYPE_COUNT = 5;
-    static constexpr Type TYPES[TYPE_COUNT] = {Type::NONE, Type::USER,
-                                               Type::SYSTEM, Type::PROGRAM};
+    static constexpr SignalType TYPES[TYPE_COUNT] = {
+        SignalType::NONE, SignalType::USER, SignalType::SYSTEM,
+        SignalType::PROGRAM};
 
     template <int N>
     static constexpr unsigned MAX_TYPE_ENUM_VALUE_H =
@@ -161,11 +163,11 @@ private:
                                         " signal value too large.");
     }
 
-    static unsigned char valid_value(Type type, int value, bool unwrapping) {
+    static unsigned char valid_value(SignalType type, int value, bool unwrapping) {
       switch (type) {
-      case Type::SYSTEM:
-      case Type::USER:
-      case Type::PROGRAM:
+      case SignalType::SYSTEM:
+      case SignalType::USER:
+      case SignalType::PROGRAM:
         return int_to_value(value, unwrapping);
       default:
         return 0;
@@ -176,9 +178,9 @@ private:
       unsigned result = static_cast<unsigned>(signal.type()) << VALUE_BITS;
 
       switch (signal.type()) {
-      case Type::SYSTEM:
-      case Type::USER:
-      case Type::PROGRAM:
+      case SignalType::SYSTEM:
+      case SignalType::USER:
+      case SignalType::PROGRAM:
         result |= VALUE_MASK & static_cast<unsigned>(signal.value());
         return result;
       default:
@@ -186,7 +188,7 @@ private:
       }
     }
 
-    static Type unwrapped_type(unsigned wrapped) {
+    static SignalType unwrapped_type(unsigned wrapped) {
       unsigned type_value = wrapped >> VALUE_BITS;
 
       for (size_t i = 0; i < TYPE_COUNT; i++) {
@@ -198,11 +200,11 @@ private:
                                   "does not represent a valid type.");
     }
 
-    static unsigned char unwrapped_value(Type type, unsigned wrapped) {
+    static unsigned char unwrapped_value(SignalType type, unsigned wrapped) {
       switch (type) {
-      case Type::SYSTEM:
-      case Type::USER:
-      case Type::PROGRAM:
+      case SignalType::SYSTEM:
+      case SignalType::USER:
+      case SignalType::PROGRAM:
         return valid_value(type, wrapped & VALUE_MASK, true);
       default:
         return 0;

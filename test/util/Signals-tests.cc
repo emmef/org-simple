@@ -9,7 +9,7 @@
 #include <org-simple/util/Signals.h>
 
 using Sig = org::simple::util::Signal;
-using Type = org::simple::util::Signal::Type;
+using Type = org::simple::util::SignalType;
 
 static const std::vector<unsigned> wrap_test_values() {
 //  static std::atomic_flag flag = ATOMIC_FLAG_INIT;
