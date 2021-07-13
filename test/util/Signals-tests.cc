@@ -2,25 +2,14 @@
 // Created by michel on 11-07-21.
 //
 
-#include <org-simple/util/Signals.h>
 
-#include <iostream>
+#include <ostream>
 #include <test-helper.h>
 #include <vector>
+#include <org-simple/util/Signals.h>
 
 using Sig = org::simple::util::Signal;
 using Type = org::simple::util::Signal::Type;
-
-static std::ostream &operator<<(std::ostream &out, const Type &type) {
-  out << Sig::type_name(type);
-  return out;
-}
-
-static constexpr unsigned TEST_VALUES[] = {
-    1, Sig::max_value() / 4, Sig::max_value() / 3, Sig::max_value() / 2,
-    Sig::max_value()};
-static constexpr unsigned TEST_VALUES_COUNT =
-    sizeof(TEST_VALUES) / sizeof(unsigned);
 
 static const std::vector<unsigned> wrap_test_values() {
 //  static std::atomic_flag flag = ATOMIC_FLAG_INIT;
@@ -43,14 +32,7 @@ BOOST_AUTO_TEST_SUITE(org_simple_util_Signals)
   Sig sig = Sig::none();
 
   BOOST_CHECK_EQUAL(0u, sig.value());
-  BOOST_CHECK(Type::NONE == sig.type());
-}
-
-BOOST_AUTO_TEST_CASE(initTimeout) {
-  Sig sig = Sig::timeout();
-
-  BOOST_CHECK_EQUAL(0u, sig.value());
-  BOOST_CHECK(Type::TIMEOUT == sig.type());
+  BOOST_CHECK(Type::NONE ==sig.type());
 }
 
 BOOST_AUTO_TEST_CASE(initUser) {
@@ -122,31 +104,25 @@ BOOST_AUTO_TEST_CASE(initUserWithMax) {
 BOOST_AUTO_TEST_CASE(checkNoTerminatorNone) {
   Sig sig = Sig::none();
 
-  sig.check_no_terminator();
-}
-
-BOOST_AUTO_TEST_CASE(checkNoTerminatorTimeout) {
-  Sig sig = Sig::timeout();
-
-  sig.check_no_terminator();
+  BOOST_CHECK(!sig.is_terminator());
 }
 
 BOOST_AUTO_TEST_CASE(checkNoTerminatorSystem) {
   Sig sig = Sig::system(Sig::max_value() / 2);
 
-  BOOST_CHECK_THROW(sig.check_no_terminator(), std::runtime_error);
+  BOOST_CHECK(sig.is_terminator());
 }
 
 BOOST_AUTO_TEST_CASE(checkNoTerminatorProgram) {
   Sig sig = Sig::program(Sig::max_value() / 2);
 
-  BOOST_CHECK_THROW(sig.check_no_terminator(), std::runtime_error);
+  BOOST_CHECK(sig.is_terminator());
 }
 
 BOOST_AUTO_TEST_CASE(checkNoTerminatorUser) {
   Sig sig = Sig::user(Sig::max_value() / 2);
 
-  sig.check_no_terminator();
+  BOOST_CHECK(!sig.is_terminator());
 }
 
 BOOST_AUTO_TEST_CASE(wrapUnwrapNone) {
@@ -160,25 +136,6 @@ BOOST_AUTO_TEST_CASE(wrapUnwrapNone) {
 
 BOOST_AUTO_TEST_CASE(wrapUnwrapNoneSetWrappedValue) {
   Sig sig = Sig::none();
-  unsigned wrapped = sig.wrapped();
-  wrapped |= Sig::max_value() / 2;
-  Sig unwrapped = Sig::unwrap(wrapped);
-
-  BOOST_CHECK(unwrapped.value() == sig.value());
-  BOOST_CHECK(unwrapped.type() == sig.type());
-}
-
-BOOST_AUTO_TEST_CASE(wrapUnwrapTimeout) {
-  Sig sig = Sig::timeout();
-  unsigned wrapped = sig.wrapped();
-  Sig unwrapped = Sig::unwrap(wrapped);
-
-  BOOST_CHECK(unwrapped.value() == sig.value());
-  BOOST_CHECK(unwrapped.type() == sig.type());
-}
-
-BOOST_AUTO_TEST_CASE(wrapUnwrapTimoutSetWrappedValue) {
-  Sig sig = Sig::timeout();
   unsigned wrapped = sig.wrapped();
   wrapped |= Sig::max_value() / 2;
   Sig unwrapped = Sig::unwrap(wrapped);
