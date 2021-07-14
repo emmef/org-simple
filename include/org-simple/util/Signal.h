@@ -200,8 +200,8 @@ private:
   static constexpr short SHIFTS_SIGNAL_TYPE = sizeof(value_type) * 8 + 1;
 
   SignalType type_;
-  bool terminates_;
   AbstractSignalValue<V> value_;
+  bool terminates_;
 
   AbstractSignal(SignalType type, external_type value, bool terminates)
       : type_(type), value_(value), terminates_(terminates) {}
