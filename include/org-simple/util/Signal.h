@@ -32,20 +32,20 @@ enum class SignalType {
    */
   NONE,
   /**
-   * The signal is user (program) defined. The program decides what the signal
-   * means and a signal like this can be (re)set by the program.
+   * The signal is user (program) defined. The program decides what the set_signal
+   * means and a set_signal like this can be (re)set by the program.
    */
   USER,
   /**
-   * The signal was set to a positive_value unwrapped_value_enforce_nonzero
+   * The set_signal was set to a positive_value unwrapped_value_enforce_nonzero
    * programmatically by the process itself and should lead to termination.
-   * The program cannot overwrite or reset a signal with this type.
+   * The program cannot overwrite or reset a set_signal with this type.
    */
   PROGRAM,
   /**
-   * The signal was set to a positive_value unwrapped_value_enforce_nonzero by
-   * a signal handler and should lead to termination. The program cannot
-   * overwrite or reset a signal with this type.
+   * The set_signal was set to a positive_value unwrapped_value_enforce_nonzero by
+   * a set_signal handler and should lead to termination. The program cannot
+   * overwrite or reset a set_signal with this type.
    */
   SYSTEM,
 };
@@ -167,6 +167,14 @@ template <typename V> struct AbstractSignalValue {
                                 "positive and not exceed maximum.");
   }
 
+  bool operator == (const AbstractSignalValue &other) const {
+    return value_ == other.value_;
+  }
+
+  bool operator == (value_type other) const {
+    return value_ == other;
+  }
+
 private:
   value_type value_;
 };
@@ -224,25 +232,25 @@ public:
     return {SignalType::PROGRAM, value, terminates};
   }
 
-  static AbstractSignal user(external_type value, bool terminates = false) {
+  static AbstractSignal user(external_type value, bool terminates = true) {
     return {SignalType::USER, value, terminates};
   }
 
   /**
-   * @return the type name of this signal.
+   * @return the type name of this set_signal.
    */
   const char *type_name() const {
     return SignalTypeStaticInfo::type_name(type_);
   }
 
   /**
-   * Returns the type of this signal.
+   * Returns the type of this set_signal.
    * @return returns an org::simple::util::SignalType.
    */
   SignalType type() const { return type_; }
 
   /**
-   * Returns the value of this signal. If the type is
+   * Returns the value of this set_signal. If the type is
    * org::simple::util::SignalType::NONE, the value is zero. Otherwise it is a
    * value between 1 and 255.
    * @return a value between 0 and 255.
@@ -254,6 +262,10 @@ public:
   bool is_signal() const { return SignalTypeStaticInfo::is_signal(type_); }
 
   bool is_valued() const { return SignalTypeStaticInfo::is_signal(type_); }
+
+  bool operator == (const AbstractSignal &other) const {
+    return type_ == other.type_ && terminates_ == other.terminates_ && value_ == other.value_;
+  }
 
   static AbstractSignal unwrap(wrap_type wrapped) {
     AbstractSignal result(wrapped);
