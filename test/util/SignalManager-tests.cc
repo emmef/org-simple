@@ -14,8 +14,6 @@ using SignalManager = org::simple::util::SignalManager;
 using SignalResult = org::simple::util::SignalResult;
 using FakeClock = org::simple::util::FakeClock;
 
-FakeClock fake_clock;
-
 class AbstractScenario {
   Signal first_;
   Signal second_;

@@ -126,6 +126,8 @@ struct AbstractFakeClock : private FakeClockCounter<threadLocal> {
   }
 
 private:
+  AbstractFakeClock() {};
+
   static get_callback_function callback(bool set = false, get_callback_function f = nullptr) {
     static std::atomic<get_callback_function> callback_;
     if (set) {
@@ -147,9 +149,6 @@ private:
       return data_;
     }
   }
-
-  static bool (*get_callback_)(uint64_t now, void *);
-  static void *callback_data_;
 
   static uint64_t add_and_get(uint64_t value) {
     return (FakeClockCounter<threadLocal>::counter() += value);
