@@ -43,19 +43,19 @@ public:
 public:
 
   SignalResult reset(int attempts = 0) {
-    return signal({}, attempts);
+    return set_signal({}, attempts);
   }
   SignalResult system(int value, int attempts = 0) {
-    return signal(Signal::system(value), attempts);
+    return set_signal(Signal::system(value), attempts);
   }
   SignalResult program(int value, int attempts = 0) {
-    return signal(Signal::program(value), attempts);
+    return set_signal(Signal::program(value), attempts);
   }
   SignalResult user(int value, int attempts = 0) {
-    return signal(Signal::user(value), attempts);
+    return set_signal(Signal::user(value), attempts);
   }
 
-  SignalResult signal(const Signal &signal, int attempts)  {
+  SignalResult set_signal(const Signal &signal, int attempts = 0)  {
     int maxAttempts = attempts == 0 ? DEFAULT_LOCK_FREE_RETRIES : attempts;
     wrap_type newValue = signal.wrapped();
     wrap_type wrapped = wrapped_signal_;
@@ -75,19 +75,17 @@ public:
   }
 
   [[nodiscard]] bool has_signal_value() const {
-    return get_signal().is_valued();
+    return wrapped_signal_ != 0;
   }
 
   [[nodiscard]] wrap_type get_signal_value() const {
-    const Signal &sig = get_signal();
-    return sig.is_valued() ? sig.value() : 0;
+    return get_signal().value();
   }
 
   Signal get_signal() const { return Signal::unwrap(wrapped_signal_); }
 
   template <class Clock, class Duration>
-  bool
-  wait_until(Signal &result,
+  bool busy_wait_until(Signal &result,
              const std::chrono::time_point<Clock, Duration> &timeout_time) {
     auto func = [timeout_time, this](wrap_type wrapped) {
       while (Clock::now() < timeout_time) {
@@ -101,7 +99,7 @@ public:
     return abstract_wait(result, func);
   }
 
-  bool wait_retries(Signal &result, int retries) {
+  bool busy_wait_spin(Signal &result, int retries) {
     auto func = [retries, this](wrap_type wrapped) {
       for (int i = 0; i < retries; i++) {
         wrap_type current = wrapped_signal_;
