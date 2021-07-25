@@ -161,12 +161,13 @@ class SetFirstWaitSecondThreadSetsSecond : public AbstractScenario {
       StopStartGuard guard(signal_thread_started_, signal_thread_stopped_);
       while_with_max_iterations([this]() { return !inside_wait_; },
                                 "Await wait thread to be inside initial wait");
-      inside_wait_ = false;
       manager_.set_signal(second());
-      manager_.reset_called();
+      inside_wait_ = false;
+      std::this_thread::yield();
       while_with_max_iterations(
           [this]() { return !(inside_wait_ || wait_thread_stopped_); },
           "Await wait thread to be inside wait after signal set");
+      std::this_thread::yield();
       FakeClock ::set_now(FakeClock::now() + FakeClock::duration(TIMEOUT + 1));
     }
 

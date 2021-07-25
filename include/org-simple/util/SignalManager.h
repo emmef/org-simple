@@ -31,27 +31,16 @@ enum class SignalResult { FAIL = 0, SUCCESS = 1, NOT_ALLOWED = 2 };
 
 template <bool E> class SignalCallbackHandler {};
 template <> class SignalCallbackHandler<true> {
+
   typedef void (*cb_type)(void *);
   std::atomic<cb_type> cb_ = nullptr;
   std::atomic<void *> d_ = nullptr;
-  static bool was_called(bool set) {
-    static std::atomic<bool> was_called_ = false;
-    if (set) {
-      was_called_ = false;
-      return true;
-    } else {
-      bool result = true;
-      return was_called_.compare_exchange_strong(result, true);
-    }
-  }
 
 protected:
   void callback() const {
-    if (!was_called(false)) {
-      auto cbc = cb_.load();
-      if (cbc) {
-        cbc(d_.load());
-      }
+    auto cbc = cb_.load();
+    if (cbc) {
+      cbc(d_.load());
     }
   }
 
@@ -59,10 +48,7 @@ public:
   void set_callback(void (*cb)(void *), void *d) {
     cb_ = cb;
     d_ = cb ? d : nullptr;
-    was_called(true);
   }
-
-  void reset_called() { was_called(true); }
 };
 template <> class SignalCallbackHandler<false> {
 protected:
@@ -70,7 +56,6 @@ protected:
 
 public:
   void set_callback(void (*)(void *), void *) {}
-  void reset_called() {}
 };
 
 template <typename V, bool callbacks = false>
