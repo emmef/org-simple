@@ -465,16 +465,6 @@ std::ostream &operator<<(std::ostream &stream, const FunctionTestScenario &s) {
 } // namespace
 
 
-static bool same(double v1, double v2, double epsilon = 1e-12) {
-  if (v1 == 0) {
-    return fabs(v2) < epsilon;
-  }
-  if (v2 == 0) {
-    return fabs(v1) < epsilon;
-  }
-  return epsilon > fabs(v1 - v2) / std::min(fabs(v2), fabs(v2));
-}
-
 
 } // namespace org::simple::test
 

@@ -4,11 +4,12 @@
 
 #include "test-helper.h"
 #include <org-simple/dsp/integration.h>
+#include <boost/math/special_functions/relative_difference.hpp>
 
 using namespace org::simple::dsp::integration;
 
 static bool same(double v1, double v2, double epsilon = 1e-12) {
-    return org::simple::test::same(v1, v2, epsilon);
+  return boost::math::relative_difference(v1, v2) < epsilon;
 }
 
 BOOST_AUTO_TEST_SUITE(org_simple_dsp_integration_Tests)
