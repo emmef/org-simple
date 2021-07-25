@@ -76,7 +76,9 @@ public:
   SetFirstThenSecond(Signal first, Signal second)
       : AbstractScenario(first, second) {}
 
-  [[nodiscard]] const char *description() const final { return "Set first then last"; }
+  [[nodiscard]] const char *description() const final {
+    return "Set first then last";
+  }
 
   void setFirstThenSecond() const {
     SignalManager manager;
@@ -110,7 +112,7 @@ class SetFirstWaitSecondThreadSetsSecond : public AbstractScenario {
 
     static constexpr long TIMEOUT = 2;
 
-    bool while_with_max_iterations(const std::function<bool()>& true_func,
+    bool while_with_max_iterations(const std::function<bool()> &true_func,
                                    const char *msg) {
       auto now = std::chrono::system_clock::now();
       auto duration = std::chrono::seconds(1);
@@ -125,7 +127,7 @@ class SetFirstWaitSecondThreadSetsSecond : public AbstractScenario {
       }
       const char *m = msg ? msg : "";
       std::cerr << "ERROR: while_max did not finish in max iterations: " << m
-             << std::endl;
+                << std::endl;
       return false;
     }
 
@@ -200,11 +202,9 @@ class SetFirstWaitSecondThreadSetsSecond : public AbstractScenario {
       BOOST_CHECK_EQUAL(expected_signal, had_signal);
       if (expected_signal) {
         BOOST_CHECK_EQUAL(second(), result);
-      }
-      else {
+      } else {
         BOOST_CHECK_EQUAL(first(), result_);
       }
-
     }
 
   public:
@@ -214,26 +214,28 @@ class SetFirstWaitSecondThreadSetsSecond : public AbstractScenario {
       FakeClock::set_count(0);
       std::thread wt(waiting_thread, instance);
       std::thread st(signal_thread, instance);
-      instance->while_with_max_iterations(
-          [instance]() { return !instance->started(); },
-          "Waiting for threads to start");
-      if (instance->while_with_max_iterations(
-              [instance]() { return !instance->stopped(); },
-              "Waiting for threads to stop")) {
+      if (!instance->while_with_max_iterations(
+              [instance]() { return !instance->started(); },
+              "Waiting for threads to start")) {
+        std::cerr << "Test threads failed to start " << *instance << std::endl;
+      } else if (instance->while_with_max_iterations(
+                     [instance]() { return !instance->stopped(); },
+                     "Waiting for threads to stop")) {
         wt.join();
         st.join();
         instance->verifyResults();
         delete instance;
       } else {
-        std::cerr << "Threads took too long: detached!" << std::endl;
         wt.detach();
         st.detach();
+        std::cerr << "Threads took too long: detached!" << std::endl;
       }
     }
 
-    Executor(Signal first, Signal second) : AbstractScenario(first, second), had_signal_(false) {}
+    Executor(Signal first, Signal second)
+        : AbstractScenario(first, second), had_signal_(false) {}
     [[nodiscard]] const char *description() const final {
-      return "Set signal in one thread, check waiting thread";
+      return "Set first in result, await signal, set second in other thread";
     }
   };
 
@@ -345,7 +347,6 @@ BOOST_AUTO_TEST_CASE(testInstanceNoSignalAtStart) {
 BOOST_DATA_TEST_CASE(testAssignTwice, getScenarios()) {
   sample.setFirstThenSecond();
 }
-
 
 BOOST_DATA_TEST_CASE(tesWaitForSignal, getScenarios2()) { sample.execute(); }
 
