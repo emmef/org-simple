@@ -66,16 +66,15 @@ public:
   virtual ~CoefficientsSetter() = default;
 
   [[nodiscard]] size_t getCoefficientCount() const { return getOrder() + 1; }
-  [[nodiscard]] size_t getTotalCoefficientCount() const { return 2 * getCoefficientCount(); }
 
   CoefficientsSetter &setFF(size_t i, T value) {
-    setValidX(Index::checked(i, getCoefficientCount()), value);
+    setValidFB(Index::checked(i, getCoefficientCount()), value);
     return *this;
   }
 
   CoefficientsSetter &setFB(size_t i, T value,
                             FeedbackConvention conv = FeedbackConvention::ADD) {
-    setValidY(Index::checked(i, getCoefficientCount()),
+    setValidFF(Index::checked(i, getCoefficientCount()),
               conv == FeedbackConvention::ADD ? value : -value);
     return *this;
   }
@@ -96,7 +95,7 @@ public:
  * @tparam coeff Type of coefficient, that MUST be a floating-point.
  * @tparam CoefficientsClass A class that contains coefficients.
  */
-template <typename coeff, size_t FIXED_ORDER, class CoefficientsClass>
+template <typename coeff, unsigned FIXED_ORDER, class CoefficientsClass>
 class Coefficients {
   inline const coeff &getFB(size_t i) const {
     return static_cast<const CoefficientsClass *>(this)->getFB(i);
@@ -106,13 +105,10 @@ class Coefficients {
     return static_cast<const CoefficientsClass *>(this)->getFF(i);
   }
 
-  template <size_t Z = FIXED_ORDER>
-  requires(Z == 0) size_t inline getOrder() const {
+public:
+  inline unsigned getOrder() const {
     return static_cast<const CoefficientsClass *>(this)->getOrder();
   }
-
-  template <size_t Z = FIXED_ORDER>
-  requires(Z != 0) static constexpr size_t getOrder() { return FIXED_ORDER; }
 
   /**
    * Filters a single input, using the history of inputs and outputs for the
@@ -131,11 +127,18 @@ class Coefficients {
   template <typename S>
   inline S filter_single(S *__restrict in_history, S *__restrict out_history,
                          const S input) const {
+    size_t order;
+    if constexpr (FIXED_ORDER == 0) {
+      order = getOrder();
+    }
+    else {
+      order = FIXED_ORDER;
+    }
     S Y = 0;
     S xN0 = input;
     S yN0 = 0.0;
     size_t i, j;
-    for (i = 0, j = 1; i < getOrder(); i++, j++) {
+    for (i = 0, j = 1; i < order; i++, j++) {
       const S xN1 = in_history[i];
       const S yN1 = out_history[i];
       in_history[i] = xN0;
@@ -167,10 +170,17 @@ class Coefficients {
   template <typename S>
   void filter_forward_offs(size_t count, const S *__restrict in,
                            S *__restrict out) const {
-    const size_t end = count + getOrder();
-    for (size_t n = getOrder(); n < end; n++) {
+    size_t order;
+    if constexpr (FIXED_ORDER == 0) {
+      order = getOrder();
+    }
+    else {
+      order = FIXED_ORDER;
+    }
+    const size_t end = count + order;
+    for (size_t n = order; n < end; n++) {
       S yN = getFF(0) * in[n];
-      for (size_t j = 1; j <= getOrder(); j++) {
+      for (size_t j = 1; j <= order; j++) {
         yN += in[n - j] * getFF(j) + out[n - j] * getFB(j);
       }
       out[n] = flush_to_zero(yN);
@@ -189,19 +199,26 @@ class Coefficients {
    */
   template <typename S>
   void filter_forward_zero(size_t count, const S *__restrict in,
-                           S *__restrict out) {
-    for (size_t n = 0; n < getOrder(); n++) {
+                           S *__restrict out) const {
+    size_t order;
+    if constexpr (FIXED_ORDER == 0) {
+      order = getOrder();
+    }
+    else {
+      order = FIXED_ORDER;
+    }
+    for (size_t n = 0; n < order; n++) {
       S yN = getFF(0) * in[n];
-      for (size_t j = 1; j <= getOrder(); j++) {
+      for (size_t j = 1; j <= order; j++) {
         if (j <= n) {
           yN += in[n - j] * getFF(j) + out[n - j] * getFB(j);
         }
       }
       out[n] = flush_to_zero(yN);
     }
-    for (size_t n = getOrder(); n < count; n++) {
+    for (size_t n = order; n < count; n++) {
       S yN = getFF(0) * in[n];
-      for (size_t j = 1; j <= getOrder(); j++) {
+      for (size_t j = 1; j <= order; j++) {
         yN += in[n - j] * getFF(j) + out[n - j] * getFB(j);
       }
       out[n] = flush_to_zero(yN);
@@ -223,11 +240,18 @@ class Coefficients {
    */
   template <typename S>
   void filter_backward_offs(size_t count, const S *__restrict in,
-                            S *__restrict out) {
+                            S *__restrict out) const {
 
+    size_t order;
+    if constexpr (FIXED_ORDER == 0) {
+      order = getOrder();
+    }
+    else {
+      order = FIXED_ORDER;
+    }
     for (ptrdiff_t n = count - 1; n >= 0; n--) {
       S yN = getFF(0) * in[n];
-      for (size_t j = 1; j <= getOrder(); j++) {
+      for (size_t j = 1; j <= order; j++) {
         yN += in[n + j] * getFF(j) + out[n + j] * getFB(j);
       }
       out[n] = flush_to_zero(yN);
@@ -246,13 +270,20 @@ class Coefficients {
    */
   template <typename S>
   void filter_backward_zero(size_t count, const S *__restrict in,
-                            S *__restrict out) {
+                            S *__restrict out) const {
+    size_t order;
+    if constexpr (FIXED_ORDER == 0) {
+      order = getOrder();
+    }
+    else {
+      order = FIXED_ORDER;
+    }
     const ptrdiff_t start = count - 1;
-    const ptrdiff_t end = count - getOrder();
+    const ptrdiff_t end = count - order;
     ptrdiff_t n;
     for (n = start; n >= end && n >= 0; n--) {
       S yN = getFF(0) * in[n];
-      for (size_t j = 1; j <= getOrder(); j++) {
+      for (size_t j = 1; j <= order; j++) {
         ptrdiff_t i = n + j;
         if (i <= start) {
           yN += in[i] * getFF(j) + out[i] * getFB(j);
@@ -262,7 +293,7 @@ class Coefficients {
     }
     for (; n >= 0; n--) {
       S yN = getFF(0) * in[n];
-      for (size_t j = 1; j <= getOrder(); j++) {
+      for (size_t j = 1; j <= order; j++) {
         yN += in[n + j] * getFF(j) + out[n + j] * getFB(j);
       }
       out[n] = flush_to_zero(yN);
@@ -270,11 +301,12 @@ class Coefficients {
   }
 };
 
-template <typename C, size_t O, size_t A = 0>
+template <typename C, unsigned O, size_t A = 0>
 class FixedOrderCoefficients
     : public Coefficients<C, O, FixedOrderCoefficients<C, O, A>>,
       public CoefficientsSetter<C> {
 
+  using Parent = Coefficients<C, O, FixedOrderCoefficients<C, O, A>>;
   static_assert(O > 0, "Filter order must be positive.");
   static_assert(O <= 32, "Filter order cannot exceed 32.");
   static constexpr size_t FF = 0;
@@ -289,14 +321,21 @@ public:
 
   inline const C &getFF(size_t i) const { return coeffs[i + FF]; }
 
-  size_t getOrder() const { return O; }
+  unsigned getOrder() const final { return O; }
+//
+//  using Parent::filter_single;
+//  using Parent::filter_forward_offs;
+//  using Parent::filter_forward_zero;
+//  using Parent::filter_backward_offs;
+//  using Parent::filter_backward_zero;
 };
 
-template <typename C, size_t O, size_t A = 0>
+template <typename C, unsigned O, size_t A = 0>
 class FixedOrderCoefficientsRef
     : public Coefficients<C, O, FixedOrderCoefficientsRef<C, O, A>>,
       public CoefficientsSetter<C> {
 
+  using Parent = Coefficients<C, O, FixedOrderCoefficientsRef<C, O, A>>;
   static_assert(O > 0, "Filter order must be positive.");
   static_assert(O <= 32, "Filter order cannot exceed 32.");
   static constexpr size_t FF = 0;
@@ -313,7 +352,13 @@ public:
 
   inline const C &getFF(size_t i) const { return coeffs[i + FF]; }
 
-  size_t getOrder() const { return O; }
+  unsigned getOrder() const final { return O; }
+//
+//  using Parent::filter_single;
+//  using Parent::filter_forward_offs;
+//  using Parent::filter_forward_zero;
+//  using Parent::filter_backward_offs;
+//  using Parent::filter_backward_zero;
 };
 
 // ArrayDataRefFixedSize
