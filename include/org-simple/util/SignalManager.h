@@ -29,9 +29,54 @@ namespace org::simple::util {
 
 enum class SignalResult { FAIL = 0, SUCCESS = 1, NOT_ALLOWED = 2 };
 
-template<typename V>
-class AbstractSignalManager {
+template <bool E> class SignalCallbackHandler {};
+template <> class SignalCallbackHandler<true> {
+  typedef void (*cb_type)(void *);
+  std::atomic<cb_type> cb_ = nullptr;
+  std::atomic<void *> d_ = nullptr;
+  static bool was_called(bool set) {
+    static std::atomic<bool> was_called_ = false;
+    if (set) {
+      was_called_ = false;
+      return true;
+    } else {
+      bool result = true;
+      return was_called_.compare_exchange_strong(result, true);
+    }
+  }
+
+protected:
+  void callback() const {
+    if (!was_called(false)) {
+      auto cbc = cb_.load();
+      if (cbc) {
+        cbc(d_.load());
+      }
+    }
+  }
+
 public:
+  void set_callback(void (*cb)(void *), void *d) {
+    cb_ = cb;
+    d_ = cb ? d : nullptr;
+    was_called(true);
+  }
+
+  void reset_called() { was_called(true); }
+};
+template <> class SignalCallbackHandler<false> {
+protected:
+  void callback() const {}
+
+public:
+  void set_callback(void (*)(void *), void *) {}
+  void reset_called() {}
+};
+
+template <typename V, bool callbacks = false>
+class AbstractSignalManager : public SignalCallbackHandler<callbacks> {
+  using SignalCallbackHandler<callbacks>::callback;
+
   typedef AbstractSignal<V> Signal;
   typedef typename Signal::wrap_type wrap_type;
   typedef typename Signal::external_type value_type;
@@ -41,10 +86,8 @@ public:
   std::atomic<wrap_type> wrapped_signal_ = 0;
 
 public:
+  SignalResult reset(int attempts = 0) { return set_signal({}, attempts); }
 
-  SignalResult reset(int attempts = 0) {
-    return set_signal({}, attempts);
-  }
   SignalResult system(int value, int attempts = 0) {
     return set_signal(Signal::system(value), attempts);
   }
@@ -55,7 +98,7 @@ public:
     return set_signal(Signal::user(value), attempts);
   }
 
-  SignalResult set_signal(const Signal &signal, int attempts = 0)  {
+  SignalResult set_signal(const Signal &signal, int attempts = 0) {
     int maxAttempts = attempts == 0 ? DEFAULT_LOCK_FREE_RETRIES : attempts;
     wrap_type newValue = signal.wrapped();
     wrap_type wrapped = wrapped_signal_;
@@ -65,8 +108,8 @@ public:
       if (unwrapped.terminates()) {
         return SignalResult::NOT_ALLOWED;
       }
-      if (wrapped_signal_.compare_exchange_weak(wrapped, newValue,
-                                                std::memory_order_acq_rel)) {
+      if (wrapped_signal_.compare_exchange_strong(wrapped, newValue,
+                                                  std::memory_order_acq_rel)) {
         return SignalResult::SUCCESS;
       }
       attempt++;
@@ -74,9 +117,7 @@ public:
     return SignalResult::FAIL;
   }
 
-  [[nodiscard]] bool has_signal_value() const {
-    return wrapped_signal_ != 0;
-  }
+  [[nodiscard]] bool has_signal_value() const { return wrapped_signal_ != 0; }
 
   [[nodiscard]] wrap_type get_signal_value() const {
     return get_signal().value();
@@ -85,58 +126,50 @@ public:
   Signal get_signal() const { return Signal::unwrap(wrapped_signal_); }
 
   template <class Clock, class Duration>
-  bool busy_wait_until(Signal &result,
-             const std::chrono::time_point<Clock, Duration> &timeout_time) {
-    auto func = [timeout_time, this](wrap_type wrapped) {
-      while (Clock::now() < timeout_time) {
-        wrap_type current = wrapped_signal_;
-        if (changed_and_set(wrapped, current)) {
-          return current;
-        }
-      }
-      return (wrap_type)0;
-    };
-    return abstract_wait(result, func);
+  bool busy_wait_until(
+      Signal &result,
+      const std::chrono::time_point<Clock, Duration> &timeout_time) const {
+    wrap_type current = wrapped_signal_;
+    callback();
+    while (current == 0 && Clock::now() < timeout_time) {
+      current = wrapped_signal_;
+      callback();
+    }
+    return get_and_set_result(result, current);
+  };
+
+  template <class Rep, class Per, class Clock = std::chrono::system_clock>
+  [[maybe_unused]] bool busy_wait_for(Signal &result,
+                     const std::chrono::duration<Rep, Per> &duration) const {
+    wrap_type current = wrapped_signal_;
+    auto start = Clock::now();
+    while (current == 0 && Clock::now() - start < duration) {
+      callback();
+      current = wrapped_signal_;
+    }
+    return get_and_set_result(result, current);
+  };
+
+  bool busy_wait_spin(Signal &result, int retries) const {
+    wrap_type current = wrapped_signal_;
+    for (int i = 0; current == 0 && i < retries; i++) {
+      callback();
+      current = wrapped_signal_;
+    }
+    return get_and_set_result(result, current);
   }
 
-  bool busy_wait_spin(Signal &result, int retries) {
-    auto func = [retries, this](wrap_type wrapped) {
-      for (int i = 0; i < retries; i++) {
-        wrap_type current = wrapped_signal_;
-        if (changed_and_set(wrapped, current)) {
-          return current;
-        }
-      }
-      return (wrap_type)0;
-    };
-    return abstract_wait(result, func);
-  }
-
-  static AbstractSignalManager &instance;
-
-  static AbstractSignalManager &get_default_instance() {
+  [[maybe_unused]] static AbstractSignalManager &get_default_instance() {
     static AbstractSignalManager manager_;
     return manager_;
   }
 
-  AbstractSignalManager(){}
+  [[maybe_unused]] void force_reset() { wrapped_signal_ = 0; }
 
 private:
-
-  static bool changed_and_set(wrap_type old_value, wrap_type current_value) {
-    return current_value && current_value != old_value;
-  }
-
-  bool abstract_wait(Signal &result, std::function<wrap_type (wrap_type)> wait_function) {
-    wrap_type wrapped_result = result.wrapped();
-    wrap_type wrapped = wrapped_signal_;
-    if (changed_and_set(wrapped_result, wrapped)) {
-      result = { wrapped };
-      return true;
-    }
-    wrap_type after_wait_wrapped = wait_function(wrapped);
-    if (changed_and_set(wrapped_result, after_wait_wrapped)) {
-      result = { after_wait_wrapped };
+  bool get_and_set_result(Signal &result, wrap_type wrapped) const {
+    if (wrapped) {
+      result = {wrapped};
       return true;
     }
     return false;

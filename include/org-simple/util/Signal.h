@@ -206,6 +206,7 @@ private:
   AbstractSignal(SignalType type, external_type value, bool terminates)
       : type_(type), value_(value), terminates_(terminates) {}
 
+public:
   AbstractSignal(wrap_type wrapped) {
     if (!SignalTypeStaticInfo::value_to_type(type_,
                                              wrapped >> SHIFTS_SIGNAL_TYPE)) {
@@ -216,12 +217,10 @@ private:
       terminates_ = false;
       return;
     }
-    unsigned msk = MASK_VALUE;
-    value_ = wrapped & msk;
+    value_ = wrapped & MASK_VALUE;
     terminates_ = (wrapped & FLAG_TERMINATE) != 0;
   }
 
-public:
   AbstractSignal() : type_(SignalType::NONE), terminates_(false) {}
 
   static AbstractSignal system(external_type value, bool terminates = true) {
