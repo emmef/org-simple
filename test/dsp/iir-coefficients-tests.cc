@@ -12,20 +12,6 @@ using Coefficients =
 
 namespace {
 
-static constexpr size_t SAMPLE_LENGTH = 1024;
-static constexpr size_t MAX_ORDER = 4;
-static constexpr size_t BUFFER_LENGTH = SAMPLE_LENGTH + 2 * MAX_ORDER;
-
-static constexpr size_t start_generating_position(size_t order) {
-  return order;
-}
-
-static constexpr size_t start_forward_position(size_t order) { return order; }
-
-static constexpr size_t start_backward_position(size_t order) {
-  return order + SAMPLE_LENGTH;
-}
-
 template <unsigned ORDER, unsigned SAMPLES> class SampleBufferWithFilter {
   static_assert(ORDER > 0 && ORDER <= 4);
   static_assert(SAMPLES > 0);
@@ -162,12 +148,14 @@ public:
 
   void filter_forward_zero(const Coefficients<ORDER> &coeffs_) {
     zero_output_and_history();
-    coeffs_.filter_forward_zero(SAMPLES, &input_[ORDER], &output_[ORDER]);
+    coeffs_.filter_forward_history_zero(SAMPLES, &input_[ORDER],
+                                        &output_[ORDER]);
   }
 
   void filter_backward_zero(const Coefficients<ORDER> &coeffs_) {
     zero_output_and_history();
-    coeffs_.filter_backward_zero(SAMPLES, &input_[ORDER], &output_[ORDER]);
+    coeffs_.filter_backward_history_zero(SAMPLES, &input_[ORDER],
+                                         &output_[ORDER]);
   }
 
   void filter_forward_single(const Coefficients<ORDER> &coeffs) {
