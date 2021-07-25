@@ -181,11 +181,6 @@ private:
   }
 };
 
-template <typename T> class CoefficientsSetter {
-public:
-  virtual ~CoefficientsSetter() = default;
-};
-
 /**
  * Wraps access to coefficient implementation so that algorithms do not need to
  * care about internals nor have to dealwith polymorphism.
@@ -437,8 +432,7 @@ public:
 
 template <typename C, unsigned O, size_t A = 0>
 class FixedOrderCoefficients
-    : public Coefficients<C, O, FixedOrderCoefficients<C, O, A>>,
-      public CoefficientsSetter<C> {
+    : public Coefficients<C, O, FixedOrderCoefficients<C, O, A>> {
 
   using Parent = Coefficients<C, O, FixedOrderCoefficients<C, O, A>>;
   friend Parent;
@@ -458,8 +452,7 @@ protected:
 
 template <typename C, unsigned O, size_t A = 0>
 class FixedOrderCoefficientsRef
-    : public Coefficients<C, O, FixedOrderCoefficientsRef<C, O, A>>,
-      public CoefficientsSetter<C> {
+    : public Coefficients<C, O, FixedOrderCoefficientsRef<C, O, A>> {
 
   using Parent = Coefficients<C, O, FixedOrderCoefficientsRef<C, O, A>>;
   friend Parent;

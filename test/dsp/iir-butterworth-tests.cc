@@ -10,9 +10,74 @@
 
 using namespace org::simple::dsp::iir;
 
-static bool same(double v1, double v2, double epsilon = 1e-12) {
-  return boost::math::relative_difference(v1, v2) < epsilon;
+const std::vector<size_t> create_dividers() {
+  std::vector<size_t> v;
+
+  v.emplace_back(2);
+  v.emplace_back(4);
+  v.emplace_back(8);
+  v.emplace_back(16);
+  v.emplace_back(20);
+  v.emplace_back(24);
+
+  return v;
 }
+
+const std::vector<size_t> &get_dividers() {
+  static std::vector<size_t> v = create_dividers();
+
+  return v;
+}
+
+static size_t get_max_divider() {
+  size_t m = 0;
+  for (auto f : get_dividers()) {
+    m = std::max(m, f);
+  }
+  return m;
+}
+
+
+class DoubleFilterCalculator {
+  size_t order_;
+  size_t max_divider_;
+  size_t response_periods_;
+  size_t data_length_;
+  double *data_;
+
+  void zero() {
+    for (size_t i = 0; i < data_length_; i++) {
+      data_[i] = 0;
+    }
+  }
+
+public:
+  static constexpr double ERROR = 1e-3;
+  static constexpr size_t HEADROOM = 2;
+
+  DoubleFilterCalculator(size_t order) : order_(order) {
+    response_periods_ = (0.5 + -1.0 * order_ * log(ERROR));
+    max_divider_ = get_max_divider();
+    data_length_ = (response_periods_ + HEADROOM) * max_divider_ + 2 * order;
+    data_ = new double[data_length_];
+  }
+
+  double calculate(FilterType ft, size_t divider) {
+    if (divider < 2 || divider > max_divider_) {
+      throw std::invalid_argument("Invalid divider");
+    }
+    zero();
+
+  }
+
+  ~DoubleFilterCalculator() {
+    delete[] data_;
+  }
+};
+
+//static bool same(double v1, double v2, double epsilon = 1e-12) {
+//  return boost::math::relative_difference(v1, v2) < epsilon;
+//}
 
 static double reference_high_pass_gain(size_t order, double rel) {
   double alpha = pow(fabs(rel), order);
@@ -23,6 +88,7 @@ static double reference_low_pass_gain(size_t order, double rel) {
   double alpha2 = pow(fabs(rel), order * 2);
   return 1.0 / sqrt(1.0 + alpha2);
 }
+
 
 struct GainScenario {
   FilterType type;
@@ -100,6 +166,10 @@ std::vector<GainScenario> createTestScenarios() {
   }
 
   return scenarios;
+}
+
+static bool same(double x, double y) {
+  return boost::math::relative_difference(x, y) <= 1e-11;
 }
 
 BOOST_AUTO_TEST_SUITE(org_simple_dsp_iir_butterworth_tests)

@@ -59,7 +59,7 @@ static double get_wb_low_pass_gain(size_t order, double relative_w0_freq) {
   return 1.0 / sqrt(1.0 + alpha2);
 }
 
-static bool is_bw_valid_relative_frequency(double relative) {
+static inline bool is_bw_valid_relative_frequency(double relative) {
   return relative >= std::numeric_limits<double>::epsilon() && relative <= 0.5;
 }
 
@@ -109,7 +109,7 @@ struct Butterworth {
   }
 
   template <typename Coefficient>
-  static void create(CoefficientsSetter<Coefficient> &coefficients,
+  static void create(CoefficientsFilter<Coefficient> &coefficients,
                      Rate sampleRate, double frequency, FilterType filterType,
                      Coefficient scale = 1.0) {
     create(coefficients,
@@ -118,7 +118,7 @@ struct Butterworth {
   }
 
   template <typename Coefficient>
-  static void create(CoefficientsSetter<Coefficient> &coefficients,
+  static void create(CoefficientsFilter<Coefficient> &coefficients,
                      double relativeFrequency, FilterType filterType,
                      Coefficient scale = 1.0) {
     switch (filterType) {
@@ -135,7 +135,7 @@ struct Butterworth {
 
   template <typename Coefficient>
   static void
-  getLowPassCoefficients(CoefficientsSetter<Coefficient> &coefficients,
+  getLowPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
                          double relativeFrequency, Coefficient scale = 1.0) {
     size_t order = validOrder(coefficients.order());
     int unscaledCCoefficients[coefficients.getCoefficientCount()];
@@ -152,7 +152,7 @@ struct Butterworth {
 
   template <typename Coefficient>
   static void
-  getHighPassCoefficients(CoefficientsSetter<Coefficient> &coefficients,
+  getHighPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
                           double relativeFrequency, Coefficient scale = 1.0) {
     size_t order = validOrder(coefficients.order());
     int unscaledCCoefficients[coefficients.getCoefficientCount()];
@@ -171,7 +171,7 @@ struct Butterworth {
 private:
   template <typename Coefficient>
   static void
-  setFeedbackCoefficients(CoefficientsSetter<Coefficient> &d_coefficients,
+  setFeedbackCoefficients(CoefficientsFilter<Coefficient> &d_coefficients,
                           double relativeFrequency) {
     const size_t order = d_coefficients.getOrder();
     double fbCoeffs[order * 2 + 1];
