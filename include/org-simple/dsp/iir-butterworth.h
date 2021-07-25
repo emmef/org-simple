@@ -32,7 +32,7 @@ static constexpr bool is_valid_bw_order(size_t order) {
   return order >= 1 && order <= 20;
 }
 
-static size_t valid_bw_order(size_t order) {
+static unsigned short valid_bw_order(size_t order) {
   if (is_valid_bw_order(order)) {
     return order;
   }
@@ -45,33 +45,21 @@ static size_t valid_bw_order(const Coefficients<A...> &coeffs) {
   return valid_bw_order(coeffs.getOrder());
 }
 
-static constexpr bool is_supported_bw_type(FilterType type) {
+static bool is_supported_bw_type(FilterType type) {
   return type == FilterType::HIGH_PASS || type == FilterType::LOW_PASS;
 }
 
-static FilterType supported_bw_type(FilterType type) {
-  if (is_supported_bw_type(type)) {
-    return type;
-  }
-  throw std::invalid_argument(
-      "supported_bw_type: type must be LOW_PASS or HIGH_PASS.");
-}
-
 static double get_wb_high_pass_gain(size_t order, double relative_w0_freq) {
-  double r = fabs(relative_w0_freq);
-  return r < std::numeric_limits<double>::epsilon()
-             ? 0
-             : 1.0 / sqrt(1.0 + pow(r, 2.0 * valid_bw_order(order)));
+  double alpha = pow(fabs(relative_w0_freq), valid_bw_order(order));
+  return alpha / sqrt(1.0 + alpha * alpha);
 }
 
 static double get_wb_low_pass_gain(size_t order, double relative_w0_freq) {
-  double r = fabs(relative_w0_freq);
-  return r < std::numeric_limits<double>::epsilon()
-             ? 1.0
-             : 1.0 / sqrt(1.0 + pow(r, -2.0 * valid_bw_order(order)));
+  double alpha2 = pow(fabs(relative_w0_freq), valid_bw_order(order) * 2);
+  return 1.0 / sqrt(1.0 + alpha2);
 }
 
-static constexpr bool is_bw_valid_relative_frequency(double relative) {
+static bool is_bw_valid_relative_frequency(double relative) {
   return relative >= std::numeric_limits<double>::epsilon() && relative <= 0.5;
 }
 
@@ -107,26 +95,17 @@ struct Butterworth {
   }
 
   static double getHighPassGain(size_t order, double relative_w0_freq) {
-    double r = fabs(relative_w0_freq);
-    return r < std::numeric_limits<double>::epsilon()
-               ? 0
-               : 1.0 / sqrt(1.0 + pow(r, 2.0 * valid_bw_order(order)));
+    return get_wb_high_pass_gain(order, relative_w0_freq);
   }
 
   static double getLowPassGain(size_t order, double relative_w0_freq) {
-    double r = fabs(relative_w0_freq);
-    return r < std::numeric_limits<double>::epsilon()
-               ? 1.0
-               : 1.0 / sqrt(1.0 + pow(r, -2.0 * valid_bw_order(order)));
+    return get_wb_low_pass_gain(order, relative_w0_freq);
   }
 
   static double relativeNycquistLimitedFrequency(Rate sampleRate,
                                                            double frequency) {
-    if (frequency > 0) {
-      return std::clamp(sampleRate.relative(frequency),
-                        std::numeric_limits<double>::epsilon(), 0.5);
-    }
-    return -relativeNycquistLimitedFrequency(sampleRate, -frequency);
+    return std::clamp(sampleRate.relative(frequency),
+                        -0.5, 0.5);
   }
 
   template <typename Coefficient>
@@ -262,7 +241,7 @@ private:
     double parg0 = M_PI / (double)(2 * order);
 
     double sf = 1.0;     // scaling factor
-    for (int k = 0; k < order / 2; ++k) {
+    for (size_t k = 0; k < order / 2; ++k) {
       sf *= 1.0 + fomega * sin((double)(2 * k + 1) * parg0);
     }
 
@@ -282,7 +261,7 @@ private:
     double sf = 1.0;
     double sin_omega = sin(omega);
     double parg0 = M_PI / (double)(2 * order); // zero-th pole angle
-    for (int k = 0; k < order / 2; ++k) {
+    for (size_t k = 0; k < order / 2; ++k) {
       sf *= 1.0 + sin_omega * sin((double)(2 * k + 1) * parg0);
     }
 
