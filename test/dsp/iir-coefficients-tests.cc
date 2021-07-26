@@ -12,7 +12,7 @@ using Coefficients =
 
 namespace {
 
-template <unsigned ORDER, unsigned SAMPLES> class SampleBufferWithFilter {
+template <unsigned ORDER, unsigned SAMPLES> class FilterScenarioBuffer {
   static_assert(ORDER > 0 && ORDER <= 4);
   static_assert(SAMPLES > 0);
   static constexpr size_t SIZE = SAMPLES + 2 * ORDER;
@@ -45,8 +45,8 @@ template <unsigned ORDER, unsigned SAMPLES> class SampleBufferWithFilter {
     std::cout << "\t" << i << ":\t" << s1 << "\t" << eq << s2 << std::endl;
   }
 
-  static void print_both(const SampleBufferWithFilter &first,
-                         const SampleBufferWithFilter &second, bool output,
+  static void print_both(const FilterScenarioBuffer &first,
+                         const FilterScenarioBuffer &second, bool output,
                          const char *msg = nullptr) {
     std::cout << "Comparison of buffers (";
     std::cout << (output ? "output" : "input");
@@ -75,29 +75,29 @@ template <unsigned ORDER, unsigned SAMPLES> class SampleBufferWithFilter {
   }
 
 public:
-  void print_output_comparison(const SampleBufferWithFilter &first,
+  void print_output_comparison(const FilterScenarioBuffer &first,
                                const char *msg) const {
     print_both(*this, first, true, msg);
   }
 
-  void print_input_comparison(const SampleBufferWithFilter &first,
+  void print_input_comparison(const FilterScenarioBuffer &first,
                               const char *msg) const {
     print_both(*this, first, false, msg);
   }
 
-  void copy_from(const SampleBufferWithFilter &source) {
+  void copy_from(const FilterScenarioBuffer &source) {
     for (size_t i = 0; i < SIZE; i++) {
       input_[i] = source.input_[i];
     }
   }
 
-  void copy_from_reverse(const SampleBufferWithFilter &source) {
+  void copy_from_reverse(const FilterScenarioBuffer &source) {
     for (size_t i = 0, j = SIZE - 1; i < SIZE; i++, j--) {
       input_[i] = source.input_[j];
     }
   }
 
-  bool equals(const SampleBufferWithFilter &source) {
+  bool equals(const FilterScenarioBuffer &source) {
     for (size_t i = 0; i < SIZE; i++) {
       if (!equals(output_[i], source.output_[i])) {
         print_both(*this, source, true, "Equal fail");
@@ -107,10 +107,30 @@ public:
     return true;
   }
 
-  bool equals_reverse(const SampleBufferWithFilter &source) {
+  bool equals_input(const FilterScenarioBuffer &source) {
+    for (size_t i = 0; i < SIZE; i++) {
+      if (!equals(input_[i], source.input_[i])) {
+        print_both(*this, source, false, "Equal fail");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool equals_reverse(const FilterScenarioBuffer &source) {
     for (size_t i = 0, j = SIZE - 1; i < SIZE; i++, j--) {
       if (!equals(output_[i], source.output_[j])) {
         print_both(*this, source, true, "Reverse equal fail");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool equals_reverse_input(const FilterScenarioBuffer &source) {
+    for (size_t i = 0, j = SIZE - 1; i < SIZE; i++, j--) {
+      if (!equals(input_[i], source.input_[j])) {
+        print_both(*this, source, false, "Reverse equal fail");
         return false;
       }
     }
@@ -180,15 +200,41 @@ public:
     }
   }
 
-  SampleBufferWithFilter() { zero_output_and_history(); }
+  FilterScenarioBuffer() { zero_output_and_history(); }
 };
 
 BOOST_AUTO_TEST_SUITE(org_simple_dsp_iir_Coefficients)
 
+BOOST_AUTO_TEST_CASE(testFilterScenarioBufferCopy) {
+  static constexpr size_t SIZE = 10;
+  FilterScenarioBuffer<2, SIZE> filter1;
+  FilterScenarioBuffer<2, SIZE> filter2;
+  filter1.fill_with_random();
+  filter2.copy_from(filter1);
+
+  BOOST_CHECK_MESSAGE(filter1.equals_input(filter2), "copy_from: target should be equal to source");
+  BOOST_CHECK_MESSAGE(filter2.equals_input(filter1), "copy_from: source should be equal to target");
+
+  BOOST_CHECK(filter1.equals(filter2));
+}
+
+BOOST_AUTO_TEST_CASE(testFilterScenarioBufferCopyReverse) {
+  static constexpr size_t SIZE = 10;
+  FilterScenarioBuffer<2, SIZE> filter1;
+  FilterScenarioBuffer<2, SIZE> filter2;
+  filter1.fill_with_random();
+  filter2.copy_from_reverse(filter1);
+
+  BOOST_CHECK_MESSAGE(filter1.equals_reverse_input(filter2), "copy_from_reverse: target should be equal to source");
+  BOOST_CHECK_MESSAGE(filter2.equals_reverse_input(filter1), "copy_from_reverse: source should be equal to target");
+
+  BOOST_CHECK(filter1.equals(filter2));
+}
+
 BOOST_AUTO_TEST_CASE(testFilterSingleEqualsForwardWithOffset) {
   static constexpr size_t SIZE = 10;
-  SampleBufferWithFilter<2, SIZE> filter1;
-  SampleBufferWithFilter<2, SIZE> filter2;
+  FilterScenarioBuffer<2, SIZE> filter1;
+  FilterScenarioBuffer<2, SIZE> filter2;
   Coefficients<2> coeffs;
   filter1.generate_random(coeffs);
 
@@ -202,8 +248,8 @@ BOOST_AUTO_TEST_CASE(testFilterSingleEqualsForwardWithOffset) {
 
 BOOST_AUTO_TEST_CASE(testForwardEqualsBackwardBothWithOffset) {
   static constexpr size_t SIZE = 10;
-  SampleBufferWithFilter<2, SIZE> filter1;
-  SampleBufferWithFilter<2, SIZE> filter2;
+  FilterScenarioBuffer<2, SIZE> filter1;
+  FilterScenarioBuffer<2, SIZE> filter2;
   Coefficients<2> coeffs;
   filter1.generate_random(coeffs);
 
@@ -218,8 +264,8 @@ BOOST_AUTO_TEST_CASE(testForwardEqualsBackwardBothWithOffset) {
 
 BOOST_AUTO_TEST_CASE(testForwardEqualsBackwardBothWithZeroHistory) {
   static constexpr size_t SIZE = 10;
-  SampleBufferWithFilter<2, SIZE> filter1;
-  SampleBufferWithFilter<2, SIZE> filter2;
+  FilterScenarioBuffer<2, SIZE> filter1;
+  FilterScenarioBuffer<2, SIZE> filter2;
   Coefficients<2> coeffs;
   filter1.generate_random(coeffs);
 
@@ -231,7 +277,6 @@ BOOST_AUTO_TEST_CASE(testForwardEqualsBackwardBothWithZeroHistory) {
 
   BOOST_CHECK(filter1.equals_reverse(filter2));
 }
-
 
 BOOST_AUTO_TEST_SUITE_END()
 
