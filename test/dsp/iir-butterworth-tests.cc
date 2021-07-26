@@ -8,6 +8,8 @@
 #include <org-simple/dsp/iir-butterworth.h>
 #include <vector>
 
+#include "iir-coefficients-test-helper.h"
+
 using namespace org::simple::dsp::iir;
 
 const std::vector<size_t> create_dividers() {
@@ -37,16 +39,36 @@ static size_t get_max_divider() {
   return m;
 }
 
-
-class DoubleFilterCalculator {
+class DoubleFilterMetrics {
   size_t order_;
+
+private:
   size_t max_divider_;
   size_t response_periods_;
   size_t data_length_;
+
+public:
+  static constexpr double ERROR = 1e-3;
+  static constexpr size_t HEADROOM = 2;
+
+  DoubleFilterMetrics(unsigned order) : order_(order) {
+    response_periods_ = (0.5 + -1.0 * order_ * log(ERROR));
+    max_divider_ = get_max_divider();
+    data_length_ = (response_periods_ + HEADROOM) * max_divider_ + 2 * order;
+  }
+
+  size_t getOrder() const { return order_; }
+  size_t getMaxDivider() const { return max_divider_; }
+  size_t getResponsePeriods() const { return response_periods_; }
+  size_t getDataLength() const { return data_length_; }
+
+};
+
+class DoubleFilterCalculator : public DoubleFilterMetrics {
   double *data_;
 
   void zero() {
-    for (size_t i = 0; i < data_length_; i++) {
+    for (size_t i = 0; i < getDataLength(); i++) {
       data_[i] = 0;
     }
   }
@@ -55,15 +77,11 @@ public:
   static constexpr double ERROR = 1e-3;
   static constexpr size_t HEADROOM = 2;
 
-  DoubleFilterCalculator(size_t order) : order_(order) {
-    response_periods_ = (0.5 + -1.0 * order_ * log(ERROR));
-    max_divider_ = get_max_divider();
-    data_length_ = (response_periods_ + HEADROOM) * max_divider_ + 2 * order;
-    data_ = new double[data_length_];
+  DoubleFilterCalculator(size_t order) : DoubleFilterMetrics(order), data_(new double[getDataLength()]) {
   }
 
   double calculate(FilterType ft, size_t divider) {
-    if (divider < 2 || divider > max_divider_) {
+    if (divider < 2 || divider > getMaxDivider()) {
       throw std::invalid_argument("Invalid divider");
     }
     zero();
