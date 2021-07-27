@@ -23,24 +23,59 @@
 
 #include <org-simple/dsp/iir-coefficients.h>
 
-
 namespace {
 
 template <unsigned ORDER>
 using Coefficients =
-org::simple::dsp::iir::FixedOrderCoefficients<double, ORDER>;
+    org::simple::dsp::iir::FixedOrderCoefficients<double, ORDER>;
 
 // TODO: Retrofit to allow for dynamic allocation
-template <unsigned ORDER, unsigned SAMPLES> class FilterScenarioBuffer {
+template <unsigned ORDER> class FilterScenarioBuffer {
   static_assert(ORDER > 0 && ORDER <= 4);
-  static_assert(SAMPLES > 0);
-  static constexpr size_t SIZE = SAMPLES + 2 * ORDER;
-  static constexpr size_t GENERATE_START = ORDER;
-  static constexpr size_t GENERATE_END = GENERATE_START + SAMPLES;
   static constexpr double RANDOM_SCALE = 1.0;
   static constexpr double EQUAL_DELTA = 1e-10 * RANDOM_SCALE;
-  double input_[SIZE];
-  double output_[SIZE];
+  static constexpr size_t MAX_BUFFERS = 10;
+  static constexpr const char *BUFFER_NAME[MAX_BUFFERS + 1] = {
+      "input",  "output", "misc_1", "misc_2", "misc_3", "misc_4",
+      "misc_5", "misc_6", "misc_7", "misc_8", "invalid"};
+
+  using Elements = org::simple::core::SizeMetric::Elements<sizeof(double)>;
+  const size_t buffers_;
+  const size_t samples_;
+  const size_t size_;
+  const size_t generateStart_ = ORDER;
+  const size_t generateEnd_ = generateStart_ + samples_;
+  double *data_;
+
+  static size_t valid_buffers(size_t buffers) {
+    if (buffers > 0 && buffers < 10) {
+      return buffers;
+    }
+    throw std::invalid_argument(
+        "FilterScenarioBuffer: number of buffers must be in range [1..10].");
+  }
+
+  static unsigned long valid_size(size_t samples) {
+    return Elements::Valid::sum(samples, 2lu * ORDER);
+  }
+
+  static size_t valid_samples(size_t samples, size_t buffers) {
+    if (Elements::IsValid::product(buffers, valid_size(samples))) {
+      return samples;
+    }
+    throw std::invalid_argument(
+        "FilterScenarioBuffer: combination of samples and buffers too large.");
+  }
+
+  static size_t calculate_size(size_t samples) { return samples + 2 * ORDER; }
+
+  void allocate_data() {
+    data_ = new double[size_ * buffers_];
+  }
+
+  void deallocate_data() {
+    delete[] data_;
+  }
 
   static double random_sample(double scale = 1.0) {
     static constexpr double scale_ = 1.0 / RAND_MAX;
@@ -48,14 +83,26 @@ template <unsigned ORDER, unsigned SAMPLES> class FilterScenarioBuffer {
     return scale * scale_ * (2.0 * rand() - RAND_MAX);
   }
 
-  void zero_output_and_history() {
-    for (size_t i = 0; i < SIZE; i++) {
-      output_[i] = 0;
-    }
-  }
-
   static bool equals(double sample1, double sample2) {
     return fabs(sample1 - sample2) <= EQUAL_DELTA;
+  }
+
+  static const char *buffer_name(size_t selector) {
+    return BUFFER_NAME[std::min(selector, MAX_BUFFERS)];
+  }
+
+  double *get_buffer(size_t selector) {
+    if (selector < buffers_) {
+      return data_ + selector * size_;;
+    }
+    throw std::out_of_range("FilterScenarioBuffer: buffer index out of range.");
+  }
+
+  const double *get_buffer(size_t selector) const {
+    if (selector < buffers_) {
+      return data_ + selector * size_;
+    }
+    throw std::out_of_range("FilterScenarioBuffer: buffer index out of range.");
   }
 
   static void print_samples(size_t i, double s1, double s2) {
@@ -64,36 +111,69 @@ template <unsigned ORDER, unsigned SAMPLES> class FilterScenarioBuffer {
     std::cout << "\t" << i << ":\t" << s1 << "\t" << eq << s2 << std::endl;
   }
 
+  static void check_compatible_buffers(const FilterScenarioBuffer &first,
+                                       const FilterScenarioBuffer &second,
+                                       size_t selector) {
+    if (first.samples_ != second.samples_) {
+      throw std::invalid_argument(
+          "FilterScenarioBuffer: buffers of different size used.");
+    }
+    if (selector >= first.buffers_ || selector >= second.buffers_) {
+      throw std::invalid_argument(
+          "FilterScenarioBuffer: buffer selector invalid.");
+    }
+  }
+
   static void print_both(const FilterScenarioBuffer &first,
-                         const FilterScenarioBuffer &second, bool output,
+                         const FilterScenarioBuffer &second, size_t selector,
                          const char *msg = nullptr) {
+    check_compatible_buffers(first, second, selector);
     std::cout << "Comparison of buffers (";
-    std::cout << (output ? "output" : "input");
+    std::cout << buffer_name(selector);
     if (msg) {
       std::cout << "; " << msg;
     }
     std::cout << ")" << std::endl;
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
     std::cout.precision(4);
-    const double *p1 = output ? first.output_ : first.input_;
-    const double *p2 = output ? second.output_ : second.input_;
+    const double *p1 = first.get_buffer(selector);
+    const double *p2 = second.get_buffer(selector);
 
     size_t i;
-    for (i = 0; i < GENERATE_START; i++) {
+    for (i = 0; i < first.generateStart_; i++) {
       print_samples(i, p1[i], p2[i]);
     }
     std::cout << "\t---" << std::endl;
-    for (; i < GENERATE_END; i++) {
+    for (; i < first.generateEnd_; i++) {
       print_samples(i, p1[i], p2[i]);
     }
     std::cout << "\t---" << std::endl;
-    for (; i < SIZE; i++) {
+    for (; i < first.size_; i++) {
       print_samples(i, p1[i], p2[i]);
     }
     std::cout << "done" << std::endl;
   }
 
+  void zero_buffer(size_t selector) {
+    auto dst = get_buffer(selector);
+    for (size_t i = 0; i < size_; i++) {
+      dst[i] = 0;
+    }
+  }
+
 public:
+  FilterScenarioBuffer(size_t samples, size_t buffers)
+      : buffers_(valid_buffers(buffers)),
+        samples_(valid_samples(samples, buffers_)), size_(valid_size(samples_)),
+        generateStart_(ORDER), generateEnd_(generateStart_ + samples_) {
+    allocate_data();
+    for (size_t selector = 0; selector < buffers_; selector++) {
+      zero_buffer(selector);
+    }
+  }
+
+  ~FilterScenarioBuffer() { deallocate_data(); }
+
   void print_output_comparison(const FilterScenarioBuffer &first,
                                const char *msg) const {
     print_both(*this, first, true, msg);
@@ -104,122 +184,124 @@ public:
     print_both(*this, first, false, msg);
   }
 
-  void copy_from(const FilterScenarioBuffer &source) {
-    for (size_t i = 0; i < SIZE; i++) {
-      input_[i] = source.input_[i];
+  void copy_from(const FilterScenarioBuffer &source, size_t selector) {
+    check_compatible_buffers(*this, source, selector);
+    auto dst = get_buffer(selector);
+    auto src = source.get_buffer(selector);
+    for (size_t i = 0; i < size_; i++) {
+      dst[i] = src[i];
     }
   }
 
-  void copy_from_reverse(const FilterScenarioBuffer &source) {
-    for (size_t i = 0, j = SIZE - 1; i < SIZE; i++, j--) {
-      input_[i] = source.input_[j];
+  void copy_from_reverse(const FilterScenarioBuffer &source,
+                         size_t selector) {
+    check_compatible_buffers(*this, source, selector);
+    auto dst = get_buffer(selector);
+    auto src = source.get_buffer(selector);
+    for (size_t i = 0, j = size_ - 1; i < size_; i++, j--) {
+      dst[i] = src[j];
     }
   }
 
-  bool equals(const FilterScenarioBuffer &source) {
-    for (size_t i = 0; i < SIZE; i++) {
-      if (!equals(output_[i], source.output_[i])) {
-        print_both(*this, source, true, "Equal fail");
+  bool equals(const FilterScenarioBuffer &other, size_t selector) {
+    auto me = get_buffer(selector);
+    auto you = other.get_buffer(selector);
+    for (size_t i = 0; i < size_; i++) {
+      if (!equals(me[i], you[i])) {
+        print_both(*this, other, true, "Equal fail");
         return false;
       }
     }
     return true;
   }
 
-  bool equals_input(const FilterScenarioBuffer &source) {
-    for (size_t i = 0; i < SIZE; i++) {
-      if (!equals(input_[i], source.input_[i])) {
-        print_both(*this, source, false, "Equal fail");
+  bool equals_reverse(const FilterScenarioBuffer &other, size_t selector) {
+    auto me = get_buffer(selector);
+    auto you = other.get_buffer(selector);
+    for (size_t i = 0, j = size_ - 1; i < size_; i++, j--) {
+      if (!equals(me[i], you[j])) {
+        print_both(*this, other, true, "Reverse equal fail");
         return false;
       }
     }
     return true;
   }
 
-  bool equals_reverse(const FilterScenarioBuffer &source) {
-    for (size_t i = 0, j = SIZE - 1; i < SIZE; i++, j--) {
-      if (!equals(output_[i], source.output_[j])) {
-        print_both(*this, source, true, "Reverse equal fail");
-        return false;
-      }
-    }
-    return true;
-  }
-
-  bool equals_reverse_input(const FilterScenarioBuffer &source) {
-    for (size_t i = 0, j = SIZE - 1; i < SIZE; i++, j--) {
-      if (!equals(input_[i], source.input_[j])) {
-        print_both(*this, source, false, "Reverse equal fail");
-        return false;
-      }
-    }
-    return true;
-  }
-
-  void fill_with_random_zero_padded() {
+  void fill_with_random_zero_padded(size_t selector = 0) {
+    auto dst = get_buffer(selector);
     size_t i;
-    for (i = 0; i < GENERATE_START; i++) {
-      input_[i] = 0;
+    for (i = 0; i < generateStart_; i++) {
+      dst[i] = 0;
     }
-    for (; i < GENERATE_END; i++) {
-      input_[i] = random_sample();
+    for (; i < generateEnd_; i++) {
+      dst[i] = random_sample();
     }
-    for (; i < SIZE; i++) {
-      input_[i] = 0;
-    }
-  }
-
-  void fill_with_random() {
-    for (size_t i = 0; i < SIZE; i++) {
-      input_[i] = random_sample();
+    for (; i < size_; i++) {
+      dst[i] = 0;
     }
   }
 
-  void filter_forward_offs(const Coefficients<ORDER> &coeffs_) {
-    zero_output_and_history();
-    coeffs_.filter_forward_offs(SAMPLES, input_, output_);
+  void fill_with_random(size_t selector) {
+    auto dst = get_buffer(selector);
+    for (size_t i = 0; i < size_; i++) {
+      dst[i] = random_sample();
+    }
   }
 
-  void filter_backward_offs(const Coefficients<ORDER> &coeffs_) {
-    zero_output_and_history();
-    coeffs_.filter_backward_offs(SAMPLES, &input_[ORDER], &output_[ORDER]);
+  void filter_forward_offs(const Coefficients<ORDER> &coeffs_,
+                           size_t input_selector, size_t output_selector) {
+    zero_buffer(output_selector);
+    coeffs_.filter_forward_offs(samples_, get_buffer(input_selector),
+                                get_buffer(output_selector));
   }
 
-  void filter_forward_zero(const Coefficients<ORDER> &coeffs_) {
-    zero_output_and_history();
-    coeffs_.filter_forward_history_zero(SAMPLES, &input_[ORDER],
-                                        &output_[ORDER]);
+  void filter_backward_offs(const Coefficients<ORDER> &coeffs_,
+                            size_t input_selector, size_t output_selector) {
+    zero_buffer(output_selector);
+    coeffs_.filter_backward_offs(samples_, get_buffer(input_selector) + ORDER,
+                                 get_buffer(output_selector) + ORDER);
   }
 
-  void filter_backward_zero(const Coefficients<ORDER> &coeffs_) {
-    zero_output_and_history();
-    coeffs_.filter_backward_history_zero(SAMPLES, &input_[ORDER],
-                                         &output_[ORDER]);
+  void filter_forward_zero(const Coefficients<ORDER> &coeffs_,
+                           size_t input_selector, size_t output_selector) {
+    zero_buffer(output_selector);
+    coeffs_.filter_forward_history_zero(samples_,
+                                        get_buffer(input_selector) + ORDER,
+                                        get_buffer(output_selector) + ORDER);
   }
 
-  void filter_forward_single(const Coefficients<ORDER> &coeffs) {
+  void filter_backward_zero(const Coefficients<ORDER> &coeffs_,
+                            size_t input_selector, size_t output_selector) {
+    zero_buffer(output_selector);
+    coeffs_.filter_backward_history_zero(samples_,
+                                         get_buffer(input_selector) + ORDER,
+                                         get_buffer(output_selector) + ORDER);
+  }
+
+  void filter_forward_single(const Coefficients<ORDER> &coeffs,
+                             size_t input_selector, size_t output_selector) {
     double in_history[ORDER];
     double out_history[ORDER];
-    zero_output_and_history();
+    double *in = get_buffer(input_selector);
+    double *out = get_buffer(output_selector);
+    zero_buffer(output_selector);
     // reverse copy (in history, the past has higher memory offset)
     for (size_t i = 0, j = ORDER - 1; i < ORDER; i++, j--) {
-      in_history[i] = input_[j];
-      out_history[i] = output_[j];
+      in_history[i] = in[j];
+      out_history[i] = out[j];
     }
-    for (size_t i = ORDER; i < ORDER + SAMPLES; i++) {
-      output_[i] = coeffs.filter_single(in_history, out_history, input_[i]);
+    for (size_t i = ORDER; i < ORDER + samples_; i++) {
+      out[i] = coeffs.filter_single(in_history, out_history, in[i]);
     }
   }
 
-  void generate_random(Coefficients<ORDER> &coeffs_) const {
+  void generate_random_filter(Coefficients<ORDER> &coeffs_) const {
     double scale = 0.45 / ORDER;
     for (size_t i = 0; i <= ORDER; i++) {
       coeffs_.setFB(i, random_sample(scale));
       coeffs_.setFF(i, random_sample(scale));
     }
   }
-
-  FilterScenarioBuffer() { zero_output_and_history(); }
 };
 
 } // end of anonymous namespace
