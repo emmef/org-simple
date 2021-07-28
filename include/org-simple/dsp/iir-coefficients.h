@@ -138,6 +138,9 @@ public:
                                      S *__restrict out) const = 0;
 
   [[nodiscard]] inline unsigned getOrder() const { return getValidOrder(); }
+  [[nodiscard]] size_t getCoefficientCount() const {
+    return getValidOrder() + 1;
+  }
   [[nodiscard]] inline S getFB(size_t i) const {
     return getValidFB(Index::checked(i, getCoefficientCount()));
   }
@@ -176,9 +179,6 @@ protected:
   [[nodiscard]] virtual S getValidFB(size_t i) const = 0;
 
 private:
-  [[nodiscard]] size_t getCoefficientCount() const {
-    return getValidOrder() + 1;
-  }
 };
 
 /**
