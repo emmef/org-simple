@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(testNowIsAsSetUsingSecondsDuration) {
 }
 
 BOOST_AUTO_TEST_CASE(testNowIsAsSetUsingCount) {
-  int64_t count = rand() - rand();
+  uint64_t count = rand();
 
   Clock::set_count(count);
 
