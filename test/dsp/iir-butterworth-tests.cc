@@ -93,10 +93,6 @@ public:
   }
 };
 
-//static bool same(double v1, double v2, double epsilon = 1e-12) {
-//  return boost::math::relative_difference(v1, v2) < epsilon;
-//}
-
 static double reference_high_pass_gain(size_t order, double rel) {
   double alpha = pow(fabs(rel), order);
   return alpha / sqrt(1.0 + alpha * alpha);
@@ -106,7 +102,6 @@ static double reference_low_pass_gain(size_t order, double rel) {
   double alpha2 = pow(fabs(rel), order * 2);
   return 1.0 / sqrt(1.0 + alpha2);
 }
-
 
 struct GainScenario {
   FilterType type;

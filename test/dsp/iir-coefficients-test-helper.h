@@ -21,6 +21,7 @@
  * limitations under the License.
  */
 
+#include <org-simple/util/Array.h>
 #include <org-simple/dsp/iir-coefficients.h>
 
 namespace {
@@ -45,7 +46,7 @@ template <unsigned ORDER> class FilterScenarioBuffer {
   const size_t size_;
   const size_t generateStart_ = ORDER;
   const size_t generateEnd_ = generateStart_ + samples_;
-  double *data_;
+  org::simple::util::ArrayAllocated<double> data_;
 
   static size_t valid_buffers(size_t buffers) {
     if (buffers > 0 && buffers < 10) {
@@ -68,14 +69,6 @@ template <unsigned ORDER> class FilterScenarioBuffer {
   }
 
   static size_t calculate_size(size_t samples) { return samples + 2 * ORDER; }
-
-  void allocate_data() {
-    data_ = new double[size_ * buffers_];
-  }
-
-  void deallocate_data() {
-    delete[] data_;
-  }
 
   static double random_sample(double scale = 1.0) {
     static constexpr double scale_ = 1.0 / RAND_MAX;
@@ -165,14 +158,14 @@ public:
   FilterScenarioBuffer(size_t samples, size_t buffers)
       : buffers_(valid_buffers(buffers)),
         samples_(valid_samples(samples, buffers_)), size_(valid_size(samples_)),
-        generateStart_(ORDER), generateEnd_(generateStart_ + samples_) {
-    allocate_data();
+        generateStart_(ORDER), generateEnd_(generateStart_ + samples_),
+        data_(size_ * buffers_) {
     for (size_t selector = 0; selector < buffers_; selector++) {
       zero_buffer(selector);
     }
   }
 
-  ~FilterScenarioBuffer() { deallocate_data(); }
+  ~FilterScenarioBuffer() { }
 
   void print_output_comparison(const FilterScenarioBuffer &first,
                                const char *msg) const {
