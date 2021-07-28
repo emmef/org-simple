@@ -108,7 +108,7 @@ struct AbstractFakeClock : private FakeClockCounter<threadLocal> {
     set_count(time.time_since_epoch().count());
   };
 
-  static void set_count(int64_t new_count) { set(new_count); }
+  static void set_count(uint64_t new_count) { set(new_count); }
 
   static int64_t add_get_count(int64_t value) { return add_and_get(value); }
 
