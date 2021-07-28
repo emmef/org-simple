@@ -188,6 +188,9 @@ public:
     return begin() + capacity();
   }
 
+  const T *operator+(size_t offset) const { return begin() + Index::safe(offset, capacity()); }
+  T *operator+(size_t offset) { return begin() + Index::safe(offset, capacity()); }
+
   // capacity
 
   size_t capacity() const {
@@ -208,6 +211,7 @@ public:
     return begin()[Index::unsafe(offset, capacity())];
   }
   T &data(size_t offset) { return begin()[Index::unsafe(offset, capacity())]; }
+
   const T &operator[](size_t offset) const { return data(offset); }
   T &operator[](size_t offset) { return data(offset); }
 
@@ -217,6 +221,8 @@ public:
     return begin()[Index::safe(offset, capacity())];
   }
   T &at(size_t offset) { return begin()[Index::safe(offset, capacity())]; }
+
+
 
   /**
    * Copies all the elements from \c source to this array if they both have the
