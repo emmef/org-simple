@@ -137,16 +137,16 @@ struct Butterworth {
   static void
   getLowPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
                          double relativeFrequency, Coefficient scale = 1.0) {
-    size_t order = validOrder(coefficients.order());
+    size_t order = validOrder(coefficients.getOrder());
     int unscaledCCoefficients[coefficients.getCoefficientCount()];
     getUnscaledLowPassCCoefficients(order, unscaledCCoefficients);
 
-    setFeedbackCoefficients(coefficients, relativeFrequency);
+    setFeedForwardCoefficients(coefficients, relativeFrequency);
 
     double scaleOfC = scale * getLowPassScalingFactor(order, relativeFrequency);
 
     for (size_t i = 0; i <= order; i++) {
-      coefficients.setFF(i, scaleOfC * unscaledCCoefficients[i]);
+      coefficients.setFB(i, scaleOfC * unscaledCCoefficients[i]);
     }
   }
 
@@ -154,24 +154,24 @@ struct Butterworth {
   static void
   getHighPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
                           double relativeFrequency, Coefficient scale = 1.0) {
-    size_t order = validOrder(coefficients.order());
+    size_t order = validOrder(coefficients.getOrder());
     int unscaledCCoefficients[coefficients.getCoefficientCount()];
     getUnscaledHighPassCCoefficients(order, unscaledCCoefficients);
 
-    setFeedbackCoefficients(coefficients, relativeFrequency);
+    setFeedForwardCoefficients(coefficients, relativeFrequency);
 
     double scaleOfC =
         scale * getHighPassScalingFactor(order, relativeFrequency);
 
     for (size_t i = 0; i <= order; i++) {
-      coefficients.setFF(i, scaleOfC * unscaledCCoefficients[i]);
+      coefficients.setFB(i, scaleOfC * unscaledCCoefficients[i]);
     }
   }
 
 private:
   template <typename Coefficient>
   static void
-  setFeedbackCoefficients(CoefficientsFilter<Coefficient> &d_coefficients,
+  setFeedForwardCoefficients(CoefficientsFilter<Coefficient> &d_coefficients,
                           double relativeFrequency) {
     const size_t order = d_coefficients.getOrder();
     double fbCoeffs[order * 2 + 1];
@@ -215,7 +215,7 @@ private:
        * where they where subtracted instead of added. We do adds only, so we
        * need to negate them here.
        */
-      d_coefficients.setFB(i, -fbCoeffs[i]);
+      d_coefficients.setFF(i, -fbCoeffs[i]);
     }
   }
 
