@@ -49,16 +49,31 @@ static bool is_supported_bw_type(FilterType type) {
   return type == FilterType::HIGH_PASS || type == FilterType::LOW_PASS;
 }
 
-static double get_wb_high_pass_gain(size_t order, double relative_w0_freq) {
+static double get_bw_high_pass_gain(size_t order, double relative_w0_freq) {
   double alpha = pow(fabs(relative_w0_freq), valid_bw_order(order));
   return alpha / sqrt(1.0 + alpha * alpha);
 }
 
-static double get_wb_low_pass_gain(size_t order, double relative_w0_freq) {
+static double get_bw_low_pass_gain(size_t order, double relative_w0_freq) {
   double alpha2 = pow(fabs(relative_w0_freq), valid_bw_order(order) * 2);
   return 1.0 / sqrt(1.0 + alpha2);
 }
 
+static double get_bw_gain(FilterType type, size_t order,
+                          double relative_w0_freq) {
+  switch (type) {
+  case FilterType::LOW_PASS:
+    return get_bw_low_pass_gain(order, relative_w0_freq);
+  case FilterType::HIGH_PASS:
+    return get_bw_high_pass_gain(order, relative_w0_freq);
+  default:
+    throw std::invalid_argument("org::simple::dsp::iir::get_wb_gain: "
+                                "FilterType must be HIGH_PASS or LOW_PASS");
+  }
+
+  double alpha = pow(fabs(relative_w0_freq), valid_bw_order(order));
+  return alpha / sqrt(1.0 + alpha * alpha);
+}
 static inline bool is_bw_valid_relative_frequency(double relative) {
   return relative >= std::numeric_limits<double>::epsilon() && relative <= 0.5;
 }
@@ -95,17 +110,16 @@ struct Butterworth {
   }
 
   static double getHighPassGain(size_t order, double relative_w0_freq) {
-    return get_wb_high_pass_gain(order, relative_w0_freq);
+    return get_bw_high_pass_gain(order, relative_w0_freq);
   }
 
   static double getLowPassGain(size_t order, double relative_w0_freq) {
-    return get_wb_low_pass_gain(order, relative_w0_freq);
+    return get_bw_low_pass_gain(order, relative_w0_freq);
   }
 
   static double relativeNycquistLimitedFrequency(Rate sampleRate,
-                                                           double frequency) {
-    return std::clamp(sampleRate.relative(frequency),
-                        -0.5, 0.5);
+                                                 double frequency) {
+    return std::clamp(sampleRate.relative(frequency), -0.5, 0.5);
   }
 
   template <typename Coefficient>
@@ -138,7 +152,7 @@ struct Butterworth {
   getLowPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
                          double relativeFrequency, Coefficient scale = 1.0) {
     size_t order = validOrder(coefficients.getOrder());
-    int unscaledCCoefficients[coefficients.getCoefficientCount()];
+    int unscaledCCoefficients[getMaxOrder() + 1];
     getUnscaledLowPassCCoefficients(order, unscaledCCoefficients);
 
     setFeedForwardCoefficients(coefficients, relativeFrequency);
@@ -155,7 +169,7 @@ struct Butterworth {
   getHighPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
                           double relativeFrequency, Coefficient scale = 1.0) {
     size_t order = validOrder(coefficients.getOrder());
-    int unscaledCCoefficients[coefficients.getCoefficientCount()];
+    int unscaledCCoefficients[getMaxOrder() + 1];
     getUnscaledHighPassCCoefficients(order, unscaledCCoefficients);
 
     setFeedForwardCoefficients(coefficients, relativeFrequency);
@@ -172,19 +186,20 @@ private:
   template <typename Coefficient>
   static void
   setFeedForwardCoefficients(CoefficientsFilter<Coefficient> &d_coefficients,
-                          double relativeFrequency) {
+                             double relativeFrequency) {
     const size_t order = d_coefficients.getOrder();
-    double fbCoeffs[order * 2 + 1];
-    memset(&fbCoeffs, 0, sizeof(fbCoeffs));
+    size_t totalCoefficients = order * 2 + 1;
+    double fbCoeffs[getMaxOrder() * 2 + 1];
+    memset(&fbCoeffs, 0, totalCoefficients * sizeof(double));
     // binomial coefficients
-    double binomials[2 * order + 2];
-    memset(&binomials, 0, sizeof(binomials));
+    double binomials[getMaxOrder() * 2 + 2];
+    memset(&binomials, 0, (2 * order + 2) * sizeof(double));
 
     double theta = M_PI * 2 * relativeFrequency;
     double st = sin(theta);
     double ct = cos(theta);
 
-    for (int k = 0; k < order; ++k) {
+    for (unsigned k = 0; k < order; ++k) {
       double parg = M_PI * (double)(2 * k + 1) / (double)(2 * order);
       double sparg = sin(parg);
       double cparg = cos(parg);
@@ -193,12 +208,12 @@ private:
       binomials[2 * k + 1] = -st * cparg / a;
     }
 
-    for (int i = 0; i < order; ++i) {
+    for (unsigned i = 0; i < order; ++i) {
       for (int j = i; j > 0; --j) {
         fbCoeffs[2 * j] += binomials[2 * i] * fbCoeffs[2 * (j - 1)] -
-                       binomials[2 * i + 1] * fbCoeffs[2 * (j - 1) + 1];
+                           binomials[2 * i + 1] * fbCoeffs[2 * (j - 1) + 1];
         fbCoeffs[2 * j + 1] += binomials[2 * i] * fbCoeffs[2 * (j - 1) + 1] +
-                           binomials[2 * i + 1] * fbCoeffs[2 * (j - 1)];
+                               binomials[2 * i + 1] * fbCoeffs[2 * (j - 1)];
       }
       fbCoeffs[0] += binomials[2 * i];
       fbCoeffs[1] += binomials[2 * i + 1];
@@ -206,10 +221,10 @@ private:
 
     fbCoeffs[1] = fbCoeffs[0];
     fbCoeffs[0] = 1.0;
-    for (int k = 3; k <= order; ++k) {
+    for (unsigned k = 3; k <= order; ++k) {
       fbCoeffs[k] = fbCoeffs[2 * k - 2];
     }
-    for (int i = 0; i <= order; i++) {
+    for (unsigned i = 0; i <= order; i++) {
       /*
        * Negate coefficients as this calculus was meant for recursive equations
        * where they where subtracted instead of added. We do adds only, so we
@@ -235,12 +250,13 @@ private:
     ffCoeffs[order] = 1;
   }
 
-  static double getLowPassScalingFactor(size_t order, double relativeFrequency) {
+  static double getLowPassScalingFactor(size_t order,
+                                        double relativeFrequency) {
     double omega = M_PI * 2 * relativeFrequency;
     double fomega = sin(omega);
     double parg0 = M_PI / (double)(2 * order);
 
-    double sf = 1.0;     // scaling factor
+    double sf = 1.0; // scaling factor
     for (size_t k = 0; k < order / 2; ++k) {
       sf *= 1.0 + fomega * sin((double)(2 * k + 1) * parg0);
     }
@@ -255,7 +271,8 @@ private:
     return (sf);
   }
 
-  static double getHighPassScalingFactor(size_t order, double relativeFrequency) {
+  static double getHighPassScalingFactor(size_t order,
+                                         double relativeFrequency) {
     double omega = M_PI * 2 * relativeFrequency;
 
     double sf = 1.0;
@@ -284,8 +301,6 @@ private:
       }
     }
   }
-
-
 };
 
 } // namespace org::simple::dsp::iir
