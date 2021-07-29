@@ -56,6 +56,18 @@ enum class FilterType {
   HIGH_PASS
 };
 
+static constexpr size_t MAX_ORDER = 31;
+static constexpr bool is_valid_order(size_t order) {
+  return order > 0 && order <= MAX_ORDER;
+}
+static size_t validated_order(size_t order) {
+  if (is_valid_order(order)) {
+    return order;
+  }
+  throw std::invalid_argument(
+      "org::simple::dsp::iir: filter order must be between 1 and 31.");
+}
+
 template <typename S> class CoefficientsFilter {
 public:
   /**
@@ -217,7 +229,6 @@ protected:
   [[nodiscard]] coeff getValidFB(size_t i) const final { return getFB_(i); }
 
 public:
-
   /**
    * Filters a single input, using the history of inputs and outputs for the
    * recursive filter. The histories will be updated with the most recent
@@ -430,6 +441,33 @@ public:
   }
 };
 
+template <typename coeff> class FilterHistory {
+  size_t order_;
+  std::unique_ptr<coeff[]> data_;
+
+public:
+  FilterHistory(size_t order)
+      : order_(validated_order(order)), data_(new coeff[2 * order_]) {}
+
+  template <typename C, unsigned O, class F>
+  FilterHistory(const Coefficients<C, O, F> &filter)
+      : FilterHistory(filter.getOrder()) {}
+
+  FilterHistory(const CoefficientsFilter<coeff> &filter)
+      : FilterHistory(filter.getOrder()) {}
+
+  coeff *inputs() { return data_.get(); }
+  coeff *outputs() { return data_.get() + order_; }
+  size_t order() const { return order_; }
+
+  void zero() {
+    for (coeff *p = data_.get(), *end = p + order_ * 2; p < end; p++) {
+      *p = 0;
+    }
+  }
+};
+
+
 template <typename C, unsigned O, size_t A = 0>
 class FixedOrderCoefficients
     : public Coefficients<C, O, FixedOrderCoefficients<C, O, A>> {
@@ -473,7 +511,115 @@ public:
   FixedOrderCoefficientsRef(C *const pool_location) : coeffs(pool_location) {}
 };
 
-// ArrayDataRefFixedSize
+template <typename S>
+size_t effectiveIRLength(const CoefficientsFilter<S> &filter, size_t maxLength,
+                         double error) {
+  static constexpr size_t values_ = 2;
+  static constexpr size_t eras_ = 3;
+
+  class FilterState {
+    const CoefficientsFilter<S> &filter_;
+    size_t coeffs_;
+    size_t era_;
+    org::simple::util::ArrayAllocated<S> data_;
+    bool firstSample_;
+
+    S getSample() {
+      if (firstSample_) {
+        firstSample_ = false;
+        return 1.0;
+      }
+      return 0.0;
+    }
+
+  public:
+    FilterState(const CoefficientsFilter<S> &filter)
+        : filter_(filter), coeffs_(filter.getCoefficientCount()),
+          era_(2 * coeffs_ + values_), data_(era_ * eras_), firstSample_(true) {
+      S *p;
+      for (p = data_.begin(); p < data_.end(); p++) {
+        *p = 0.0;
+      }
+    }
+
+    S output() {
+      return filter_.single(data_.begin(), data_ + coeffs_, getSample());
+    }
+
+    void storeBlock(S value) { data_[2 * coeffs_] = value; }
+    void storeTotal(S value) { data_[2 * coeffs_ + 1] = value; }
+    S loadBlock() const { return data_[2 * coeffs_]; }
+    S loadTotal() const { return data_[2 * coeffs_ + 1]; }
+
+    void nextEra() {
+      S *to = data_.end();
+      const S *from = to - era_;
+      while (from > data_.begin()) {
+        *--to = *--from;
+      }
+    }
+
+    void previousEra() {
+      S *to = data_.begin();
+      const S *from = to + era_;
+      const S *end = data_.end();
+      while (from < end) {
+        *++to = *++from;
+      }
+    }
+  } state(filter);
+  double err = std::clamp(error, 1e-32, 0.9);
+  size_t minSamples = filter.getCoefficientCount();
+  size_t maxSamples =
+      std::min(std::max(minSamples, maxLength),
+               std::numeric_limits<size_t>::max() / 2 / sizeof(S));
+  size_t maxBlockEnd = org::simple::core::Bits<size_t>::fill(maxSamples) + 1;
+
+  size_t blockStart = 0;
+  size_t blockEnd = 1;
+
+  double total = 0;
+  double block = 0;
+  bool terminate = false;
+  while (blockEnd < maxBlockEnd || blockStart <= minSamples) {
+    for (size_t i = blockStart; i < blockEnd; i++) {
+      block += fabs(state.output());
+    }
+    state.storeBlock(block);
+    state.storeTotal(total);
+    terminate = block < err * total;
+    if (terminate) {
+      break;
+    }
+    total += block;
+    block = 0;
+    state.nextEra();
+    blockStart = blockEnd;
+    blockEnd += blockStart;
+  }
+  if (!terminate) {
+    return blockStart;
+  }
+  // tail becomes sum of current block and previous block
+  double tail = state.loadBlock();
+  state.previousEra();
+  tail += state.loadBlock();
+  // total becomes totoal at start of previous block
+  total = state.loadTotal();
+  // roll back filter history state to the start of the previous block
+  state.previousEra();
+  // recalculate previous block with continuous termination check
+  block = 0;
+  size_t sample;
+  for (sample = blockStart / 2; sample < blockStart; sample++) {
+    block += fabs(state.output());
+    if (tail - block < err * (total + block)) {
+      break;
+    }
+  }
+
+  return sample;
+}
 
 } // namespace org::simple::dsp::iir
 
