@@ -28,131 +28,100 @@
 
 namespace org::simple::dsp::iir {
 
-static constexpr bool is_valid_bw_order(size_t order) {
-  return order >= 1 && order <= 20;
-}
-
-static unsigned short valid_bw_order(size_t order) {
-  if (is_valid_bw_order(order)) {
-    return order;
-  }
-  throw std::invalid_argument(
-      "valid_bw_order: order must be between 1 and 20.");
-}
-
-template <typename... A>
-static size_t valid_bw_order(const Coefficients<A...> &coeffs) {
-  return valid_bw_order(coeffs.getOrder());
-}
-
-static bool is_supported_bw_type(FilterType type) {
-  return type == FilterType::HIGH_PASS || type == FilterType::LOW_PASS;
-}
-
 static double get_bw_high_pass_gain(size_t order, double relative_w0_freq) {
-  double alpha = pow(fabs(relative_w0_freq), valid_bw_order(order));
+  double alpha = pow(fabs(relative_w0_freq), order);
   return alpha / sqrt(1.0 + alpha * alpha);
 }
 
 static double get_bw_low_pass_gain(size_t order, double relative_w0_freq) {
-  double alpha2 = pow(fabs(relative_w0_freq), valid_bw_order(order) * 2);
+  double alpha2 = pow(fabs(relative_w0_freq), order * 2);
   return 1.0 / sqrt(1.0 + alpha2);
 }
 
-static double get_bw_gain(FilterType type, size_t order,
-                          double relative_w0_freq) {
-  switch (type) {
-  case FilterType::LOW_PASS:
-    return get_bw_low_pass_gain(order, relative_w0_freq);
-  case FilterType::HIGH_PASS:
-    return get_bw_high_pass_gain(order, relative_w0_freq);
-  default:
-    throw std::invalid_argument("org::simple::dsp::iir::get_wb_gain: "
-                                "FilterType must be HIGH_PASS or LOW_PASS");
-  }
-
-  double alpha = pow(fabs(relative_w0_freq), valid_bw_order(order));
-  return alpha / sqrt(1.0 + alpha * alpha);
-}
-static inline bool is_bw_valid_relative_frequency(double relative) {
-  return relative >= std::numeric_limits<double>::epsilon() && relative <= 0.5;
-}
-
-template <typename... S>
-[[nodiscard]] static bool
-are_bw_valid_parameters(Coefficients<S...> &coefficients,
-                        double relativeFrequency, FilterType filterType) {
-  return is_bw_valid_relative_frequency(relativeFrequency) &&
-         is_supported_bw_type(filterType) &&
-         is_valid_bw_order(coefficients.getOrder());
-}
-
-template <typename... S>
-[[nodiscard]] static bool
-are_bw_valid_parameters(Coefficients<S...> &coefficients, Rate sampleRate,
-                        double frequency, FilterType filterType) {
-  return are_bw_valid_parameters(coefficients, sampleRate.relative(frequency),
-                                 filterType);
-}
-
 struct Butterworth {
-  static constexpr size_t getMaxOrder() { return 20; }
+  static constexpr size_t MAX_ORDER = 20;
+  static constexpr const char *CATEGORY = "Butterworth";
 
-  static bool isValidOrder(size_t order) {
-    return order > 0 && order <= getMaxOrder();
+  static inline bool isValidOrder(size_t order) {
+    return order > 0 && order <= MAX_ORDER;
   }
 
-  static size_t validOrder(size_t order) {
+  static inline size_t validatedOrder(size_t order) {
     if (isValidOrder(order)) {
       return order;
     }
-    throw std::invalid_argument("Butterworth order must be between 1 and 20");
+    throw std::invalid_argument(
+        "org::simple::dsp::iir:Butterworth order must be between 1 and 8");
   }
 
-  static double getHighPassGain(size_t order, double relative_w0_freq) {
-    return get_bw_high_pass_gain(order, relative_w0_freq);
+  static inline bool isValidFilterType(FilterType type) {
+    return type == FilterType::HIGH_PASS || type == FilterType::LOW_PASS;
   }
 
-  static double getLowPassGain(size_t order, double relative_w0_freq) {
-    return get_bw_low_pass_gain(order, relative_w0_freq);
+  static inline FilterType validatedFilterType(FilterType type) {
+    return validated_filter_type(type, isValidFilterType, CATEGORY);
   }
 
-  static double relativeNycquistLimitedFrequency(Rate sampleRate,
-                                                 double frequency) {
-    return std::clamp(sampleRate.relative(frequency), -0.5, 0.5);
+  static inline const char *getTypeName(FilterType type) {
+    return get_filter_type_name(type, isValidFilterType);
+  }
+
+  static inline double getGain(FilterType type, size_t order,
+                               double relative_w0_freq,
+                               bool clampFrequency = false) {
+    if (validatedFilterType(type) == FilterType::LOW_PASS) {
+      return getLowPassGain(order, relative_w0_freq, clampFrequency);
+    }
+    return getHighPassGain(order, relative_w0_freq, clampFrequency);
+  }
+
+  static inline double getHighPassGain(size_t order, double relative_w0_freq,
+                                       bool clampFrequency) {
+    return get_bw_high_pass_gain(
+        validatedOrder(order),
+        clampFrequency ? getClampedRelativeFrequency(relative_w0_freq)
+                       : relative_w0_freq);
+  }
+
+  static inline double getLowPassGain(size_t order, double relative_w0_freq,
+                                      bool clampFrequency) {
+    return get_bw_low_pass_gain(
+        validatedOrder(order),
+        clampFrequency ? getClampedRelativeFrequency(relative_w0_freq)
+                       : relative_w0_freq);
+  }
+
+  static double getClampedRelativeFrequency(double frequency) {
+    return frequency;
   }
 
   template <typename Coefficient>
   static void create(CoefficientsFilter<Coefficient> &coefficients,
                      Rate sampleRate, double frequency, FilterType filterType,
                      Coefficient scale = 1.0) {
-    create(coefficients,
-           relativeNycquistLimitedFrequency(frequency, sampleRate), filterType,
-           scale);
+    create(coefficients, sampleRate.relative(frequency), filterType, scale);
   }
 
   template <typename Coefficient>
   static void create(CoefficientsFilter<Coefficient> &coefficients,
                      double relativeFrequency, FilterType filterType,
                      Coefficient scale = 1.0) {
-    switch (filterType) {
-    case FilterType::LOW_PASS:
-      getLowPassCoefficients(coefficients, relativeFrequency, scale);
-      return;
-    case FilterType::HIGH_PASS:
-      getHighPassCoefficients(coefficients, relativeFrequency, scale);
-      return;
-    default:
-      throw std::invalid_argument("Unknown filter type (must be low or high");
+    if (validatedFilterType(filterType) == FilterType::LOW_PASS) {
+      setLowPassCoefficients(
+          coefficients, getClampedRelativeFrequency(relativeFrequency), scale);
+    } else {
+      setHighPassCoefficients(
+          coefficients, getClampedRelativeFrequency(relativeFrequency), scale);
     }
   }
 
+private:
   template <typename Coefficient>
   static void
-  getLowPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
+  setLowPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
                          double relativeFrequency, Coefficient scale = 1.0) {
-    size_t order = validOrder(coefficients.getOrder());
-    int unscaledCCoefficients[getMaxOrder() + 1];
+    size_t order = validatedOrder(coefficients.getOrder());
+    int unscaledCCoefficients[MAX_ORDER + 1];
     getUnscaledLowPassCCoefficients(order, unscaledCCoefficients);
 
     setFeedForwardCoefficients(coefficients, relativeFrequency);
@@ -166,10 +135,10 @@ struct Butterworth {
 
   template <typename Coefficient>
   static void
-  getHighPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
+  setHighPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,
                           double relativeFrequency, Coefficient scale = 1.0) {
-    size_t order = validOrder(coefficients.getOrder());
-    int unscaledCCoefficients[getMaxOrder() + 1];
+    size_t order = validatedOrder(coefficients.getOrder());
+    int unscaledCCoefficients[MAX_ORDER + 1];
     getUnscaledHighPassCCoefficients(order, unscaledCCoefficients);
 
     setFeedForwardCoefficients(coefficients, relativeFrequency);
@@ -182,17 +151,16 @@ struct Butterworth {
     }
   }
 
-private:
   template <typename Coefficient>
   static void
   setFeedForwardCoefficients(CoefficientsFilter<Coefficient> &d_coefficients,
                              double relativeFrequency) {
     const size_t order = d_coefficients.getOrder();
     size_t totalCoefficients = order * 2 + 1;
-    double fbCoeffs[getMaxOrder() * 2 + 1];
+    double fbCoeffs[MAX_ORDER * 2 + 1];
     memset(&fbCoeffs, 0, totalCoefficients * sizeof(double));
     // binomial coefficients
-    double binomials[getMaxOrder() * 2 + 2];
+    double binomials[MAX_ORDER * 2 + 2];
     memset(&binomials, 0, (2 * order + 2) * sizeof(double));
 
     double theta = M_PI * 2 * relativeFrequency;

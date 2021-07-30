@@ -56,11 +56,75 @@ enum class FilterType {
   HIGH_PASS
 };
 
+static inline const char *
+get_filter_type_name(FilterType type, bool (*predicate)(FilterType) = nullptr) {
+  if (!predicate || predicate(type)) {
+    switch (type) {
+    case FilterType::ALL_PASS:
+      return "all pass";
+    case FilterType::LOW_PASS:
+      return "low pass";
+    case FilterType::LOW_SHELVE:
+      return "low shelve";
+    case FilterType::BAND_PASS:
+      return "band pass";
+    case FilterType::PARAMETRIC:
+      return "parametric";
+    case FilterType::HIGH_SHELVE:
+      return "high shelve";
+    case FilterType::HIGH_PASS:
+      return "high pass";
+    }
+  }
+  return "unsupported";
+}
+
+static inline bool is_valid_filter_type(FilterType type,
+                          bool (*predicate)(FilterType) = nullptr) {
+  if (!predicate || predicate(type)) {
+    switch (type) {
+    case FilterType::ALL_PASS:
+    case FilterType::LOW_PASS:
+    case FilterType::LOW_SHELVE:
+    case FilterType::BAND_PASS:
+    case FilterType::PARAMETRIC:
+    case FilterType::HIGH_SHELVE:
+    case FilterType::HIGH_PASS:
+      return true;
+    }
+  }
+  return false;
+}
+
+static inline FilterType validated_filter_type(FilterType type,
+                                 bool (*predicate)(FilterType) = nullptr,
+                                 const char *filterCategory = nullptr) {
+  if (!predicate || predicate(type)) {
+    switch (type) {
+    case FilterType::ALL_PASS:
+    case FilterType::LOW_PASS:
+    case FilterType::LOW_SHELVE:
+    case FilterType::BAND_PASS:
+    case FilterType::PARAMETRIC:
+    case FilterType::HIGH_SHELVE:
+    case FilterType::HIGH_PASS:
+      return type;
+    }
+  }
+  std::string message = "org::simple::dsp::iir: Invalid filter type \"";
+  message += get_filter_type_name(type);
+  if (filterCategory) {
+    message += " for ";
+    message += filterCategory;
+  }
+  throw std::invalid_argument(message);
+}
+
 static constexpr size_t MAX_ORDER = 31;
 static constexpr bool is_valid_order(size_t order) {
   return order > 0 && order <= MAX_ORDER;
 }
-static size_t validated_order(size_t order) {
+static inline size_t validated_order(size_t order) {
   if (is_valid_order(order)) {
     return order;
   }
@@ -467,7 +531,6 @@ public:
   }
 };
 
-
 template <typename C, unsigned O, size_t A = 0>
 class FixedOrderCoefficients
     : public Coefficients<C, O, FixedOrderCoefficients<C, O, A>> {
@@ -582,6 +645,9 @@ size_t effectiveIRLength(const CoefficientsFilter<S> &filter, size_t maxLength,
   double block = 0;
   bool terminate = false;
   while (blockEnd < maxBlockEnd || blockStart <= minSamples) {
+    if (blockStart > minSamples && block == 0 && total == 0) {
+      return 0;
+    }
     for (size_t i = blockStart; i < blockEnd; i++) {
       block += fabs(state.output());
     }
