@@ -38,14 +38,14 @@ class Biquad {
   };
 
   template <typename C>
-  static inline void setCoefficients(iir::CoefficientsFilter<C> &setter,
+  static inline void setCoefficients(iir::CoefficientsFilter<C> &coefficients,
                                      const BiQuadCoefficients bqc) {
-    setter.setFF(0, bqc.C0);
-    setter.setFF(1, bqc.C1);
-    setter.setFF(2, bqc.C2);
-    setter.setFB(0, 0, FeedbackConvention::ADD);
-    setter.setFB(1, bqc.D1, FeedbackConvention::ADD);
-    setter.setFB(2, bqc.D2, FeedbackConvention::ADD);
+    coefficients.setFF(0, bqc.C0);
+    coefficients.setFF(1, bqc.C1);
+    coefficients.setFF(2, bqc.C2);
+    coefficients.setFB(0, 0, FeedbackConvention::ADD);
+    coefficients.setFB(1, bqc.D1, FeedbackConvention::ADD);
+    coefficients.setFB(2, bqc.D2, FeedbackConvention::ADD);
   }
 
 public:
@@ -102,10 +102,10 @@ public:
   }
 
   template <class T>
-  static inline void generateParametric(CoefficientsFilter<T> &setter,
+  static inline void generateParametric(CoefficientsFilter<T> &coefficients,
                                         double center, double gain,
                                         double bandwidth) {
-    validateCoefficients(setter);
+    validateCoefficients(coefficients);
     static constexpr double LN_2_2 = (M_LN2 / 2);
     double omega = M_PI * 2 * clampedRelativeFrequency(center);
     double cw = cos(omega);
@@ -121,18 +121,18 @@ public:
     result.D1 = -result.C1;
     result.D2 = ((g / J) - 1.0f) * a0r;
 
-    setCoefficients(setter, result);
+    setCoefficients(coefficients, result);
   }
 
   template <class T>
-  static inline void generateParametric(CoefficientsFilter<T> &setter,
+  static inline void generateParametric(CoefficientsFilter<T> &coefficients,
                                         Rate rate, double center, double gain,
                                         double bandwidth) {
-    generateParametric(setter, rate.relative(center), gain, bandwidth);
+    generateParametric(coefficients, rate.relative(center), gain, bandwidth);
   }
 
   template <class T>
-  static inline void generateHighShelve(CoefficientsFilter<T> &setter,
+  static inline void generateHighShelve(CoefficientsFilter<T> &coefficients,
                                         double center, double gain,
                                         double slope) {
     double omega = M_PI * 2 * clampedRelativeFrequency(center);
@@ -153,21 +153,21 @@ public:
     result.D1 = a0r * -2.0f * (A - 1.0f - apc);
     result.D2 = a0r * (-A - 1.0f + amc + bs);
 
-    setCoefficients(setter, result);
+    setCoefficients(coefficients, result);
   }
 
   template <class T>
-  static inline void generateHighShelve(CoefficientsFilter<T> &setter,
+  static inline void generateHighShelve(CoefficientsFilter<T> &coefficients,
                                         Rate rate, double center, double gain,
                                         double slope) {
-    generateHighShelve(setter, rate.relative(center), gain, slope);
+    generateHighShelve(coefficients, rate.relative(center), gain, slope);
   }
 
   template <class T>
-  static inline void generateLowShelve(CoefficientsFilter<T> &setter,
+  static inline void generateLowShelve(CoefficientsFilter<T> &coefficients,
                                        double center, double gain,
                                        double slope) {
-    validateCoefficients(setter);
+    validateCoefficients(coefficients);
     double omega = M_PI * 2 * clampedRelativeFrequency(center);
     double cw = cos(omega);
     double sw = sin(omega);
@@ -186,20 +186,20 @@ public:
     result.D1 = a0r * 2.0f * (A - 1.0f + apc);
     result.D2 = a0r * (-A - 1.0f - amc + bs);
 
-    setCoefficients(setter, result);
+    setCoefficients(coefficients, result);
   }
 
   template <class T>
-  static inline void generateLowShelve(CoefficientsFilter<T> &setter, Rate rate,
-                                       double center, double gain,
+  static inline void generateLowShelve(CoefficientsFilter<T> &coefficients,
+                                       Rate rate, double center, double gain,
                                        double slope) {
-    generateLowShelve(setter, rate.relative(center), gain, slope);
+    generateLowShelve(coefficients, rate.relative(center), gain, slope);
   }
 
   template <class T>
-  static inline void generateBandPass(CoefficientsFilter<T> &setter,
+  static inline void generateBandPass(CoefficientsFilter<T> &coefficients,
                                       double center, double bandwidth) {
-    validateCoefficients(setter);
+    validateCoefficients(coefficients);
     double omega = M_PI * 2 * clampedRelativeFrequency(center);
     double sn = sin(omega);
     double cs = cos(omega);
@@ -214,19 +214,20 @@ public:
     result.D1 = a0r * (2.0 * cs);
     result.D2 = a0r * (alpha - 1.0);
 
-    setCoefficients(setter, result);
+    setCoefficients(coefficients, result);
   }
 
   template <class T>
-  static inline void generateBandPass(CoefficientsFilter<T> &setter, Rate rate,
-                                      double center, double bandwidth) {
-    generateBandPass(setter, rate.relative(center), bandwidth);
+  static inline void generateBandPass(CoefficientsFilter<T> &coefficients,
+                                      Rate rate, double center,
+                                      double bandwidth) {
+    generateBandPass(coefficients, rate.relative(center), bandwidth);
   }
 
   template <class T>
-  static inline void generateHighPass(CoefficientsFilter<T> &setter,
+  static inline void generateHighPass(CoefficientsFilter<T> &coefficients,
                                       double center, double bandwidth) {
-    validateCoefficients(setter);
+    validateCoefficients(coefficients);
     double omega = M_PI * 2 * clampedRelativeFrequency(center);
     double sn = sin(omega);
     double cs = cos(omega);
@@ -241,19 +242,20 @@ public:
     result.D1 = a0r * (2.0 * cs);
     result.D2 = a0r * (alpha - 1.0);
 
-    setCoefficients(setter, result);
+    setCoefficients(coefficients, result);
   }
 
   template <class T>
-  static inline void generateHighPass(CoefficientsFilter<T> &setter, Rate rate,
-                                      double center, double bandwidth) {
-    generateHighPass(setter, rate.relative(center), bandwidth);
+  static inline void generateHighPass(CoefficientsFilter<T> &coefficients,
+                                      Rate rate, double center,
+                                      double bandwidth) {
+    generateHighPass(coefficients, rate.relative(center), bandwidth);
   }
 
   template <class T>
-  static inline void generateLowPass(CoefficientsFilter<T> &setter,
+  static inline void generateLowPass(CoefficientsFilter<T> &coefficients,
                                      double center, double bandwidth) {
-    validateCoefficients(setter);
+    validateCoefficients(coefficients);
     double omega = M_PI * 2 * clampedRelativeFrequency(center);
     double sn = sin(omega);
     double cs = cos(omega);
@@ -268,13 +270,14 @@ public:
     result.D1 = a0r * (2.0 * cs);
     result.D2 = a0r * (alpha - 1.0);
 
-    setCoefficients(setter, result);
+    setCoefficients(coefficients, result);
   }
 
   template <class T>
-  static inline void generateLowPass(CoefficientsFilter<T> &setter, Rate rate,
-                                     double center, double bandwidth) {
-    generateLowPass(setter, rate.relative(center), bandwidth);
+  static inline void generateLowPass(CoefficientsFilter<T> &coefficients,
+                                     Rate rate, double center,
+                                     double bandwidth) {
+    generateLowPass(coefficients, rate.relative(center), bandwidth);
   }
 
   class ConfigCenter {
