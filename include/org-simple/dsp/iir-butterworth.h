@@ -28,16 +28,6 @@
 
 namespace org::simple::dsp::iir {
 
-static double get_bw_high_pass_gain(size_t order, double relative_w0_freq) {
-  double alpha = pow(fabs(relative_w0_freq), order);
-  return alpha / sqrt(1.0 + alpha * alpha);
-}
-
-static double get_bw_low_pass_gain(size_t order, double relative_w0_freq) {
-  double alpha2 = pow(fabs(relative_w0_freq), order * 2);
-  return 1.0 / sqrt(1.0 + alpha2);
-}
-
 struct Butterworth {
   static constexpr size_t MAX_ORDER = 20;
   static constexpr const char *CATEGORY = "Butterworth";
@@ -116,6 +106,17 @@ struct Butterworth {
   }
 
 private:
+
+  static double get_bw_high_pass_gain(size_t order, double relative_w0_freq) {
+    double alpha = pow(fabs(relative_w0_freq), order);
+    return alpha / sqrt(1.0 + alpha * alpha);
+  }
+
+  static double get_bw_low_pass_gain(size_t order, double relative_w0_freq) {
+    double alpha2 = pow(fabs(relative_w0_freq), order * 2);
+    return 1.0 / sqrt(1.0 + alpha2);
+  }
+
   template <typename Coefficient>
   static void
   setLowPassCoefficients(CoefficientsFilter<Coefficient> &coefficients,

@@ -163,9 +163,9 @@ struct GainScenario : public FilterScenario {
     if (!ref) {
       switch (type) {
       case FilterType::LOW_PASS:
-        return get_bw_low_pass_gain(order, relative);
+        return Butterworth::getLowPassGain(order, relative, false);
       case FilterType::HIGH_PASS:
-        return get_bw_high_pass_gain(order, relative);
+        return Butterworth::getHighPassGain(order, relative, false);
       default:
         return std::numeric_limits<double>::quiet_NaN();
       }
@@ -256,7 +256,7 @@ BOOST_AUTO_TEST_SUITE(org_simple_dsp_iir_butterworth_tests)
 BOOST_DATA_TEST_CASE(sample, createTestScenarios()) {
   if (!same(sample.expected_gain, sample.actual())) {
     BOOST_CHECK_EQUAL(sample.expected_gain, sample.actual());
-    double g1 = get_bw_low_pass_gain(sample.order, sample.relative);
+    double g1 = Butterworth::getLowPassGain(sample.order, sample.relative, false);
     double g2 = reference_low_pass_gain(sample.order, sample.relative);
     BOOST_CHECK_EQUAL(g1, g2);
   } else {
