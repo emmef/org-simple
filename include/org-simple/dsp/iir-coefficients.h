@@ -48,16 +48,18 @@ enum class FeedbackConvention { ADD, SUBTRACT };
 
 enum class FilterType {
   ALL_PASS,
+  BAND_PASS,
+  HIGH_PASS,
+  HIGH_SHELVE,
   LOW_PASS,
   LOW_SHELVE,
-  BAND_PASS,
   PARAMETRIC,
-  HIGH_SHELVE,
-  HIGH_PASS
+  DIFFERENT
 };
 
 static inline const char *
-get_filter_type_name(FilterType type, bool (*predicate)(FilterType) = nullptr) {
+get_filter_type_name_or_null(FilterType type,
+                             bool (*predicate)(FilterType) = nullptr) {
   if (!predicate || predicate(type)) {
     switch (type) {
     case FilterType::ALL_PASS:
@@ -74,42 +76,29 @@ get_filter_type_name(FilterType type, bool (*predicate)(FilterType) = nullptr) {
       return "high shelve";
     case FilterType::HIGH_PASS:
       return "high pass";
+    case FilterType::DIFFERENT:
+      return "different";
     }
   }
-  return "unsupported";
+  return nullptr;
 }
 
-static inline bool is_valid_filter_type(FilterType type,
-                          bool (*predicate)(FilterType) = nullptr) {
-  if (!predicate || predicate(type)) {
-    switch (type) {
-    case FilterType::ALL_PASS:
-    case FilterType::LOW_PASS:
-    case FilterType::LOW_SHELVE:
-    case FilterType::BAND_PASS:
-    case FilterType::PARAMETRIC:
-    case FilterType::HIGH_SHELVE:
-    case FilterType::HIGH_PASS:
-      return true;
-    }
-  }
-  return false;
+static inline const char *
+get_filter_type_name(FilterType type, bool (*predicate)(FilterType) = nullptr) {
+  const char *result = get_filter_type_name_or_null(type, predicate);
+  return result ? result : "[INVALID]";
 }
 
-static inline FilterType validated_filter_type(FilterType type,
-                                 bool (*predicate)(FilterType) = nullptr,
-                                 const char *filterCategory = nullptr) {
-  if (!predicate || predicate(type)) {
-    switch (type) {
-    case FilterType::ALL_PASS:
-    case FilterType::LOW_PASS:
-    case FilterType::LOW_SHELVE:
-    case FilterType::BAND_PASS:
-    case FilterType::PARAMETRIC:
-    case FilterType::HIGH_SHELVE:
-    case FilterType::HIGH_PASS:
-      return type;
-    }
+static inline bool
+is_valid_filter_type(FilterType type, bool (*predicate)(FilterType) = nullptr) {
+  return get_filter_type_name_or_null(type, predicate) != nullptr;
+}
+
+static inline FilterType
+validated_filter_type(FilterType type, bool (*predicate)(FilterType) = nullptr,
+                      const char *filterCategory = nullptr) {
+  if (get_filter_type_name_or_null(type, predicate) != nullptr) {
+    return type;
   }
   std::string message = "org::simple::dsp::iir: Invalid filter type \"";
   message += get_filter_type_name(type);
@@ -237,6 +226,24 @@ public:
   }
 
   ~CoefficientsFilter() = default;
+
+  void assign(const CoefficientsFilter &source) {
+    unsigned order = getOrder();
+    if (source.getOrder() != order) {
+      throw std::invalid_argument(
+          "org::simple::dsp::iir::CoefficientsFilter: can only assign "
+          "coefficients representing same order.");
+    }
+    for (unsigned i = 0; i < order; i++) {
+      setFF(i, source.getFF(i));
+      setFB(i, source.getFB(i));
+    }
+  }
+
+  CoefficientsFilter &operator=(const CoefficientsFilter &source) {
+    assign(source);
+    return *this;
+  }
 
   friend void setAmplifyOnly(CoefficientsFilter &setter, S scale) {
     setter.setValidFF(0, scale);
