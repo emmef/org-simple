@@ -2,4 +2,8 @@
 // Created by michel on 30-07-21.
 //
 
-namespace org::simple {} // namespace org::simple
+#include <org-simple/dsp/iir-biquad.h>
+
+namespace org::simple {
+// TODO Add test coverage!
+} // namespace org::simple
