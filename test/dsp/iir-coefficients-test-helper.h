@@ -23,6 +23,7 @@
 
 #include <org-simple/util/Array.h>
 #include <org-simple/dsp/iir-coefficients.h>
+#include <iostream>
 
 namespace {
 
@@ -318,11 +319,11 @@ const std::vector<size_t> &get_test_periods() {
 }
 
 template <typename C>
-C filterGain(const CoefficientsFilter<C> &filter, size_t signal_period) {
-  size_t responseSamples = effectiveIRLength(filter, TEST_SAMPLERATE, 1e-6);
+C measureFilterGain(const CoefficientsFilter<C> &filter, size_t signal_period, size_t &effective_IR_length) {
+  effective_IR_length = effectiveIRLength(filter, TEST_SAMPLERATE, 1e-6);
   size_t settleSamples =
       3 * signal_period +
-      signal_period * ((responseSamples + signal_period / 2) / signal_period);
+      signal_period * ((effective_IR_length + signal_period / 2) / signal_period);
   size_t totalSamples = signal_period + 2 * settleSamples;
   std::unique_ptr<double> buffer(new double[totalSamples]);
   FilterHistory<double> history(filter);
@@ -357,7 +358,7 @@ struct FilterScenario {
   }
 
   virtual const char *typeOfScenario() const = 0;
-  virtual std::ostream &parameters(std::ostream &out) const = 0;
+  virtual void parameters(std::ostream &out) const = 0;
 
   std::ostream &write(std::ostream &out) const {
     out << typeOfScenario() << "(type=\"" << typeName()
@@ -366,6 +367,8 @@ struct FilterScenario {
     out << ")";
     return out;
   }
+
+  virtual ~FilterScenario() = default;
 };
 
 } // end of anonymous namespace

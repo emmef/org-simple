@@ -304,8 +304,6 @@ static const std::vector<SetFirstThenSecond> &generateScnenarios() {
     }
   }
 
-  std::cout << "Test scenarios: " << scenarios.size() << std::endl;
-
   return scenarios;
 }
 

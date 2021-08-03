@@ -40,12 +40,12 @@ class Biquad {
   template <typename C>
   static inline void setCoefficients(iir::CoefficientsFilter<C> &coefficients,
                                      const BiQuadCoefficients bqc) {
-    coefficients.setFF(0, bqc.C0);
-    coefficients.setFF(1, bqc.C1);
-    coefficients.setFF(2, bqc.C2);
-    coefficients.setFB(0, 0, FeedbackConvention::ADD);
-    coefficients.setFB(1, bqc.D1, FeedbackConvention::ADD);
-    coefficients.setFB(2, bqc.D2, FeedbackConvention::ADD);
+    coefficients.setFB(0, bqc.C0);
+    coefficients.setFB(1, bqc.C1);
+    coefficients.setFB(2, bqc.C2);
+    coefficients.setFF(0, 0);
+    coefficients.setFF(1, bqc.D1);
+    coefficients.setFF(2, bqc.D2);
   }
 
 public:
@@ -112,14 +112,14 @@ public:
     double sw = sin(omega);
     double J = sqrt(clampedGain(gain));
     double g = sw * sinh(LN_2_2 * clampedBandwidth(bandwidth) * omega / sw);
-    double a0r = 1.0f / (1.0f + (g / J));
+    double a0r = 1.0 / (1.0 + (g / J));
 
     BiQuadCoefficients result;
-    result.C0 = (1.0f + (g * J)) * a0r;
-    result.C1 = (-2.0f * cw) * a0r;
-    result.C2 = (1.0f - (g * J)) * a0r;
+    result.C0 = (1.0 + (g * J)) * a0r;
+    result.C1 = (-2.0 * cw) * a0r;
+    result.C2 = (1.0 - (g * J)) * a0r;
     result.D1 = -result.C1;
-    result.D2 = ((g / J) - 1.0f) * a0r;
+    result.D2 = ((g / J) - 1.0) * a0r;
 
     setCoefficients(coefficients, result);
   }

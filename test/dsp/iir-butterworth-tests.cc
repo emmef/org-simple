@@ -17,10 +17,9 @@ struct FilterGainScenario : public FilterScenario {
   size_t filter_period;
 
   const char *typeOfScenario() const override { return "FilterGainScenario"; }
-  std::ostream &parameters(std::ostream &out) const override {
+  void parameters(std::ostream &out) const override {
     out << "; signal_period=" << signal_period
         << "; filter_period=" << filter_period;
-    return out;
   }
 
   FilterGainScenario(size_t sp, size_t fp, FilterType t, unsigned o)
@@ -49,7 +48,7 @@ const std::vector<FilterGainScenario> getFilterGainScenarios() {
 }
 
 template <size_t ORDER>
-bool verifyGainButterworth(size_t signal_period, size_t filter_period, FilterType type,
+bool verifyButterworthGain(size_t signal_period, size_t filter_period, FilterType type,
                 double &measured, double &calculated) {
   double filterRelativeFrequency =
       filter_period > 2 ? 1.0 / filter_period : 0.45;
@@ -58,7 +57,8 @@ bool verifyGainButterworth(size_t signal_period, size_t filter_period, FilterTyp
   double error = 1.0 / (1.0 - 1.0 / min_period);
   FixedOrderCoefficients<double, ORDER> filter;
   Butterworth::create(filter, filterRelativeFrequency, type, 1.0);
-  measured = filterGain(filter, signal_period);
+  size_t filter_length;
+  measured = measureFilterGain(filter, signal_period, filter_length);
   double gainSquared = measured * measured;
   calculated = Butterworth::getGain(type, ORDER,
                            signalRelativeFrequency / filterRelativeFrequency);
@@ -111,8 +111,8 @@ struct GainScenario : public FilterScenario {
         ref(isRef) {}
 
   const char *typeOfScenario() const override { return "GainCalculationScenario"; }
-  std::ostream &parameters(std::ostream &out) const override {
-    return out << "; relative-frequency=" << relative
+  void parameters(std::ostream &out) const override {
+    out << "; relative-frequency=" << relative
         << "; expected gain=" << expected_gain
         << "; reference=" << (ref ? "true" : "false");
   }
@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(testSupportedFilterTypes) {
 BOOST_DATA_TEST_CASE(testFirstOrderHighPass, getFilterGainScenarios()) {
   double actualGain = 0.0;
   double calculatedGain = 0.0;
-  if (verifyGainButterworth<1>(sample.signal_period, sample.filter_period,
+  if (verifyButterworthGain<1>(sample.signal_period, sample.filter_period,
                                sample.type, actualGain, calculatedGain)) {
     BOOST_CHECK(true);
   } else {
