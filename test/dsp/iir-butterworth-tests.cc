@@ -12,59 +12,6 @@
 
 using namespace org::simple::dsp::iir;
 
-static constexpr size_t SAMPLERATE = 65536;
-
-const std::vector<size_t> create_periods() {
-  std::vector<size_t> v;
-
-  v.emplace_back(4);
-  v.emplace_back(8);
-  v.emplace_back(16);
-  v.emplace_back(64);
-  v.emplace_back(512);
-  v.emplace_back(2048);
-
-  return v;
-}
-
-const std::vector<size_t> &get_periods() {
-  static std::vector<size_t> v = create_periods();
-
-  return v;
-}
-
-namespace {
-struct FilterScenario {
-  FilterType type;
-  int order;
-
-  FilterScenario(FilterType t, unsigned o)
-      : type(t), order(validated_order(o)) {}
-
-  const char *typeName() const {
-    return Butterworth::getTypeName(type);
-  }
-
-  virtual const char *typeOfScenario() const = 0;
-  virtual std::ostream &parameters(std::ostream &out) const = 0;
-
-  std::ostream &write(std::ostream &out) const {
-    out << typeOfScenario() << "(type=\"" << typeName()
-        << "\"; order=" << order;
-    parameters(out);
-    out << ")";
-    return out;
-  }
-};
-
-} // end of anonymous namespace
-
-static std::ostream &operator<<(std::ostream &out,
-                                const FilterScenario &scenario) {
-  scenario.write(out);
-  return out;
-}
-
 struct FilterGainScenario : public FilterScenario {
   size_t signal_period;
   size_t filter_period;
@@ -82,8 +29,8 @@ struct FilterGainScenario : public FilterScenario {
 
 const std::vector<FilterGainScenario> getFilterGainScenarios() {
   std::vector<FilterGainScenario> result;
-  for (size_t signal_period : get_periods()) {
-    for (size_t filter_period : get_periods()) {
+  for (size_t signal_period : get_test_periods()) {
+    for (size_t filter_period : get_test_periods()) {
       result.emplace_back(FilterGainScenario(signal_period, filter_period,
                                              FilterType::LOW_PASS, 1));
       result.emplace_back(FilterGainScenario(signal_period, filter_period,
@@ -102,7 +49,7 @@ const std::vector<FilterGainScenario> getFilterGainScenarios() {
 }
 
 template <size_t ORDER>
-bool verifyGain(size_t signal_period, size_t filter_period, FilterType type,
+bool verifyGainButterworth(size_t signal_period, size_t filter_period, FilterType type,
                 double &measured, double &calculated) {
   double filterRelativeFrequency =
       filter_period > 2 ? 1.0 / filter_period : 0.45;
@@ -111,30 +58,8 @@ bool verifyGain(size_t signal_period, size_t filter_period, FilterType type,
   double error = 1.0 / (1.0 - 1.0 / min_period);
   FixedOrderCoefficients<double, ORDER> filter;
   Butterworth::create(filter, filterRelativeFrequency, type, 1.0);
-  size_t responseSamples = effectiveIRLength(filter, SAMPLERATE, 1e-6);
-  size_t settleSamples =
-      3 * signal_period +
-      signal_period * ((responseSamples + signal_period / 2) / signal_period);
-  size_t totalSamples = signal_period + 2 * settleSamples;
-  std::unique_ptr<double> buffer(new double[totalSamples]);
-  FilterHistory<double> history(filter);
-  history.zero();
-  for (size_t sample = 0; sample < totalSamples; sample++) {
-    double input = cos(M_PI * 2 * (sample % signal_period) / signal_period);
-    buffer.get()[sample] =
-        filter.single(history.inputs(), history.outputs(), input);
-  }
-  history.zero();
-  for (ptrdiff_t sample = totalSamples; sample > 0;) {
-    double &p = buffer.get()[--sample];
-    p = filter.single(history.inputs(), history.outputs(), p);
-  }
-  double gainSquared = 0;
-  double *p = buffer.get() + settleSamples;
-  for (size_t sample = 0; sample < signal_period; sample++) {
-    gainSquared = std::max(gainSquared, *p++);
-  }
-  measured = sqrt(gainSquared);
+  measured = filterGain(filter, signal_period);
+  double gainSquared = measured * measured;
   calculated = Butterworth::getGain(type, ORDER,
                            signalRelativeFrequency / filterRelativeFrequency);
   double minGain = std::min(measured, calculated) * error;
@@ -277,8 +202,8 @@ BOOST_AUTO_TEST_CASE(testSupportedFilterTypes) {
 BOOST_DATA_TEST_CASE(testFirstOrderHighPass, getFilterGainScenarios()) {
   double actualGain = 0.0;
   double calculatedGain = 0.0;
-  if (verifyGain<1>(sample.signal_period, sample.filter_period, sample.type,
-                    actualGain, calculatedGain)) {
+  if (verifyGainButterworth<1>(sample.signal_period, sample.filter_period,
+                               sample.type, actualGain, calculatedGain)) {
     BOOST_CHECK(true);
   } else {
     BOOST_CHECK_EQUAL(actualGain, calculatedGain);

@@ -266,7 +266,7 @@ private:
 
 /**
  * Wraps access to coefficient implementation so that algorithms do not need to
- * care about internals nor have to dealwith polymorphism.
+ * care about internals nor have to deal with polymorphism.
  * @tparam coeff Type of coefficient, that MUST be a floating-point.
  * @tparam CoefficientsClass A class that contains coefficients.
  */
@@ -581,6 +581,24 @@ public:
   FixedOrderCoefficientsRef(C *const pool_location) : coeffs(pool_location) {}
 };
 
+/**
+ * Estimates the effective impulse response length of the filter described by
+ * the coefficients, where the total contribution of the filter after that
+ * length is smaller than contribution before that length times the desired
+ * error. First, a rough estimate is made, where the last block's total
+ * contribution is compared with the contribution of all previous block, where
+ * the block sizes double in size each time. This process stops when the error
+ * condition is met, or when maxLength is exceeded. Given the exponential
+ * character of IIR filters, it is assumed that later blocks contribute less
+ * than the last block. Second, the block before the last block is "replayed".
+ * This is done until the first part plus all previous contributions are smaller
+ * than the second part plus the last block's contribution.
+ *
+ * If the total contribution of the filter response is zero after the number of
+ * coefficients in the filter as samples, the effective length is returned as
+ * zero.
+ *
+ */
 template <typename S>
 size_t effectiveIRLength(const CoefficientsFilter<S> &filter, size_t maxLength,
                          double error) {

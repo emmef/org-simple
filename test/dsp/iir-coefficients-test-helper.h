@@ -26,9 +26,10 @@
 
 namespace {
 
-template <unsigned ORDER>
-using Coefficients =
-    org::simple::dsp::iir::FixedOrderCoefficients<double, ORDER>;
+using namespace org::simple::dsp::iir;
+
+static constexpr size_t TEST_SAMPLERATE = 65536;
+
 
 // TODO: Retrofit to allow for dynamic allocation
 template <unsigned ORDER> class FilterScenarioBuffer {
@@ -241,21 +242,21 @@ public:
     }
   }
 
-  void filter_forward_offs(const Coefficients<ORDER> &coeffs_,
+  void filter_forward_offs(const FixedOrderCoefficients<double, ORDER> &coeffs_,
                            size_t input_selector, size_t output_selector) {
     zero_buffer(output_selector);
     coeffs_.filter_forward_offs(samples_, get_buffer(input_selector),
                                 get_buffer(output_selector));
   }
 
-  void filter_backward_offs(const Coefficients<ORDER> &coeffs_,
+  void filter_backward_offs(const FixedOrderCoefficients<double, ORDER> &coeffs_,
                             size_t input_selector, size_t output_selector) {
     zero_buffer(output_selector);
     coeffs_.filter_backward_offs(samples_, get_buffer(input_selector) + ORDER,
                                  get_buffer(output_selector) + ORDER);
   }
 
-  void filter_forward_zero(const Coefficients<ORDER> &coeffs_,
+  void filter_forward_zero(const FixedOrderCoefficients<double, ORDER> &coeffs_,
                            size_t input_selector, size_t output_selector) {
     zero_buffer(output_selector);
     coeffs_.filter_forward_history_zero(samples_,
@@ -263,7 +264,7 @@ public:
                                         get_buffer(output_selector) + ORDER);
   }
 
-  void filter_backward_zero(const Coefficients<ORDER> &coeffs_,
+  void filter_backward_zero(const FixedOrderCoefficients<double, ORDER> &coeffs_,
                             size_t input_selector, size_t output_selector) {
     zero_buffer(output_selector);
     coeffs_.filter_backward_history_zero(samples_,
@@ -271,7 +272,7 @@ public:
                                          get_buffer(output_selector) + ORDER);
   }
 
-  void filter_forward_single(const Coefficients<ORDER> &coeffs,
+  void filter_forward_single(const FixedOrderCoefficients<double, ORDER> &coeffs,
                              size_t input_selector, size_t output_selector) {
     double in_history[ORDER];
     double out_history[ORDER];
@@ -288,7 +289,7 @@ public:
     }
   }
 
-  void generate_random_filter(Coefficients<ORDER> &coeffs_) const {
+  void generate_random_filter(FixedOrderCoefficients<double, ORDER> &coeffs_) const {
     double scale = 0.45 / ORDER;
     for (size_t i = 0; i <= ORDER; i++) {
       coeffs_.setFB(i, random_sample(scale));
@@ -297,6 +298,82 @@ public:
   }
 };
 
+const std::vector<size_t> test_create_periods() {
+  std::vector<size_t> v;
+
+  v.emplace_back(4);
+  v.emplace_back(8);
+  v.emplace_back(16);
+  v.emplace_back(64);
+  v.emplace_back(512);
+  v.emplace_back(2048);
+
+  return v;
+}
+
+const std::vector<size_t> &get_test_periods() {
+  static std::vector<size_t> v = test_create_periods();
+
+  return v;
+}
+
+template <typename C>
+C filterGain(const CoefficientsFilter<C> &filter, size_t signal_period) {
+  size_t responseSamples = effectiveIRLength(filter, TEST_SAMPLERATE, 1e-6);
+  size_t settleSamples =
+      3 * signal_period +
+      signal_period * ((responseSamples + signal_period / 2) / signal_period);
+  size_t totalSamples = signal_period + 2 * settleSamples;
+  std::unique_ptr<double> buffer(new double[totalSamples]);
+  FilterHistory<double> history(filter);
+  history.zero();
+  for (size_t sample = 0; sample < totalSamples; sample++) {
+    double input = cos(M_PI * 2 * (sample % signal_period) / signal_period);
+    buffer.get()[sample] =
+        filter.single(history.inputs(), history.outputs(), input);
+  }
+  history.zero();
+  for (ptrdiff_t sample = totalSamples; sample > 0;) {
+    double &p = buffer.get()[--sample];
+    p = filter.single(history.inputs(), history.outputs(), p);
+  }
+  double gainSquared = 0.0;
+  double *p = buffer.get() + settleSamples;
+  for (size_t sample = 0; sample < signal_period; sample++) {
+    gainSquared = std::max(gainSquared, *p++);
+  }
+  return sqrt(gainSquared);
+}
+
+struct FilterScenario {
+  FilterType type;
+  int order;
+
+  FilterScenario(FilterType t, unsigned o)
+  : type(t), order(validated_order(o)) {}
+
+  const char *typeName() const {
+    return get_filter_type_name(type);
+  }
+
+  virtual const char *typeOfScenario() const = 0;
+  virtual std::ostream &parameters(std::ostream &out) const = 0;
+
+  std::ostream &write(std::ostream &out) const {
+    out << typeOfScenario() << "(type=\"" << typeName()
+    << "\"; order=" << order;
+    parameters(out);
+    out << ")";
+    return out;
+  }
+};
+
 } // end of anonymous namespace
+static std::ostream &operator<<(std::ostream &out,
+    const FilterScenario &scenario) {
+  scenario.write(out);
+  return out;
+}
+
 
 #endif // ORG_SIMPLE_IIR_COEFFICIENTS_TEST_HELPER_H
