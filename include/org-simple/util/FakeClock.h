@@ -23,6 +23,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <atomic>
 
 namespace org::simple::util {
 
