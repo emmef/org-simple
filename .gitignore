@@ -37,3 +37,6 @@ cmake-*
 # IntelliJ stuff
 .idea
 
+
+build-*
+DEADJOE
