@@ -3,54 +3,41 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/Characters.h>
 #include <org-simple/core/Bits.h>
+#include <org-simple/util/Characters.h>
 
 namespace {
 
+using Marker = org::simple::util::ByteEncoding::Marker;
+using Continuation = org::simple::util::ByteEncoding::Continuation;
+using Leading = org::simple::util::ByteEncoding::Leading;
 using Utf8 = org::simple::util::Utf8;
-using ExtensionByte = org::simple::util::Utf8::ExtensionByte;
-template <short BYTES> using Range = org::simple::util::Utf8::Range<BYTES>;
 
-template <short Bytes>
-void checkRangeConstants(short bits, char marker, char markerMask,
-                         char32_t firstCodePoint, char32_t lastCodePoint) {
-  using R = Range<Bytes>;
-  BOOST_CHECK_EQUAL(Range<Bytes>::BYTES, Bytes);
-  BOOST_CHECK_EQUAL(R::BITS, bits);
-  BOOST_CHECK_EQUAL(R::MARKER, marker);
-  BOOST_CHECK_EQUAL(R::MARKER_MASK, markerMask);
-  BOOST_CHECK_EQUAL(R::VALUE_MASK, ~markerMask);
-  BOOST_CHECK_EQUAL(R::FIRST_CODEPOINT, firstCodePoint);
-  BOOST_CHECK_EQUAL(R::LAST_CODEPOINT, lastCodePoint);
-}
+using namespace org::simple::util::ByteEncoding;
 
-template<short Bytes>
-void checkBytesForCharacters() {
-  BOOST_CHECK_EQUAL(Utf8::getBytesForCharacter(Range<Bytes>::FIRST_CODEPOINT), Bytes);
-  BOOST_CHECK_EQUAL(Utf8::getBytesForCharacter((Range<Bytes>::LAST_CODEPOINT + Range<Bytes>::FIRST_CODEPOINT)/2), Bytes);
-  BOOST_CHECK_EQUAL(Utf8::getBytesForCharacter(Range<Bytes>::LAST_CODEPOINT - 1), Bytes);
-  BOOST_CHECK_EQUAL(Utf8::getBytesForCharacter(Range<Bytes>::LAST_CODEPOINT), Bytes);
-}
 
-template<short Bytes>
-void checkScatterForCharacterAndBack(char32_t c) {
+template <short Bytes> void checkScatterForCharacterAndBack(char32_t c) {
   char buffer[5];
-  const char *next;
-  BOOST_CHECK_EQUAL(Utf8::unsafeScatter(c, buffer), buffer + Bytes);
-  BOOST_CHECK_EQUAL(Utf8::Reader::readGextNext(buffer, &next), c);
-  BOOST_CHECK_EQUAL(next - buffer, Bytes);
+  BOOST_CHECK_EQUAL(Utf8::encodeBytes(c, buffer) - buffer, Bytes);
+  char32_t result;
+  BOOST_CHECK_EQUAL(Utf8::decodeBytes(buffer, result) - buffer, Bytes);
+  BOOST_CHECK_EQUAL(c, result);
 }
 
-template<short Bytes>
-void checkScatterForCharacters() {
-  checkScatterForCharacterAndBack<Bytes>(Range<Bytes>::FIRST_CODEPOINT);
-  checkScatterForCharacterAndBack<Bytes>(Range<Bytes>::FIRST_CODEPOINT + 1);
-  checkScatterForCharacterAndBack<Bytes>((Range<Bytes>::FIRST_CODEPOINT + Range<Bytes>::LAST_CODEPOINT)/2);
-  checkScatterForCharacterAndBack<Bytes>(Range<Bytes>::LAST_CODEPOINT - 1);
-  checkScatterForCharacterAndBack<Bytes>(Range<Bytes>::LAST_CODEPOINT);
-  char32_t c = org::simple::core::Bits<char32_t>::fill(Range<Bytes>::FIRST_CODEPOINT);
-  while (c <= Range<Bytes>::LAST_CODEPOINT) {
+template <short Bytes> void checkScatterForCharacters() {
+  static constexpr Leading l = leading[Bytes - 1];
+  static constexpr char32_t min = l.minimumCodePoint;
+  static constexpr char32_t max = std::min(l.maximumCodePoint, Utf8::MAX_UTF8_CODEPOINT);
+  BOOST_CHECK_EQUAL(l.encodedBytes, Bytes);
+  checkScatterForCharacterAndBack<Bytes>(min);
+  checkScatterForCharacterAndBack<Bytes>(min);
+  checkScatterForCharacterAndBack<Bytes>(
+      (min + max) / 2);
+  checkScatterForCharacterAndBack<Bytes>(max - 1);
+  checkScatterForCharacterAndBack<Bytes>(max);
+  char32_t c =
+      org::simple::core::Bits<char32_t>::fill(min);
+  while (c <= max) {
     checkScatterForCharacterAndBack<Bytes>(c);
     c <<= 1;
     c |= 1;
@@ -61,63 +48,121 @@ void checkScatterForCharacters() {
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_Characters)
 
-BOOST_AUTO_TEST_CASE(testConstantsOfUtf8ExtensionByteConstants) {
-  BOOST_CHECK_EQUAL(ExtensionByte::MARKER, char(0x80));
-  BOOST_CHECK_EQUAL(ExtensionByte::MARKER_MASK, char(0xc0));
-  BOOST_CHECK_EQUAL(ExtensionByte::VALUE_MASK, char(0x3f));
-  BOOST_CHECK_EQUAL(ExtensionByte::BITS, 6);
+BOOST_AUTO_TEST_CASE(testMarkerValue) {
+  Marker m1 { 1 };
+
+  BOOST_CHECK_EQUAL(m1.markerBits, 1);
+  BOOST_CHECK_EQUAL(m1.marker, char(0));
+  BOOST_CHECK_EQUAL(m1.maskMarker, char(0x80));
+  BOOST_CHECK_EQUAL(m1.maskValue, char(0x7f));
+  BOOST_CHECK_EQUAL(m1.valueBits, 7);
+
+  Marker m2{2};
+  BOOST_CHECK_EQUAL(m2.markerBits, 2);
+  BOOST_CHECK_EQUAL(m2.marker, char(0x80));
+  BOOST_CHECK_EQUAL(m2.maskMarker, char(0xc0));
+  BOOST_CHECK_EQUAL(m2.maskValue, char(0x3f));
+  BOOST_CHECK_EQUAL(m2.valueBits, 6);
+
+  Marker m3{3};
+  BOOST_CHECK_EQUAL(m3.markerBits, 3);
+  BOOST_CHECK_EQUAL(m3.marker, char(0xc0));
+  BOOST_CHECK_EQUAL(m3.maskMarker, char(0xe0));
+  BOOST_CHECK_EQUAL(m3.maskValue, char(0x1f));
+  BOOST_CHECK_EQUAL(m3.valueBits, 5);
+
+  Marker m4{4};
+  BOOST_CHECK_EQUAL(m4.markerBits, 4);
+  BOOST_CHECK_EQUAL(m4.marker, char(0xe0));
+  BOOST_CHECK_EQUAL(m4.maskMarker, char(0xf0));
+  BOOST_CHECK_EQUAL(m4.maskValue, char(0x0f));
+  BOOST_CHECK_EQUAL(m4.valueBits, 4);
+
+  Marker m5{5};
+  BOOST_CHECK_EQUAL(m5.markerBits, 5);
+  BOOST_CHECK_EQUAL(m5.marker, char(0xf0));
+  BOOST_CHECK_EQUAL(m5.maskMarker, char(0xf8));
+  BOOST_CHECK_EQUAL(m5.maskValue, char(0x07));
+  BOOST_CHECK_EQUAL(m5.valueBits, 3);
+
+  Marker m6{6};
+  BOOST_CHECK_EQUAL(m6.markerBits, 6);
+  BOOST_CHECK_EQUAL(m6.marker, char(0xf8));
+  BOOST_CHECK_EQUAL(m6.maskMarker, char(0xfc));
+  BOOST_CHECK_EQUAL(m6.maskValue, char(0x03));
+  BOOST_CHECK_EQUAL(m6.valueBits, 2);
+
+  Marker m7{7};
+  BOOST_CHECK_EQUAL(m7.markerBits, 7);
+  BOOST_CHECK_EQUAL(m7.marker, char(0xfc));
+  BOOST_CHECK_EQUAL(m7.maskMarker, char(0xfe));
+  BOOST_CHECK_EQUAL(m7.maskValue, char(0x01));
+  BOOST_CHECK_EQUAL(m7.valueBits, 1);
 }
 
-BOOST_AUTO_TEST_CASE(testConstantsOfUtsf8Range_1Byte) {
-  checkRangeConstants<1>(7, 0, 0x80, 0, 0x7f);
+BOOST_AUTO_TEST_CASE(testMarkerPackValidAndCorrectValue) {
+  for (int bits = 1; bits <= 7; bits++) {
+    Marker marker {bits};
+    for (char byte = 0; marker.valueFrom(byte) == byte ; byte++) {
+      char packed = marker.pack(byte);
+      BOOST_CHECK(marker.is(packed));
+      char unpacked = marker.valueFrom(packed);
+      BOOST_CHECK_EQUAL(unpacked, byte);
+    }
+  }
 }
 
-BOOST_AUTO_TEST_CASE(testConstantsOfUtsf8Range_2Bytes) {
-  checkRangeConstants<2>(11, 0xc0, 0xe0, 0x80, 0x7ff);
+BOOST_AUTO_TEST_CASE(testMarkersUsedByLeadingAndContinuationBytes) {
+  BOOST_CHECK_EQUAL(Marker{1}.markerBits, leading[0].markerBits);
+  BOOST_CHECK_EQUAL(Marker{2}.markerBits, continuation.markerBits);
+  BOOST_CHECK_EQUAL(Marker{3}.markerBits, leading[1].markerBits);
+  BOOST_CHECK_EQUAL(Marker{4}.markerBits, leading[2].markerBits);
+  BOOST_CHECK_EQUAL(Marker{5}.markerBits, leading[3].markerBits);
+  BOOST_CHECK_EQUAL(Marker{6}.markerBits, leading[4].markerBits);
+  BOOST_CHECK_EQUAL(Marker{7}.markerBits, leading[5].markerBits);
 }
 
-BOOST_AUTO_TEST_CASE(testConstantsOfUtsf8Range_3Bytes) {
-  checkRangeConstants<3>(16, 0xe0, 0xf0, 0x800, 0xffff);
+BOOST_AUTO_TEST_CASE(testLeadinMinimaAndMaxima) {
+  BOOST_CHECK_EQUAL(0, leading[0].minimumCodePoint);
+  BOOST_CHECK_EQUAL(0x7f, leading[0].maximumCodePoint);
+  BOOST_CHECK_EQUAL(0x80, leading[1].minimumCodePoint);
+  BOOST_CHECK_EQUAL(0x7ff, leading[1].maximumCodePoint);
+  BOOST_CHECK_EQUAL(0x800, leading[2].minimumCodePoint);
+  BOOST_CHECK_EQUAL(0xffff, leading[2].maximumCodePoint);
+  BOOST_CHECK_EQUAL(0x10000, leading[3].minimumCodePoint);
+  BOOST_CHECK_EQUAL(0x1fffff, leading[3].maximumCodePoint);
+  BOOST_CHECK_EQUAL(0x200000, leading[4].minimumCodePoint);
+  BOOST_CHECK_EQUAL(0x3ffffff, leading[4].maximumCodePoint);
+  BOOST_CHECK_EQUAL(0x4000000, leading[5].minimumCodePoint);
+  BOOST_CHECK_EQUAL(0x7fffffff, leading[5].maximumCodePoint);
 }
 
-BOOST_AUTO_TEST_CASE(testConstantsOfUtsf8Range_4Bytes) {
-  checkRangeConstants<4>(21, 0xf0, 0xf8, 0x10000, 0x10ffff);
-}
+
 
 BOOST_AUTO_TEST_CASE(testNumberOfBytesFromMarkers) {
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(Range<1>::MARKER), 1);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(Range<2>::MARKER), 2);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(Range<3>::MARKER), 3);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(Range<4>::MARKER), 4);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(leading[0].marker), 1);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(leading[1].marker), 2);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(leading[2].marker), 3);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(leading[3].marker), 4);
 
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(Range<1>::MARKER + 1), 1);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(Range<2>::MARKER + 1), 2);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(Range<3>::MARKER + 1), 3);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(Range<4>::MARKER + 1), 4);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(leading[0].marker + 1), 1);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(leading[1].marker + 1), 2);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(leading[2].marker + 1), 3);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(leading[3].marker + 1), 4);
 
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(0x40), 1);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(0x20), 1);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(0x10), 1);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(0x08), 1);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(0x04), 1);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(0x02), 1);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(0x01), 1);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(0x40), 1);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(0x20), 1);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(0x10), 1);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(0x08), 1);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(0x04), 1);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(0x02), 1);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(0x01), 1);
 }
 
 BOOST_AUTO_TEST_CASE(testNumberOfBytesFromInvalidMarkers) {
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(Range<1>::MARKER | 0x80), 0);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(char(0xf80)), 0);
-  BOOST_CHECK_EQUAL(Utf8::getBytesFromMarker(char(0xf90)), 0);
-}
-
-BOOST_AUTO_TEST_CASE(testNumberOfBytesForCharacter) {
-  checkBytesForCharacters<1>();
-  checkBytesForCharacters<2>();
-  checkBytesForCharacters<3>();
-  checkBytesForCharacters<4>();
-
-  BOOST_CHECK_EQUAL(Utf8::getBytesForCharacter(0), 1);
-  BOOST_CHECK_EQUAL(Utf8::getBytesForCharacter(Range<4>::LAST_CODEPOINT + 1), 0);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(leading[0].marker | 0x80), 0);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(char(0xf80)), 0);
+  BOOST_CHECK_EQUAL(Utf8::encodedBytes(char(0xf90)), 0);
 }
 
 BOOST_AUTO_TEST_CASE(testScatterUnicodeBytesAndReverse) {

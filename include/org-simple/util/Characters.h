@@ -22,6 +22,7 @@
  */
 
 #include <algorithm>
+#include <org-simple/core/Bits.h>
 
 namespace org::simple::util {
 
@@ -62,133 +63,148 @@ struct Ascii {
   }
 };
 
-struct Utf8 {
+namespace ByteEncoding {
+static constexpr int getBitsForByteCount(int bytes) {
+  return bytes == 1 ? 7 : bytes * 5 + 1;
+}
 
-  struct ExtensionByte {
-    static constexpr char MARKER_MASK = char(0xc0);
-    static constexpr char VALUE_MASK = char(~0xc0);
-    static constexpr char MARKER = char(0x80);
-    static constexpr short BITS = 6;
-
-    static constexpr char32_t unsafeScatter(char32_t c, char *p) {
-      *p = MARKER | char(VALUE_MASK & c);
-      return c >> BITS;
-    }
-
-    static constexpr bool is(char c) { return char(c & MARKER_MASK) == MARKER; }
-
-    static constexpr char getMaskedValue(char c) { return char(c & VALUE_MASK); }
-  };
-
-  template <short B> struct Range {
-    static constexpr char32_t MAX_CODEPOINT = 0x0010ffff;
-    static_assert(B >= 1 && B <= 4);
-
-    static constexpr short BYTES = B;
-    static constexpr short BITS = BYTES == 1 ? 7 : BYTES * 5 + 1;
-    static constexpr char MARKER =
-        BYTES == 1 ? 0 : char(0xfffffffe << (7 - BYTES));
-    static constexpr char MARKER_MASK =
-        BYTES == 1 ? char(0x80) : char(0xffffffff << (7 - BYTES));
-    static constexpr char VALUE_MASK = ~MARKER_MASK;
-    static constexpr char32_t LAST_CODEPOINT =
-        std::min(MAX_CODEPOINT, char32_t((1 << BITS) - 1));
-
-    static constexpr char32_t FIRST_CODEPOINT =
-        BYTES == 1
-            ? 0
-            : Range<std::max(short(BYTES - 1), short(1))>::LAST_CODEPOINT + 1;
-
-    /**
-     * Returns whether the given character is a byte marker for a BYTE bytes
-     * code-point.
-     */
-    static constexpr bool isByteMarker(char c) {
-      char check = char(c & MARKER_MASK);
-      return check == MARKER;
-    }
-
-    static constexpr char32_t getMaskedValue(char c) { return c & VALUE_MASK; }
-
-    static constexpr char gerMarkerByte(char c) {
-      return char(MARKER | getMaskedValue(c));
-    }
-
-  private:
-    friend struct Range<1>;
-    friend struct Range<2>;
-    friend struct Range<3>;
-    friend struct Range<4>;
-    friend struct Utf8;
-
-    static constexpr short getBytesFromMarker(char c) {
-      if constexpr (BYTES > 1) {
-        return isByteMarker(c) ? BYTES
-                               : Range<BYTES - 1>::getBytesFromMarker(c);
-      } else {
-        return isByteMarker(c) ? BYTES : 0;
-      }
-    }
-
-    static constexpr short getBytesForCharacter(char32_t c) {
-      if constexpr (BYTES < 4) {
-        return c <= LAST_CODEPOINT ? BYTES
-                                   : Range<BYTES + 1>::getBytesForCharacter(c);
-      } else {
-        return c <= LAST_CODEPOINT ? BYTES : 0;
-      }
-    }
-
-    static constexpr char *unsafeScatter(char32_t c, char *destination) {
-      char32_t remainder = c;
-      for (short i = BYTES - 1; i > 0; i--) {
-        remainder = ExtensionByte::unsafeScatter(remainder, destination + i);
-      }
-      char marker = Range<BYTES>::MARKER;
-      char mask = Range<BYTES>::VALUE_MASK;
-      *destination = marker | char(mask & remainder);
-      return destination + BYTES;
-    }
-  };
-
-  static constexpr short getBytesFromMarker(char c) {
-    return Range<4>::getBytesFromMarker(c);
-  }
-
-  static constexpr short getBytesForCharacter(char32_t c) {
-    return Range<1>::getBytesForCharacter(c);
-  }
+struct Marker {
+  const int markerBits;
+  const int valueBits = 8 - markerBits;
+  const char maskMarker = char(0xff00 >> markerBits);
+  const char marker = char(maskMarker << 1);
+  const char maskValue = ~maskMarker;
 
   /**
-   * Write the specified unicode character \c c to a \c destination and return
-   * the position after the written bytes, or \c nullptr is the character
-   * cannot be represented in UTF-8. This function does not check whether
-   * \c destination is \c nullptr.
-   * @param c The unicode character
-   * @param destination The character array that will contain the bytes.
-   * @return pointer to the position in \c destination to write the next
-   * character.
+   * @return whether {@code byte} contains a valid marker.
    */
-  static constexpr char *unsafeScatter(char32_t c, char *destination) {
-    switch (getBytesForCharacter(c)) {
-    case 1:
-      return Range<1>::unsafeScatter(c, destination);
-    case 2:
-      return Range<2>::unsafeScatter(c, destination);
-    case 3:
-      return Range<3>::unsafeScatter(c, destination);
-    case 4:
-      return Range<4>::unsafeScatter(c, destination);
-    default:
-      return nullptr;
+  bool is(char byte) const { return char(byte & maskMarker) == marker; }
+
+  /**
+   * @return the bits without the marker, that are alsways the less
+   * significant bits of the byte.
+   */
+  char valueFrom(char byte) const { return char(maskValue & byte); }
+
+  /**
+   * @return a value that contains a valid marker and the lower significant
+   * bits from {@code codePoint} that can be stored next to it.
+   */
+  char pack(char32_t codePoint) const { return marker | valueFrom(codePoint); }
+
+  /**
+   * Packs {@code codePoint} in {@code destination} and returns the
+   * right-shifted value of {@code value} without the packed value bits.
+   * @param codePoint The value to pack.
+   * @param destination The destination to write the packed value to.
+   * @return the right-shifted value of {@code codePoint} without the packed
+   * value bits.
+   */
+  char32_t packGetShifted(char32_t codePoint, char &destination) const {
+    destination = pack(codePoint);
+    return destination >> valueBits;
+  }
+};
+
+struct Continuation : public Marker {
+  constexpr Continuation() : Marker{2} {}
+} static constexpr continuation;
+
+struct Leading : public Marker {
+  const int encodedBytes;
+  const int totalEncodedBits;
+  const char32_t minimumCodePoint;
+  const char32_t maximumCodePoint;
+
+  constexpr Leading(int B)
+      : Marker{B == 1 ? 1 : B + 1}, encodedBytes(B),
+        totalEncodedBits(getBitsForByteCount(B)),
+        minimumCodePoint(B == 1 ? 0
+                                : char32_t(1) << getBitsForByteCount(B - 1)),
+        maximumCodePoint((char32_t(1) << totalEncodedBits) - 1) {}
+
+  bool inside(char32_t codePoint) const {
+    return codePoint >= minimumCodePoint && codePoint <= maximumCodePoint;
+  }
+  char *unsafeEncode(char32_t c, char *bytes) const {
+    char32_t remainder = c;
+    for (int i = encodedBytes - 1; i > 0; i--) {
+      remainder = continuation.packGetShifted(remainder, bytes[i]);
     }
+    bytes[0] = pack(remainder);
+    return bytes + encodedBytes;
   }
 
-  static constexpr bool isUtf8(char32_t c) {
-    return getBytesForCharacter(c) != 0;
+  char *unsafeDecode(char *bytes, char32_t &decoded) const {
+    char *ptr = bytes;
+    char32_t sum = valueFrom(*bytes++);
+    for (int at = 1; at < encodedBytes; at++) {
+      char next = *ptr++;
+      if (!continuation.is(next)) {
+        return nullptr;
+      }
+      sum <<= continuation.valueBits;
+      sum += continuation.valueFrom(next);
+    }
+    decoded = sum;
+    return ptr;
   }
-  static constexpr bool isAscii(char32_t c) {
-    return Range<1>::isByteMarker(c);
+
+} static constexpr leading[] = {1, 2, 3, 4, 5, 6};
+
+template <int B, char32_t MAX> struct OfLength {
+  static_assert(B >= 0 && B <= 6);
+  static_assert(MAX == 0 || (MAX >= leading[B - 1].minimumCodePoint &&
+                                MAX <= leading[B - 1].maximumCodePoint));
+
+  static constexpr char32_t maxCodePoint =
+      MAX == 0 ? Leading(B).maximumCodePoint
+               : std::min(MAX, Leading(B).maximumCodePoint);
+
+
+  static int encodedBytes(char firstByte) {
+    for (int i = 0; i < B; i++) {
+      if (leading[i].is(firstByte)) {
+        return leading[i].encodedBytes;
+      }
+    }
+    return 0;
+  }
+
+    static int encodingBytes(char32_t codePoint) {
+    if (codePoint > maxCodePoint) {
+      return 0;
+    }
+    for (int i = 0; i < B; i++) {
+      if (leading[i].inside(codePoint)) {
+        return leading[i].encodedBytes;
+      }
+    }
+    return 0;
+  }
+  static char *encodeBytes(char32_t codePoint, char *bytes) {
+    if (codePoint > maxCodePoint) {
+      return nullptr;
+    }
+    for (int i = 0; i < B; i++) {
+      if (leading[i].inside(codePoint)) {
+        return leading[i].unsafeEncode(codePoint, bytes);
+      }
+    }
+    return nullptr;
+  }
+  static char *decodeBytes(char *bytes, char32_t &decoded) {
+    for (int i = 0; i < B; i++) {
+      if (leading[i].is(*bytes)) {
+        char32_t r;
+        char *string = leading[i].unsafeDecode(bytes, r);
+        if (string != nullptr && r <= maxCodePoint) {
+          decoded = r;
+          return string;
+        }
+      }
+    }
+    return nullptr;
   }
 
   class Reader {
@@ -205,7 +221,7 @@ struct Utf8 {
 
     [[nodiscard]] char32_t value() const { return character_; }
 
-    char32_t getValueAndReset()  {
+    char32_t getValueAndReset() {
       if (bytesToRead_) {
         return -1;
       }
@@ -216,83 +232,27 @@ struct Utf8 {
 
     State addGetState(char byte) {
       if (bytesToRead_ == 0) {
-        short bytes = getBytesFromMarker(byte);
-        switch (bytes) {
-        case 1:
-          character_ = byte;
-          break;
-        case 2:
-          character_ = Range<2>::getMaskedValue(byte);
-          break;
-        case 3:
-          character_ = Range<3>::getMaskedValue(byte);
-          break;
-        case 4:
-          character_ = Range<4>::getMaskedValue(byte);
-          break;
-        default:
-          return State::INVALID;
+        for (int i = 0; i < B; i++) {
+          if (leading[i].is(byte)) {
+            character_ =  leading[i].valueFrom(byte);
+            bytesToRead_ = i; // encoded bytes minus one
+          }
         }
-        bytesToRead_ = bytes - 1;
-        return State::READING;
-      } else if (Utf8::ExtensionByte::is(byte)) {
-        character_ <<= ExtensionByte::BITS;
-        character_ |= ExtensionByte::getMaskedValue(byte);
-        return --bytesToRead_ ? State::READING : State::OK;
+      } else if (continuation.is(byte)) {
+        character_ <<= continuation.valueBits;
+        character_ |= continuation.valueFrom(byte);
       }
-      return State::INVALID;
-    }
-
-    static char32_t read(const char *text) {
-      return text ? readUnsafe(text) : -1;
-    }
-
-    static char32_t readUnsafe(const char *text) {
-      const char *ptr = text;
-      if (isAscii(*ptr)) {
-        return *ptr;
+      else {
+        return State::INVALID;
       }
-      Reader reader;
-      if (reader.addGetState(*ptr++) != Reader::State::READING) {
-        return -1;
-      }
-      Reader::State state;
-      do {
-        state = reader.addGetState(*ptr++);
-      } while (state == Reader::State::READING);
-      return state == Reader::State::OK ? reader.value() : -1;
-    }
-
-    static char32_t readGextNext(const char *text, const char **next) {
-      return text ? readUnsafeGetNext(text, next) : -1;
-    }
-
-    static char32_t readUnsafeGetNext(const char *text, const char **next) {
-      if (next == nullptr) {
-        return readUnsafe(text);
-      }
-      const char *ptr = text;
-      if (isAscii(*ptr)) {
-        *next = ptr + 1;
-        return *ptr;
-      }
-      Reader reader;
-      if (reader.addGetState(*ptr++) != Reader::State::READING) {
-        *next = text;
-        return -1;
-      }
-      Reader::State state;
-      do {
-        state = reader.addGetState(*ptr++);
-      } while (state == Reader::State::READING);
-      if (state == Reader::State::OK) {
-        *next = ptr;
-        return reader.value();
-      }
-      *next = ptr;
-      return -1;
+      return --bytesToRead_ ? State::READING : State::OK;
     }
   };
+};
+}; // namespace ByteEncoding
+
+struct Utf8 : public ByteEncoding::OfLength<4, 0x0010ffff> {
+  static constexpr char32_t MAX_UTF8_CODEPOINT = 0x0010ffff;
 };
 
 } // namespace org::simple::util

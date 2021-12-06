@@ -20,7 +20,7 @@ IC0 --> MMI
 labelI-.-MMI
 ICN --> MMI
 linkStyle 1 stroke-width:0
-end
+last
 subgraph "Output translation"
 OC0["Channel buffer (BS)"]
 labelO("0 &hellip; (OUTPUTS - 1)")
@@ -30,12 +30,12 @@ MMO-->OC0
 MMO-.-labelO
 MMO-->OCN
 linkStyle 4 stroke-width:0
-end
+last
 subgraph "Processing"
 PBI["Process channel_buffer_samples buffer (Interleaved PS)"]
 PBO["Process output buffer (Interleaved PS)"]
 PBI-->PROC(Processing)-->PBO
-end
+last
 
 MMI-->PBI
 PBO-->MMO
