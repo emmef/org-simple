@@ -324,5 +324,23 @@ BOOST_AUTO_TEST_CASE(testEncodeAndRead) {
   checkEncodeAndReadForCharacters<6>();
 }
 
+BOOST_AUTO_TEST_CASE(testUtf8AllCodepoints) {
+  typedef org::simple::charEncode::Utf8Encoding Encoding;
+  byte encoded[Encoding::encodedBytes];
+  int errors = 0;
+
+  for (codePoint cp = 65536; cp <= Encoding::maximumCodePoint; cp++) {
+    byte *nextEncodePtr = Encoding::unsafeEncode(cp, encoded);
+    BOOST_CHECK(nextEncodePtr != nullptr);
+    ptrdiff_t bytesWritten = nextEncodePtr - encoded;
+    BOOST_CHECK(bytesWritten >= 1 && bytesWritten <= Encoding::encodedBytes);
+    codePoint decoded;
+    const byte *nextDecodePtr = Encoding::unsafeDecode(encoded, decoded);
+    BOOST_CHECK(nextDecodePtr != nullptr);
+    ptrdiff_t bytesRead = nextDecodePtr - encoded;
+    BOOST_CHECK_EQUAL(long(bytesWritten), long(bytesRead));
+    BOOST_CHECK_EQUAL(cp, decoded);
+  }
+}
 
 BOOST_AUTO_TEST_SUITE_END()

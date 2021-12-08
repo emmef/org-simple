@@ -234,10 +234,10 @@ struct LeadingMarker
       return (inside(c)) ? unsafeFixedLengthEncode(c, bytes) : nullptr;
     } else {
       byte *result =
-          LeadingMarker<encodedBytes - 1, B, C, L>::unsafeFixedLengthEncode(
+          LeadingMarker<encodedBytes - 1, B, C, L>::unsafeEncode(
               c, bytes);
       return result           ? result
-             : inside(*bytes) ? unsafeFixedLengthEncode(c, bytes)
+             : inside(c) ? unsafeFixedLengthEncode(c, bytes)
                               : nullptr;
     }
   }
@@ -312,8 +312,7 @@ struct LeadingMarker
       const int bytes =
           LeadingMarker<encodedBytes - 1, B, C, L>::getBytesFromLeadingMarker(
               marker);
-      bool temp = is(marker);
-      return bytes != 0 ? bytes : temp ? encodedBytes : 0;
+      return bytes != 0 ? bytes : is(marker) ? encodedBytes : 0;
     }
   }
 
