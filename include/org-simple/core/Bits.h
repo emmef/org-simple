@@ -26,7 +26,6 @@
 #include <limits>
 #include <type_traits>
 
-
 namespace org::simple::core {
 
 template <typename U>
@@ -187,6 +186,111 @@ public:
   }
 };
 
+namespace bits {
+/**
+ * Sets all bits that are less significant than the most significant bit set
+ * in the number, a.k. "right-fill".
+ * @param n The number to fill.
+ * @return The number with all bits that are less significant than its most
+ * significant bit set.
+ */
+template <typename unsigned_type>
+static constexpr unsigned_type fill(unsigned_type value) {
+  return Bits<unsigned_type>::fill(value);
+};
+
+/**
+ * Sets all bits that are less significant than the most significant bit set
+ * in the number, a.k. "right-fill". Special handling for signed types i
+ * necessary, as the right-shift operator can carry the most significant bit
+ * set, which leads to the wrong result.
+ * @param n The number to fill.
+ * @return The number with all bits that are less significant than its most
+ * significant bit set.
+ */
+template <typename signed_type>
+static constexpr signed_type fill_signed(signed_type n) {
+  return Bits<typename std::make_unsigned<signed_type>::type>::fill(n);
+}
+
+/**
+ * Returns the number of leading zero bits in {@code x}. If {@code x} is zero,
+ * the result is the number of bits in the type.
+ * @param x The number to test.
+ * @return the number of leading zero bits.
+ */
+template <typename unsigned_type>
+static constexpr int number_of_leading_zeroes(unsigned_type x) {
+  return Bits<unsigned_type>::number_of_leading_zeroes(x);
+}
+
+/**
+ * Returns the number of the most significant bit in value or -1 when value is
+ * zero. The number of the least significant bit is zero.
+ * @param x The number to test.
+ * @return the number of the most significant bit set, or -1 if value is zero.
+ */
+template <typename unsigned_type>
+static constexpr int most_significant(unsigned_type x) {
+  return Bits<unsigned_type>::most_significant(x);
+}
+
+/**
+ * Returns the number of the most significant bit in value when it is a power
+ * of two. The number of the least significant bit is zero. If value is not a
+ * power of two, or zero, this function returns minus one minus the number of
+ * the second most significant bit.
+ * @return the number of the most significant bit set, or -1 if value is zero.
+ */
+template <typename unsigned_type>
+static constexpr int most_significant_single(unsigned_type value) {
+  return Bits<unsigned_type>::most_significant_single(value);
+}
+
+/**
+ * Returns whether {@code x} is a power of two.
+ * @param x The number ot check.
+ * @return whether {@code x} is a power of two.
+ */
+template <typename unsigned_type>
+static constexpr bool is_power_of_two(unsigned_type x) {
+  return Bits<unsigned_type>::is_power_of_two(x);
+}
+
+/**
+ * Returns whether {@code x} has all bits set that are less significant than
+ * its most significant bit. In other words, whether {@code x} is one, or a
+ * power of two.
+ * @param x The number ot check.
+ * @return whether {@code x} has all bits set that are less significant than
+ * its most significant bit
+ */
+template <typename unsigned_type>
+static constexpr bool all_lesser_bits_set(unsigned_type x) {
+  return Bits<unsigned_type>::all_lesser_bits_set(x);
+}
+
+/**
+ * Returns a bit mask that can be used to wrap addresses that include the
+ * specified index.
+ * @return the bit mask that includes index.
+ */
+template <typename unsigned_type>
+static constexpr unsigned_type bit_mask_including(unsigned_type index) {
+  return Bits<unsigned_type>::bit_mask_including(index);
+}
+
+/**
+ * Returns a bit mask that can be used to wrap addresses that must not exceed
+ * the specified index. The minimum returned mask is 0.
+ * @return the bit mask that includes index.
+ */
+template <typename unsigned_type>
+static constexpr unsigned_type bit_mask_not_exceeding(unsigned_type index) {
+  return Bits<unsigned_type>::bit_mask_not_exceeding(index);
+}
+
+} // namespace bits
 } // namespace org::simple::core
 
 #endif // ORG_SIMPLE_BITS_H
