@@ -57,7 +57,7 @@ static const std::vector<long long unsigned> &generatePatterns() {
       if (i != j) {
         unsigned value = hexDigits[i] | unsigned(hexDigits[j] << 4);
         long long unsigned result = 0;
-        for (int k = 0; k < sizeof(long long unsigned); k++) {
+        for (size_t k = 0; k < sizeof(long long unsigned); k++) {
           result <<= 8;
           result |= value;
         }
@@ -185,12 +185,16 @@ void checkScatterForCharacters() {
   checkScatterForCharacterAndBack<Bytes, DecodeBytes>(max - 1);
 
   for (long long unsigned x : patterns()) {
-    codePoint pattern = x & ~codePoint(0);
-    while (pattern) {
-      if (pattern >= min && pattern <= max) {
-        checkScatterForCharacterAndBack<Bytes, DecodeBytes>(pattern);
+    const codePoint pattern = x & ~codePoint(0);
+    for (codePoint c = pattern; c != 0; c >>= 1) {
+      if (c >= min && c <= max) {
+        checkScatterForCharacterAndBack<Bytes, DecodeBytes>(c);
       }
-      pattern >>= 1;
+    }
+    for (codePoint c = pattern; c != 0; c <<= 1) {
+      if (c >= min && c <= max) {
+        checkScatterForCharacterAndBack<Bytes, DecodeBytes>(c);
+      }
     }
   }
 }
@@ -210,12 +214,16 @@ void checkNumberOfBytesDeducted() {
   checkNumberOfBytesDeducted<Bytes, EntryMarker>(min + 1);
   checkNumberOfBytesDeducted<Bytes, EntryMarker>(max - 1);
   for (long long unsigned x : patterns()) {
-    codePoint pattern = x & ~codePoint(0);
-    while (pattern) {
-      if (pattern < min && pattern > max) {
-        checkNumberOfBytesDeducted<Bytes, EntryMarker>(pattern);
+    const codePoint pattern = x & ~codePoint(0);
+    for (codePoint c = pattern; c != 0; c >>= 1) {
+      if (c >= min && c <= max) {
+        checkNumberOfBytesDeducted<Bytes, EntryMarker>(c);
       }
-      pattern >>= 1;
+    }
+    for (codePoint c = pattern; c != 0; c <<= 1) {
+      if (c >= min && c <= max) {
+        checkNumberOfBytesDeducted<Bytes, EntryMarker>(c);
+      }
     }
   }
 }
@@ -322,12 +330,16 @@ void checkEncodeAndReadForCharacters() {
   checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(min + 1);
   checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(max - 1);
   for (long long unsigned x : patterns()) {
-    codePoint pattern = x & ~codePoint(0);
-    while (pattern) {
-      if (pattern >= min && pattern <= max) {
-        checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(pattern);
+    const codePoint pattern = x & ~codePoint(0);
+    for (codePoint c = pattern; c != 0; c >>= 1) {
+      if (c >= min && c <= max) {
+        checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(c);
       }
-      pattern >>= 1;
+    }
+    for (codePoint c = pattern; c != 0; c <<= 1) {
+      if (c >= min && c <= max) {
+        checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(c);
+      }
     }
   }
 }
@@ -380,13 +392,18 @@ BOOST_AUTO_TEST_CASE(testUtf8AllCodepoints) {
   byte encoded[Encoding::encodedBytes];
 
   for (long long unsigned x : patterns()) {
-    codePoint pattern = x & ~codePoint(0);
-    while (pattern) {
-      if (pattern >= Encoding::minimumCodePoint &&
-          pattern <= Encoding::maximumCodePoint) {
-        testUtf8CodePoint(encoded, pattern);
+    const codePoint pattern = x & ~codePoint(0);
+    codePoint min = Encoding::minimumCodePoint;
+    codePoint max = Encoding::maximumCodePoint;
+    for (codePoint c = pattern; c != 0; c >>= 1) {
+      if (c >= min && c <= max) {
+        testUtf8CodePoint(encoded, c);
       }
-      pattern >>= 1;
+    }
+    for (codePoint c = pattern; c != 0; c <<= 1) {
+      if (c >= min && c <= max) {
+        testUtf8CodePoint(encoded, c);
+      }
     }
   }
 }
