@@ -22,9 +22,20 @@
  */
 
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <type_traits>
 
+namespace org::simple::core::bits {
+
+template <typename U>
+concept unsignedIntegral = std::is_integral_v<U> && std::is_unsigned_v<U> &&
+                           sizeof(U) <= 8;
+template <typename I>
+concept signedIntegral = std::is_integral_v<I> && std::is_signed_v<I> &&
+                         sizeof(I) <= 8;
+
+} // namespace org::simple::core::bits
 namespace org::simple::core {
 
 /**
@@ -32,13 +43,29 @@ namespace org::simple::core {
  * @tparam unsigned_type An integral, unsigned type.
  */
 template <typename unsigned_type = size_t> class Bits {
-  static_assert(std::is_integral_v<unsigned_type> &&
-                    !std::is_signed_v<unsigned_type>,
-                "Power2:: Type must be an integral, unsigned type");
+  static_assert(bits::unsignedIntegral<unsigned_type>);
 
-  template <int N> static constexpr unsigned_type fillN(unsigned_type n) {
-    return N < 2 ? n : fillN<N / 2>(n) | (fillN<N / 2>(n) >> (N / 2));
+  /**
+   * Basic workhorse for the fill_bits functions.
+   * @tparam B The number of bits in the type, divided by 2. This is substituted
+   * by default and supplying a different value leads to behaviour out of the
+   * design scope of this function.
+   * @param n The number to fill.
+   * @return The number with all bits that are less significant than its most
+   * significant bit set.
+   * @see {@code fill_bits<U>(n)}
+   */
+  template <int B = sizeof(unsigned_type) * 4>
+  static constexpr unsigned_type fill_bits(unsigned_type n) {
+    if constexpr (B == 1) {
+      return n | (n >> 1);
+    } else {
+      const unsigned_type n1 = fill_bits<B / 2>(n);
+      return n1 | (n1 >> B);
+    }
   }
+
+  typedef typename std::make_signed<unsigned_type>::type signed_type;
 
 public:
   /**
@@ -47,26 +74,62 @@ public:
   static constexpr unsigned type_bits = 8 * sizeof(unsigned_type);
 
   /**
-   * Fill all bits that are less significant than the most significant bit.
-   * @param value The value to fill bits
-   * @return value with all bits set that are less significant than the most
-   * significant bit.
+   * Sets all bits that are less significant than the most significant bit set
+   * in the number, a.k. "right-fill".
+   * @param n The number to fill.
+   * @return The number with all bits that are less significant than its most
+   * significant bit set.
    */
   static constexpr unsigned_type fill(unsigned_type value) {
-    return fillN<8 * sizeof(unsigned_type)>(value);
+    return fill_bits(value);
   };
+
+  /**
+   * Sets all bits that are less significant than the most significant bit set
+   * in the number, a.k. "right-fill". Special handling for signed types i
+   * necessary, as the right-shift operator can carry the most significant bit
+   * set, which leads to the wrong result.
+   * @param n The number to fill.
+   * @return The number with all bits that are less significant than its most
+   * significant bit set.
+   */
+  static constexpr signed_type fill_signed(signed_type n) {
+    return reinterpret_cast<signed_type>(
+        fill(reinterpret_cast<unsigned_type>(n)));
+  }
+
+  /**
+   * Returns the number of leading zero bits in {@code x}. If {@code x} is zero,
+   * the result is the number of bits in the type.
+   * @param x The number to test.
+   * @return the number of leading zero bits.
+   */
+  static constexpr int number_of_leading_zeroes(unsigned_type x) {
+    if (unsigned_type(1) << (type_bits - 1) & x) {
+      return 0;
+    }
+    signed_type xp = x;
+    signed_type n = type_bits;
+    signed_type c = type_bits >> 1;
+    do {
+      unsigned_type y = xp >> c;
+      if (y != 0) {
+        n = n - c;
+        xp = y;
+      }
+      c >>= 1;
+    } while (c != 0);
+    return n - xp;
+  }
 
   /**
    * Returns the number of the most significant bit in value or -1 when value is
    * zero. The number of the least significant bit is zero.
+   * @param x The number to test.
    * @return the number of the most significant bit set, or -1 if value is zero.
    */
-  static constexpr int most_significant(unsigned_type value) {
-    int bit = sizeof(unsigned_type) * 8 - 1;
-    while (bit >= 0 && (value & (unsigned_type(1) << bit)) == 0) {
-      bit--;
-    }
-    return bit;
+  static constexpr int most_significant(unsigned_type x) {
+    return x ? type_bits - 1 - number_of_leading_zeroes(x) : -1;
   }
 
   /**
@@ -77,21 +140,12 @@ public:
    * @return the number of the most significant bit set, or -1 if value is zero.
    */
   static constexpr int most_significant_single(unsigned_type value) {
-    int bit = sizeof(unsigned_type) * 8 - 1;
-    while (bit >= 0 && (value & (unsigned_type(1) << bit)) == 0) {
-      bit--;
+    int r = most_significant(value);
+    if (r < 1) {
+      return r;
     }
-    if (bit < 1) {
-      return bit;
-    }
-    int lower_bit = bit - 1;
-    while (lower_bit >= 0) {
-      if (value & (unsigned_type(1) << lower_bit)) {
-        return -lower_bit - 1;
-      }
-      lower_bit--;
-    }
-    return bit;
+    unsigned_type masked = value & fill(1 << (r - 1));
+    return masked ? -1 - most_significant(masked) : r;
   }
 
   /**
