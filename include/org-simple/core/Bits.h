@@ -47,10 +47,13 @@ template <typename unsigned_type> class Bits {
    * @tparam B The number of bits in the type, divided by 2. This is substituted
    * by default and supplying a different value leads to behaviour out of the
    * design scope of this function.
+   * Based on Hackers Delight's suggestion, but made to work in a constexpr
+   * context using templates. correctness.
    * @param n The number to fill.
    * @return The number with all bits that are less significant than its most
    * significant bit set.
    * @see {@code fill_bits<U>(n)}
+   * @see {@link https://en.wikipedia.org/wiki/Hacker%27s_Delight}
    */
   template <int B = sizeof(unsigned_type) * 4>
   static constexpr unsigned_type fill_bits(unsigned_type n) {
@@ -98,10 +101,16 @@ public:
   /**
    * Returns the number of leading zero bits in {@code x}. If {@code x} is zero,
    * the result is the number of bits in the type.
+   * Based on Hackers Delight but added the significant bit check for
+   * correctness.
    * @param x The number to test.
    * @return the number of leading zero bits.
+   * @see {@link https://en.wikipedia.org/wiki/Hacker%27s_Delight}
    */
   static constexpr int number_of_leading_zeroes(unsigned_type x) {
+    // Most significant bit check added here, as results were wrong when it was
+    // set. Not sure if the original algorithm, contrary to what the used types
+    // suggested, assumed that the highest bit should not be set.
     if (unsigned_type(1) << (type_bits - 1) & x) {
       return 0;
     }
