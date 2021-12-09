@@ -30,14 +30,14 @@ template <typename unsigned_type = size_t> struct Power2For {
    * @return true if value is a power of two, false otherwise.
    */
   static constexpr bool is(const unsigned_type value) {
-    return value >= 2 && is_minus_one(value - 1);
+    return Bits<unsigned_type>::is_power_of_two(value);
   }
 
   /**
    * @return true if value is a power of two minus one, false otherwise.
    */
   static constexpr bool is_minus_one(const unsigned_type value) {
-    return value != 0 && Bits<unsigned_type>::fill(value) == value;
+    return Bits<unsigned_type>::all_lesser_bits_set(value);
   }
 
   /**

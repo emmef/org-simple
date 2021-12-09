@@ -38,9 +38,9 @@ namespace org::simple::traits {
  * @tparam T The type to be checked to be valid ofr containing size.
  */
 template <typename S>
-static constexpr bool is_valid_size_type =
-    std::is_unsigned_v<S> &&
-    std::numeric_limits<S>::max() <= std::numeric_limits<size_t>::max();
+concept is_valid_size_type = core::unsignedIntegral<S> &&
+    std::numeric_limits<S>::max()
+<= std::numeric_limits<size_t>::max();
 
 /**
  * Returns the maximum value for a valid size type.
