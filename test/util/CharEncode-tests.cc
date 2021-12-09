@@ -2,10 +2,10 @@
 // Created by michel on 07-12-21.
 //
 
-#include <org-simple/util/CharEncode.h>
-#include <org-simple/core/Bits.h>
 #include "boost-unit-tests.h"
 #include <iostream>
+#include <org-simple/core/Bits.h>
+#include <org-simple/util/CharEncode.h>
 
 typedef char8_t byte;
 typedef char32_t codePoint;
@@ -19,9 +19,59 @@ using Continuation =
     org::simple::charEncode::ContinuationMarker<byte, codePoint>;
 typedef Leading<4> RawUtf8;
 template <int MARKER_BITS, codePoint L = std::numeric_limits<codePoint>::max()>
-using Reader = org::simple::charEncode::DecodingReader<MARKER_BITS, byte, codePoint>;
+using Reader =
+    org::simple::charEncode::DecodingReader<MARKER_BITS, byte, codePoint>;
 using ReaderState = org::simple::charEncode::DecodingReaderState;
 
+template <typename number, bool separators = true>
+static const char *binary(number num) {
+  static constexpr size_t bits = sizeof(num) * 8;
+  static char buffer[bits + 1 + bits / 3];
+  number test = number(1) << (sizeof(num) * 8 - 1);
+  if constexpr (separators) {
+    int i;
+    int j;
+    for (i = 0, j = 0; i < bits; i++, test >>= 1) {
+      if (i != 0 && (i % 4) == 0) {
+        buffer[j++] = '_';
+      }
+      buffer[j++] = test & num ? '1' : '0';
+    }
+    buffer[j] = '\0';
+  } else {
+    int i;
+    for (i = 0; i < bits; i++, test >>= 1) {
+      buffer[i++] = test & num ? '1' : '0';
+    }
+    buffer[i] = '\0';
+  }
+  return buffer;
+}
+
+static const std::vector<long long unsigned> &generatePatterns() {
+  static const unsigned hexDigits[] = {0x0, 0x1, 0x02, 0x03, 0x05, 0x07, 0xb};
+  static constexpr int count = sizeof(hexDigits) / sizeof(unsigned);
+  static std::vector<long long unsigned> results;
+  for (int i = 0; i < count; i++) {
+    for (int j = 0; j < count; j++) {
+      if (i != j) {
+        unsigned value = hexDigits[i] | unsigned(hexDigits[j] << 4);
+        long long unsigned result = 0;
+        for (int k = 0; k < sizeof(long long unsigned); k++) {
+          result <<= 8;
+          result |= value;
+        }
+        results.push_back(result);
+      }
+    }
+  }
+  return results;
+}
+
+static const std::vector<long long unsigned> &patterns() {
+  static const std::vector<long long unsigned> p = generatePatterns();
+  return p;
+}
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_CharEncode_Tests)
 
@@ -96,31 +146,6 @@ BOOST_AUTO_TEST_CASE(testLeadinMinimaAndMaxima) {
   BOOST_CHECK_EQUAL(0x7fffffff, Leading<6>::maximumCodePoint);
 }
 
-template <typename number, bool separators = true> static const char *binary(number num) {
-  static constexpr size_t bits = sizeof(num) * 8;
-  static char buffer[bits + 1 + bits / 3];
-  number test = number(1) << (sizeof(num) * 8 - 1);
-  if constexpr (separators) {
-    int i;
-    int j;
-    for (i = 0, j = 0; i < bits; i++, test >>= 1) {
-      if (i != 0 && (i % 4) == 0) {
-        buffer[j++] = '_';
-      }
-      buffer[j++] = test & num ? '1' : '0';
-    }
-    buffer[j] = '\0';
-  }
-  else {
-    int i;
-    for (i = 0; i < bits; i++, test >>= 1) {
-      buffer[i++] = test & num ? '1' : '0';
-    }
-    buffer[i] = '\0';
-  }
-  return buffer;
-}
-
 template <short Bytes, short DecodeBytes>
 void checkScatterForCharacterAndBack(const char32_t c) {
   static constexpr bool sameBytes = Bytes == DecodeBytes;
@@ -158,10 +183,15 @@ void checkScatterForCharacters() {
   checkScatterForCharacterAndBack<Bytes, DecodeBytes>(min);
   checkScatterForCharacterAndBack<Bytes, DecodeBytes>(min + 1);
   checkScatterForCharacterAndBack<Bytes, DecodeBytes>(max - 1);
-  codePoint c = max;
-  while (c > min) {
-    checkScatterForCharacterAndBack<Bytes, DecodeBytes>(c);
-    c >>= 1;
+
+  for (long long unsigned x : patterns()) {
+    codePoint pattern = x & ~codePoint(0);
+    while (pattern) {
+      if (pattern >= min && pattern <= max) {
+        checkScatterForCharacterAndBack<Bytes, DecodeBytes>(pattern);
+      }
+      pattern >>= 1;
+    }
   }
 }
 
@@ -179,10 +209,14 @@ void checkNumberOfBytesDeducted() {
   checkNumberOfBytesDeducted<Bytes, EntryMarker>(min);
   checkNumberOfBytesDeducted<Bytes, EntryMarker>(min + 1);
   checkNumberOfBytesDeducted<Bytes, EntryMarker>(max - 1);
-  codePoint c = max;
-  while (c > min) {
-    checkNumberOfBytesDeducted<Bytes, EntryMarker>(c);
-    c >>= 1;
+  for (long long unsigned x : patterns()) {
+    codePoint pattern = x & ~codePoint(0);
+    while (pattern) {
+      if (pattern < min && pattern > max) {
+        checkNumberOfBytesDeducted<Bytes, EntryMarker>(pattern);
+      }
+      pattern >>= 1;
+    }
   }
 }
 
@@ -244,13 +278,12 @@ BOOST_AUTO_TEST_CASE(testNumberOfDeductedBytes) {
   checkNumberOfBytesDeducted<6>();
 }
 
-
 template <short Bytes>
-static bool readCodePoint(const char * bytes, codePoint &result) {
+static bool readCodePoint(const char *bytes, codePoint &result) {
   Reader<Bytes> reader;
   int i;
   for (i = 0; i < 6; i++) {
-    switch(reader.addGetState(bytes[i])) {
+    switch (reader.addGetState(bytes[i])) {
     case ReaderState::READING:
       break;
     case ReaderState::OK:
@@ -267,7 +300,7 @@ template <short Bytes, short DecodeBytes>
 void checkEncodeAndReadForCharacterAndBack(const char32_t c) {
   static constexpr bool sameBytes = Bytes == DecodeBytes;
   byte buffer[6] = {0, 0, 0, 0, 0, 0};
-  
+
   BOOST_CHECK_EQUAL(Bytes, Leading<Bytes>::unsafeFixedLengthEncode(c, buffer) -
                                buffer);
   if constexpr (sameBytes) {
@@ -288,16 +321,20 @@ void checkEncodeAndReadForCharacters() {
   checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(min);
   checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(min + 1);
   checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(max - 1);
-  codePoint c = max;
-  while (c > min) {
-    checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(c);
-    c >>= 1;
+  for (long long unsigned x : patterns()) {
+    codePoint pattern = x & ~codePoint(0);
+    while (pattern) {
+      if (pattern >= min && pattern <= max) {
+        checkEncodeAndReadForCharacterAndBack<Bytes, DecodeBytes>(pattern);
+      }
+      pattern >>= 1;
+    }
   }
 }
 
 BOOST_AUTO_TEST_CASE(testEncodeAndRead) {
   checkEncodeAndReadForCharacters<1>();
-  
+
   checkEncodeAndReadForCharacters<1, 2>();
   checkEncodeAndReadForCharacters<2>();
 
@@ -324,22 +361,33 @@ BOOST_AUTO_TEST_CASE(testEncodeAndRead) {
   checkEncodeAndReadForCharacters<6>();
 }
 
+static void testUtf8CodePoint(byte *encoded, const codePoint cp) {
+  typedef org::simple::charEncode::Utf8Encoding Encoding;
+  byte *nextEncodePtr = Encoding::unsafeEncode(cp, encoded);
+  BOOST_CHECK(nextEncodePtr != nullptr);
+  ptrdiff_t bytesWritten = nextEncodePtr - encoded;
+  BOOST_CHECK(bytesWritten >= 1 && bytesWritten <= Encoding::encodedBytes);
+  codePoint decoded;
+  const byte *nextDecodePtr = Encoding::unsafeDecode(encoded, decoded);
+  BOOST_CHECK(nextDecodePtr != nullptr);
+  ptrdiff_t bytesRead = nextDecodePtr - encoded;
+  BOOST_CHECK_EQUAL(long(bytesWritten), long(bytesRead));
+  BOOST_CHECK_EQUAL(cp, decoded);
+}
+
 BOOST_AUTO_TEST_CASE(testUtf8AllCodepoints) {
   typedef org::simple::charEncode::Utf8Encoding Encoding;
   byte encoded[Encoding::encodedBytes];
-  int errors = 0;
 
-  for (codePoint cp = 65536; cp <= Encoding::maximumCodePoint; cp++) {
-    byte *nextEncodePtr = Encoding::unsafeEncode(cp, encoded);
-    BOOST_CHECK(nextEncodePtr != nullptr);
-    ptrdiff_t bytesWritten = nextEncodePtr - encoded;
-    BOOST_CHECK(bytesWritten >= 1 && bytesWritten <= Encoding::encodedBytes);
-    codePoint decoded;
-    const byte *nextDecodePtr = Encoding::unsafeDecode(encoded, decoded);
-    BOOST_CHECK(nextDecodePtr != nullptr);
-    ptrdiff_t bytesRead = nextDecodePtr - encoded;
-    BOOST_CHECK_EQUAL(long(bytesWritten), long(bytesRead));
-    BOOST_CHECK_EQUAL(cp, decoded);
+  for (long long unsigned x : patterns()) {
+    codePoint pattern = x & ~codePoint(0);
+    while (pattern) {
+      if (pattern >= Encoding::minimumCodePoint &&
+          pattern <= Encoding::maximumCodePoint) {
+        testUtf8CodePoint(encoded, pattern);
+      }
+      pattern >>= 1;
+    }
   }
 }
 
