@@ -26,7 +26,8 @@
 #include <limits>
 #include <type_traits>
 
-namespace org::simple::core::bits {
+
+namespace org::simple::core {
 
 template <typename U>
 concept unsignedIntegral = std::is_integral_v<U> && std::is_unsigned_v<U> &&
@@ -35,15 +36,12 @@ template <typename I>
 concept signedIntegral = std::is_integral_v<I> && std::is_signed_v<I> &&
                          sizeof(I) <= 8;
 
-} // namespace org::simple::core::bits
-namespace org::simple::core {
-
 /**
  * Defines various bit-related operations for a size-like type.
  * @tparam unsigned_type An integral, unsigned type.
  */
-template <typename unsigned_type = size_t> class Bits {
-  static_assert(bits::unsignedIntegral<unsigned_type>);
+template <typename unsigned_type> class Bits {
+  static_assert(unsignedIntegral<unsigned_type>);
 
   /**
    * Basic workhorse for the fill_bits functions.
@@ -149,31 +147,43 @@ public:
   }
 
   /**
+   * Returns whether {@code x} is a power of two.
+   * @param x The number ot check.
+   * @return whether {@code x} is a power of two.
+   */
+  static constexpr bool is_power_of_two(unsigned_type x) {
+    return x > 1 && (fill(x - 1) & x) == 0;
+  }
+
+  /**
+   * Returns whether {@code x} has all bits set that are less significant than
+   * its most significant bit. In other words, whether {@code x} is one, or a
+   * power of two.
+   * @param x The number ot check.
+   * @return whether {@code x} has all bits set that are less significant than
+   * its most significant bit
+   */
+  static constexpr bool all_lesser_bits_set(unsigned_type x) {
+    return x && (fill(x) ^ x) == 0;
+  }
+
+  /**
    * Returns a bit mask that can be used to wrap addresses that include the
-   * specified index. The minimum returned mask is 1.
+   * specified index.
    * @return the bit mask that includes index.
    */
   static constexpr unsigned_type bit_mask_including(unsigned_type index) {
-    return index < 2 ? 1 : fill(index);
+    return index == 0 ? 0 : fill(index);
   }
 
   /**
    * Returns a bit mask that can be used to wrap addresses that must not exceed
-   * the specified index. The minimum returned mask is 1.
+   * the specified index. The minimum returned mask is 0.
    * @return the bit mask that includes index.
    */
   static constexpr unsigned_type bit_mask_not_exceeding(unsigned_type index) {
-    return index < 2 ? 0 : fill(index) == index ? index : fill(index) >> 1;
-  }
-
-  /**
-   * Returns the maximum size that corresponds with the number of bits or the
-   * maximum value of unsigned_type if that is smaller.
-   * @return the maximum size
-   */
-  static constexpr unsigned_type max_value_for_bits(unsigned size_bits) {
-    return size_bits >= type_bits ? std::numeric_limits<unsigned_type>::max()
-                                  : unsigned_type(1) << size_bits;
+    const unsigned_type filled = fill(index);
+    return index == 0 ? 0 : filled == index ? index : filled >> 1;
   }
 };
 

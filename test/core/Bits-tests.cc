@@ -39,7 +39,7 @@ struct Scenarios {
 };
 
 template <typename T> class BitsTestCases {
-  static_assert(org::simple::core::bits::unsignedIntegral<T>);
+  static_assert(org::simple::core::unsignedIntegral<T>);
   static constexpr int bits = sizeof(T) * 8;
   static constexpr int max_bit = sizeof(T) * 8 - 1;
   static constexpr T max = T(1) << max_bit;
