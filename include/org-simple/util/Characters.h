@@ -65,7 +65,7 @@ struct Utf8 {
     return std::isspace(c, locale);
   }
   template <typename codePoint> bool isLineBreak(codePoint c) const {
-    return ascii.isLineBreak(c, locale); // we ignore 0x0085, 0x2028, 0x2029
+    return ascii.isLineBreak(c, locale) || c == codePoint(0x0085) || c == codePoint(0x2028) || c == codePoint(0x2029);
   }
   template <typename codePoint> bool isBlank(codePoint c) const {
     return std::isblank(c, locale);
@@ -114,6 +114,9 @@ struct Utf8 {
     if (c == 0x002019 || c == 0x00201D || c == 0x0000BB) {
       return c;
     }
+    return codePoint(lookUpMatch(c));
+  }
+  template <typename codePoint> int lookUpMatch(codePoint c) const {
     switch (c) {
     case 0x00201A:
       return 0x002018;
