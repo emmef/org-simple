@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_CONFIG_H
 #define ORG_SIMPLE_CONFIG_H
 /*
- * org-simple/Config.h
+ * org-simple/util/Config.h
  *
  * Added by michel on 2021-12-05
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -22,9 +22,43 @@
  */
 
 #include <cstddef>
+#include <exception>
 #include <org-simple/util/Characters.h>
+#include <org-simple/util/InputStream.h>
+#include <string>
 
 namespace org::simple::config {
+
+class ParseError : public std::runtime_error {
+
+public:
+  explicit ParseError(const std::string &s) : std::runtime_error(s) {}
+  explicit ParseError(const char *s) : std::runtime_error(s) {}
+  // TODO perhaps add some constructors with more formatting utils
+};
+
+template <typename T> class AbstractReader {
+public:
+  /**
+   * Read a key name from the input stream.
+   * @param input The input stream to read from.
+   * @throws ParserError When key could not be read successfully.
+   */
+  virtual void read(util::InputStream<T> &input) = 0;
+
+  virtual ~AbstractReader() = default;
+};
+
+template <typename T> class AbstractKeyReader : public AbstractReader<T> {
+public:
+  /**
+   * Returns the key name if that was successfully read, or throws a
+   * std::runtime_error() is it was not.
+   * @return The key name.
+   */
+  virtual const T *getKey() const = 0;
+};
+
 
 struct Classifier {
   const org::simple::charClass::Utf8 &classifier =
@@ -46,95 +80,6 @@ struct Classifier {
   }
 };
 
-template <typename codePoint> class KeyOrValueChecker {
-  const Classifier classifier;
-
-public:
-  virtual bool validAt(size_t position, codePoint value) const = 0;
-
-  virtual ~KeyOrValueChecker() = default;
-
-  static const KeyOrValueChecker &defaultInstance() {
-    class Def : public KeyOrValueChecker {
-      bool validAt(size_t, codePoint value) const final {
-        return classifier.template isValueCharacter(value);
-      }
-    };
-    static const Def inst;
-    return inst;
-  }
-};
-
-template <typename codePoint> class AbstractKeyOrValue {
-  size_t pos_ = 0;
-
-protected:
-  virtual bool addAtPosition(size_t position, codePoint c) = 0;
-  [[nodiscard]] virtual const codePoint *getRaw() const = 0;
-  virtual void onReset() {}
-
-public:
-  virtual const KeyOrValueChecker<codePoint> &checker() const {
-    return KeyOrValueChecker<codePoint>::defaultInstance();
-  };
-
-  bool add(codePoint c) {
-    if (checker().validAt(pos_, c)) {
-      if (addAtPosition(pos_, c)) {
-        ++pos_;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  [[nodiscard]] const codePoint *get() const {
-    const codePoint *raw = getRaw();
-    if (raw != nullptr && raw[pos_] == '\0') {
-      return raw;
-    }
-    return nullptr;
-  }
-
-  void reset() {
-    pos_ = 0;
-    onReset();
-  }
-};
-
-template <typename codePoint>
-class FixedLengthKeyOrValue : public AbstractKeyOrValue<codePoint> {
-  codePoint * const data_;
-  const size_t length_;
-  const KeyOrValueChecker<codePoint> &checker_;
-
-protected:
-  bool addAtPosition(size_t position, codePoint c) override {
-    if (length_ <= position) {
-      return false;
-    }
-    data_[position] = c;
-    data_[position + 1] = 0;
-    return true;
-  }
-
-  [[nodiscard]] const codePoint *getRaw() const override {
-    return data_;
-  }
-
-  void onReset() override {}
-
-public:
-  FixedLengthKeyOrValue(size_t length,
-                        const KeyOrValueChecker<codePoint> &checker)
-      : data_(new codePoint[length]), length_(length), checker_(checker) {}
-
-  ~FixedLengthKeyOrValue() { delete[] data_; }
-
-  const KeyOrValueChecker<codePoint> &checker() const override {
-    return checker_;
-  };
-};
 
 } // namespace org::simple::config
 
