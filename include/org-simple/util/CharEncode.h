@@ -234,12 +234,17 @@ struct LeadingMarker
       return (inside(c)) ? unsafeFixedLengthEncode(c, bytes) : nullptr;
     } else {
       byte *result =
-          LeadingMarker<encodedBytes - 1, B, C, L>::unsafeEncode(
-              c, bytes);
-      return result           ? result
+          LeadingMarker<encodedBytes - 1, B, C, L>::unsafeEncode(c, bytes);
+      return result      ? result
              : inside(c) ? unsafeFixedLengthEncode(c, bytes)
-                              : nullptr;
+                         : nullptr;
     }
+  }
+
+  static constexpr char *unsafeEncode(codePoint c, char *const bytes) requires(
+      !std::is_same_v<char, byte> && sizeof(byte) == sizeof(char)) {
+    return reinterpret_cast<char *const>(
+        unsafeEncode(c, reinterpret_cast<byte *const>(bytes)));
   }
 
   /**
