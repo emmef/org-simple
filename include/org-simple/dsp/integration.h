@@ -185,7 +185,7 @@ template <typename T> class BaseCoefficients {
         input_multiplier_(scale * (multiplier_to_multiplier(hm))) {}
 
 public:
-  explicit BaseCoefficients(const BaseCoefficients &c) = default;
+  BaseCoefficients(const BaseCoefficients &c) = default;
   BaseCoefficients(BaseCoefficients &&c) noexcept = default;
 
   BaseCoefficients() : BaseCoefficients(0, 1) {}
