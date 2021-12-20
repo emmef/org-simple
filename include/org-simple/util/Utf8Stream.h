@@ -63,12 +63,37 @@ class ValidatedUtf8Stream : public util::InputStream<char> {
   util::InputStream<char> &input;
   char8_t buffer[5];
   signed pos;
-  
+
+  bool readCodePoint(char c) {
+    Utf8Encoding ::codePoint v;
+    int bytes = Utf8Encoding ::getBytesToReadSetInitialReaderValue(c, v);
+    if (bytes == 0) {
+      return true;
+    }
+    buffer[0] = c;
+    int i;
+    for (i = 1; i < bytes; i++) {
+      if (!input.get(c)) {
+        return false;
+      }
+      if (!Utf8Encoding::Continuation ::is(c)) {
+        return true;
+      }
+      v <<= Utf8Encoding::Continuation::valueBits;
+      v |= Utf8Encoding::Continuation::valueFrom(c);
+      buffer[i] = c;
+    }
+    buffer[i] = 0;
+    if (v <= Utf8Encoding::maximumCodePoint) {
+      pos = 0;
+    } // if invalid v, continue and skip invalid code point
+    return true;
+  }
 public:
   ValidatedUtf8Stream(util::InputStream<char> &stream) : input(stream), pos(-1) {}
   
   bool get(char &result) override {
-    skipTo: while (true) {
+    while (true) {
       if (pos >= 0) {
         char8_t replay = buffer[pos];
         if (replay != '\0') {
@@ -88,28 +113,9 @@ public:
         result = c;
         return true;
       }
-      Utf8Encoding ::codePoint v;
-      int bytes = Utf8Encoding ::getBytesToReadSetInitialReaderValue(c, v);
-      if (bytes == 0) {
-        continue; // skip invalid start byte
+      if (!readCodePoint(c)) {
+        return false;
       }
-      buffer[0] = c;
-      int i;
-      for (i = 1; i < bytes; i++) {
-        if (!input.get(c)) {
-          return false;
-        }
-        if (!Utf8Encoding::Continuation ::is(c)) {
-          goto skipTo; // skip invalid continuation byte
-        }
-        v <<= Utf8Encoding::Continuation::valueBits;
-        v |= Utf8Encoding::Continuation::valueFrom(c);
-        buffer[i] = c;
-      }
-      buffer[i] = 0;
-      if (v <= Utf8Encoding::maximumCodePoint) {
-        pos = 0;
-      } // if invalid v, continue and skip invalid code point
     }
   }
 };
