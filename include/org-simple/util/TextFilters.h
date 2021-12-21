@@ -167,8 +167,8 @@ public:
   virtual EscapeHandlerResult handleEscape(T, T &, InputStream<T> &) {
     return EscapeHandlerResult::IGNORED;
   }
-protected:
 
+protected:
   void handle(T c, T &result, InputStream<T> &stream) {
     if (openQuote != 0) {
       if (escaped) {
@@ -188,7 +188,6 @@ protected:
     }
     result = c;
   }
-
 
 private:
   matcherFunction matcher;
@@ -239,18 +238,20 @@ private:
 };
 
 template <typename T>
-class AbstractCommentStream : public QuoteAndEscapeState<T>, public InputStream<T> {
+class AbstractCommentStream : public QuoteAndEscapeState<T>,
+                              public InputStream<T> {
   int position;
   int replay;
   T nonComment;
-
-protected:
-  QuotedStateStream<T> &input;
-  const T *const comment;
-  bool inside;
+  unsigned level;
+  const unsigned nesting;
   bool borrow_inside;
 
-  virtual bool readUntilEnd(T &result) = 0;
+protected:
+  const T *const comment;
+  QuotedStateStream<T> &input;
+
+  virtual bool readUntilEnd(T &result, QuotedStateStream<T> &input) = 0;
 
   EscapeHandlerResult handleEscape(T c, T &result,
                                    InputStream<T> &stream) final {
@@ -260,32 +261,50 @@ protected:
     }
     return input.handleEscape(c, result, stream);
   }
-  virtual EscapeHandlerResult handleEscapeLocal(T c, T &result,
-                                                InputStream<T> &stream) {
+  virtual EscapeHandlerResult handleEscapeLocal(T, T &, InputStream<T> &) {
     return EscapeHandlerResult::IGNORED;
   }
 
+  bool nestingAllowed() {
+    return level < nesting;
+  }
+
+  bool pushNestingLevel() {
+    if (nestingAllowed()) {
+      level++;
+      return true;
+    }
+    return false;
+  }
+
+  bool popNestingLevelGetDone() {
+    return level > 0 && --level == 0;
+  }
+
+  AbstractCommentStream(QuotedStateStream<T> &stream, const T *commentString,
+                        unsigned nestingLevels, bool borrow)
+      : position(-1), replay(0), nonComment(0), level(0),
+        nesting(nestingLevels + 1), borrow_inside(borrow), comment(commentString), input(stream) {}
+
 public:
-  AbstractCommentStream(QuotedStateStream<T> &stream, const T *commentString)
-      : position(-1), input(stream), comment(commentString), inside(false),
-        borrow_inside(false) {}
+  AbstractCommentStream(QuotedStateStream<T> &stream, const T *commentString,
+                        unsigned nestingLevels = 0)
+      : AbstractCommentStream(stream, commentString, nestingLevels, false) {}
 
   AbstractCommentStream(AbstractCommentStream<T> &stream,
-                        const T *commentString)
-      : position(-1), input(stream), comment(commentString), inside(false),
-        borrow_inside(true) {}
+                        const T *commentString, unsigned nestingLevels = 0)
+      : AbstractCommentStream(stream, commentString, nestingLevels, true) {}
 
   bool inQuote() const final { return input.inQuote(); }
   T getOpenQuote() const final { return input.getOpenQuote(); }
   T getCloseQuote() const final { return input.getCloseQuote(); }
   bool isEscaped() const final { return input.isEscaped(); }
-
-  bool inComment() const {
+  unsigned getLevel() const {
     return borrow_inside
-               ? dynamic_cast<AbstractCommentStream &>(input).inComment() ||
-                     inside
-               : inside;
+               ? dynamic_cast<AbstractCommentStream &>(input).getLevel() + level
+               : level;
   }
+  bool inComment() const { return getLevel() != 0; }
 
   bool get(T &result) override {
     if (position >= 0) {
@@ -327,8 +346,8 @@ public:
       return true;
     }
     if (comment[pos] == '\0') {
-      inside = true;
-      return readUntilEnd(result);
+      level = 1;
+      return readUntilEnd(result, input);
     }
     replay = pos;
     nonComment = c;
@@ -341,15 +360,14 @@ public:
 template <typename T>
 class LineCommentStream : public AbstractCommentStream<T> {
 protected:
-  using AbstractCommentStream<T>::input;
-  using AbstractCommentStream<T>::inside;
+  using AbstractCommentStream<T>::popNestingLevelGetDone;
 
-  bool readUntilEnd(T &result) {
+  bool readUntilEnd(T &result, QuotedStateStream<T> &input) override {
     T c;
     while (input.get(c)) {
       if (c == '\n') {
         result = '\n';
-        inside = false;
+        popNestingLevelGetDone();
         return true;
       }
     }
@@ -364,30 +382,55 @@ public:
 template <typename T>
 class BlockCommentStream : public AbstractCommentStream<T> {
 
-protected:
-  using AbstractCommentStream<T>::input;
-  using AbstractCommentStream<T>::comment;
-  using AbstractCommentStream<T>::inside;
-  using AbstractCommentStream<T>::inQuote;
-  using AbstractCommentStream<T>::isEscaped;
-
-  bool readUntilEnd(T &result) {
+  int getCommentEnd() const {
     int commentEnd;
     for (commentEnd = 0; comment[commentEnd] != '\0'; commentEnd++)
       ;
     commentEnd--;
+    return commentEnd;
+  }
+
+protected:
+  using AbstractCommentStream<T>::comment;
+  using AbstractCommentStream<T>::inQuote;
+  using AbstractCommentStream<T>::isEscaped;
+  using AbstractCommentStream<T>::nestingAllowed;
+  using AbstractCommentStream<T>::pushNestingLevel;
+  using AbstractCommentStream<T>::popNestingLevelGetDone;
+
+  bool readUntilEnd(T &result, QuotedStateStream<T> &input) override {
+    const int commentEnd = getCommentEnd();
     int commentPos = commentEnd;
+    bool holdLast = false;
     T c;
-    while (input.get(c)) {
-      if (!inQuote() && !isEscaped() && c == comment[commentPos]) {
-        commentPos--;
-        if (commentPos < 0) {
-          inside = false;
-          if (!input.get(c)) {
-            return false;
+    while (holdLast || input.get(c)) {
+      holdLast = false;
+      if (!inQuote() && !isEscaped()) {
+        if (c == comment[commentPos]) {
+          commentPos--;
+          if (commentPos < 0) {
+            bool done = popNestingLevelGetDone();
+            if (!input.get(c)) {
+              return false;
+            }
+            if (done) {
+              result = c;
+              return true;
+            }
+            commentPos = commentEnd;
+            holdLast = true;
           }
-          result = c;
-          return true;
+        } else if (nestingAllowed()) {
+          int pos;
+          for (pos = 0; comment[pos] != '\0' && c == comment[pos]; pos++) {
+            if (!input.get(c)) {
+              return false;
+            }
+          }
+          if (pos > 0 && comment[pos] == '\0') {
+            pushNestingLevel();
+            commentPos = commentEnd;
+          }
         }
       } else {
         commentPos = commentEnd;
@@ -397,8 +440,9 @@ protected:
   }
 
 public:
-  BlockCommentStream(QuotedStateStream<T> &stream, const T *commentString)
-      : AbstractCommentStream<T>(stream, commentString) {}
+  BlockCommentStream(QuotedStateStream<T> &stream, const T *commentString,
+                     unsigned nestingLevels = 0)
+      : AbstractCommentStream<T>(stream, commentString, nestingLevels) {}
 };
 
 } // namespace org::simple::util
