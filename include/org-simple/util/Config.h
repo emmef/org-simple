@@ -61,8 +61,8 @@ public:
 
 
 struct Classifier {
-  const org::simple::charClass::Utf8 &classifier =
-      org::simple::charClass::Classifiers::utf8();
+  const org::simple::charClass::Unicode &classifier =
+      org::simple::charClass::Classifiers::unicode();
 
   template <typename codePoint>
   bool isKeyCharacter(codePoint c, codePoint assignment) const {

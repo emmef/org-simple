@@ -2,9 +2,9 @@
 // Created by michel on 20-12-21.
 //
 
-#include <org-simple/util/StringStream.h>
-#include <org-simple/util/InputStream.h>
 #include "boost-unit-tests.h"
+#include <org-simple/util/StringStream.h>
+#include <org-simple/util/TextFilters.h>
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_QuotedStateStream_Tests)
 
@@ -17,7 +17,10 @@ BOOST_AUTO_TEST_CASE(testNoQuotesIdentical) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
+
 }
 
 BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_NotAtEndOrStart) {
@@ -29,7 +32,9 @@ BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_NotAtEndOrStart) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_AtEnd) {
@@ -41,7 +46,9 @@ BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_AtEnd) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_AtStart) {
@@ -53,7 +60,9 @@ BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_AtStart) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_AtStartAndEnd) {
@@ -65,7 +74,9 @@ BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_AtStartAndEnd) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testUnclosedQuote) {
@@ -77,7 +88,9 @@ BOOST_AUTO_TEST_CASE(testUnclosedQuote) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\'', stream.inQuote());
+  BOOST_CHECK_EQUAL(true, stream.inQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testUnclosedQuoteEscaped) {
@@ -89,7 +102,9 @@ BOOST_AUTO_TEST_CASE(testUnclosedQuoteEscaped) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(true, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\'', stream.inQuote());
+  BOOST_CHECK_EQUAL(true, stream.inQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testUnclosedQuoteEscapedQuote) {
@@ -101,7 +116,9 @@ BOOST_AUTO_TEST_CASE(testUnclosedQuoteEscapedQuote) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\'', stream.inQuote());
+  BOOST_CHECK_EQUAL(true, stream.inQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_NotAtEndOrStart) {
@@ -113,7 +130,9 @@ BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_NotAtEndOrStart) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_AtEnd) {
@@ -125,7 +144,9 @@ BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_AtEnd) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_AtStart) {
@@ -137,7 +158,9 @@ BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_AtStart) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_AtStartAndEnd) {
@@ -149,7 +172,9 @@ BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_AtStartAndEnd) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testUnclosedSecondQuote) {
@@ -161,7 +186,9 @@ BOOST_AUTO_TEST_CASE(testUnclosedSecondQuote) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\'', stream.inQuote());
+  BOOST_CHECK_EQUAL(true, stream.inQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testUnclosedSecondQuoteEscaped) {
@@ -173,7 +200,9 @@ BOOST_AUTO_TEST_CASE(testUnclosedSecondQuoteEscaped) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(true, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\'', stream.inQuote());
+  BOOST_CHECK_EQUAL(true, stream.inQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testUnclosedSecondQuoteEscapedSecondQuote) {
@@ -185,7 +214,9 @@ BOOST_AUTO_TEST_CASE(testUnclosedSecondQuoteEscapedSecondQuote) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\'', stream.inQuote());
+  BOOST_CHECK_EQUAL(true, stream.inQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\'', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testEscaped) {
@@ -197,7 +228,9 @@ BOOST_AUTO_TEST_CASE(testEscaped) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(true, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testEscapedQuote) {
@@ -209,7 +242,9 @@ BOOST_AUTO_TEST_CASE(testEscapedQuote) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedQuotes_StartEnd) {
@@ -221,7 +256,9 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedQuotes_StartEnd) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedQuotes) {
@@ -233,7 +270,9 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedQuotes) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testQuotesContainingSecondQuote) {
@@ -245,7 +284,9 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingSecondQuote) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedSecondQuote) {
@@ -257,7 +298,9 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedSecondQuote) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testQuotesContainingFirstQuote) {
@@ -269,7 +312,9 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingFirstQuote) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedFirstQuote) {
@@ -281,7 +326,9 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedFirstQuote) {
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
-  BOOST_CHECK_EQUAL('\0', stream.inQuote());
+  BOOST_CHECK_EQUAL(false, stream.inQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getOpenQuote());
+  BOOST_CHECK_EQUAL('\0', stream.getCloseQuote());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

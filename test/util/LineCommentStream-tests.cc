@@ -3,7 +3,7 @@
 //
 
 #include <org-simple/util/StringStream.h>
-#include <org-simple/util/InputStream.h>
+#include <org-simple/util/TextFilters.h>
 #include "boost-unit-tests.h"
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_LineCommentStream_Tests)
