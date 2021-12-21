@@ -34,7 +34,7 @@ public:
   bool get(T &result) override {
     T c;
     if (input.get(c)) {
-      if (c != '\r' && charClass::Utf8::isLineBreak(c)) {
+      if (c != '\r' && charClass::Unicode::isLineBreak(c)) {
         result = '\n';
       }
       else {

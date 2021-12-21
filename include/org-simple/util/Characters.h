@@ -57,7 +57,7 @@ struct Ascii {
   bool isQuote(char c) const { return getMatchingQuote(c) != 0; }
 };
 
-struct Utf8 {
+struct Unicode {
   const std::locale locale = std::locale("en_US.UTF8");
   const Ascii ascii;
   
@@ -175,11 +175,174 @@ struct Classifiers {
     static const Ascii ascii;
     return ascii;
   }
-  static const Utf8 &utf8() {
-    static const Utf8 utf8{};
-    return utf8;
+  static const Unicode &unicode() {
+    static const Unicode uc{};
+    return uc;
   }
 };
+
+
+template <typename T> struct QuoteMatcher {
+  typedef bool (*function)(T cp, T &endQuote);
+};
+
+struct QuoteMatchers {
+
+  template <typename T, T q> struct FixedSingleSymmetricMatcher {
+    static constexpr bool match(T cp, T &endQuote) {
+      if (cp == q) {
+        endQuote = cp;
+        return true;
+      }
+      return false;
+    }
+  };
+
+  template <typename T, T q1, T q2> struct FixedDoubleSymmetricMatcher {
+    static constexpr bool match(T cp, T &endQuote) {
+      if (cp == q1 || cp == q2) {
+        endQuote = cp;
+        return true;
+      }
+      return false;
+    }
+  };
+
+  template <typename T, T q1, T q2, T q3> struct FixedTripleSymmetricMatcher {
+    static constexpr bool match(T cp, T &endQuote) {
+      if (cp == q1 || cp == q2 || cp == q3) {
+        endQuote = cp;
+        return true;
+      }
+      return false;
+    }
+  };
+
+  template <typename T, T qOpen, T qClose> struct FixedPairedMatcher {
+    static constexpr bool match(T cp, T &endQuote) {
+      if (cp == qOpen) {
+        endQuote = qClose;
+        return true;
+      }
+      return false;
+    }
+  };
+
+  template <typename T, T qOpen, T qClose, T single>
+  struct FixedPairedPlusSingleSymmetricMatcher {
+    static constexpr bool match(T cp, T &endQuote) {
+      if (cp == qOpen) {
+        endQuote = qClose;
+        return true;
+      } else if (cp == single) {
+        endQuote = single;
+        return true;
+      }
+      return false;
+    }
+  };
+
+  template <typename T>
+  static constexpr typename QuoteMatcher<T>::function defaultMatch =
+      FixedDoubleSymmetricMatcher<T, '\'', '"'>::match;
+
+  template <typename T>
+  static constexpr typename QuoteMatcher<T>::function singleQuotes =
+      FixedSingleSymmetricMatcher<T, '\''>::match;
+
+  template <typename T>
+  static constexpr typename QuoteMatcher<T>::function doubleQuotes =
+      FixedSingleSymmetricMatcher<T, '"'>::match;
+
+  template <typename T> static bool uniCodeMatch(T cp, T &endQuote) {
+    T match = charClass::Classifiers::unicode().getMatchingQuote<T>(cp);
+    if (match != 0) {
+      endQuote = match;
+      return true;
+    }
+    return false;
+  }
+
+  template <typename T>
+  static typename QuoteMatcher<T>::function
+  getDefaultMatcherFor(const T *string,
+                       typename QuoteMatcher<T>::function fallback) {
+    static constexpr const T ALLOWED_QUOTE[] = "'\"`";
+    static constexpr int MAX_QUOTES = sizeof(ALLOWED_QUOTE) / sizeof(T);
+
+    bool present[MAX_QUOTES];
+    // Zero quote presence
+    for (int i = 0; i < MAX_QUOTES; i++) {
+      present[i] = false;
+    }
+    bool invalid = false;
+    // Mark quote presence
+    for (int input = 0; string[input] != '\0'; input++) {
+      T q = string[input];
+      bool found = false;
+      for (int i = 0; ALLOWED_QUOTE[i] != '\0'; i++) {
+        if (q == ALLOWED_QUOTE[i]) {
+          present[i] = true;
+          found = true;
+        }
+      }
+      if (!found) {
+        invalid = true;
+        break;
+      }
+    }
+
+    if (!invalid) {
+      // Count and condense in fixed order
+      char quoteChars[MAX_QUOTES];
+      int quoteCount = 0;
+      for (int i = 0; i < MAX_QUOTES; i++) {
+        if (present[i]) {
+          quoteChars[quoteCount++] = ALLOWED_QUOTE[i];
+        }
+      }
+      // Create result
+      switch (quoteCount) {
+      case 1:
+        switch (quoteChars[0]) {
+        case '\'':
+          return FixedSingleSymmetricMatcher<T, '\''>::match;
+        case '"':
+          return FixedSingleSymmetricMatcher<T, '"'>::match;
+        case '`':
+          return FixedSingleSymmetricMatcher<T, '`'>::match;
+        default:
+          break;
+        }
+      case 2:
+        switch (quoteChars[0]) {
+        case '\'':
+          switch (quoteChars[1]) {
+          case '"':
+            return FixedDoubleSymmetricMatcher<T, '\'', '"'>::match;
+          case '`':
+            return FixedDoubleSymmetricMatcher<T, '\'', '`'>::match;
+          default:
+            break;
+          }
+        case '"':
+          return FixedDoubleSymmetricMatcher<T, '"', '`'>::match;
+        default:
+          break;
+        }
+      case 3:
+        return FixedTripleSymmetricMatcher<T, '\'', '"', '`'>::match;
+      default:
+        break;
+      }
+    }
+    if (fallback != nullptr) {
+      return fallback;
+    }
+    throw std::invalid_argument("No matcher for string.");
+  }
+};
+
 
 } // namespace org::simple::charClass
 
