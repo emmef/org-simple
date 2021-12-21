@@ -128,7 +128,6 @@ public:
   }
 };
 
-enum class EscapeHandlerResult { IGNORED, HANDLED, BUSY };
 template <typename T> class QuoteAndEscapeState {
 public:
   virtual bool inQuote() const = 0;
@@ -136,9 +135,6 @@ public:
   virtual T getCloseQuote() const = 0;
   virtual bool isEscaped() const = 0;
   virtual ~QuoteAndEscapeState() = default;
-  virtual EscapeHandlerResult handleEscape(T, T &, InputStream<T> &) {
-    return EscapeHandlerResult::IGNORED;
-  }
 };
 
 template <typename T>
@@ -150,6 +146,7 @@ public:
   T getOpenQuote() const final { return openQuote; }
   T getCloseQuote() const final { return closeQuote; }
   bool isEscaped() const final { return escaped; }
+  virtual void handleEscape(T, T &, InputStream<T> &) {}
 
   void reset() {
     escaped = false;
@@ -164,15 +161,13 @@ public:
   QuoteAndEscapeHandler(const T *quotes)
       : QuoteAndEscapeHandler(
             charClass::QuoteMatchers::getDefaultMatcherFor(quotes, nullptr)) {}
-  virtual EscapeHandlerResult handleEscape(T, T &, InputStream<T> &) {
-    return EscapeHandlerResult::IGNORED;
-  }
 
 protected:
   void handle(T c, T &result, InputStream<T> &stream) {
     if (openQuote != 0) {
       if (escaped) {
-        handleEscapeAndState(c, result, stream);
+        handleEscape(c, result, stream);
+        escaped = false;
       } else if (c == '\\') {
         escaped = true;
       } else if (c == closeQuote) {
@@ -180,7 +175,8 @@ protected:
         closeQuote = 0;
       }
     } else if (escaped) {
-      handleEscapeAndState(c, result, stream);
+      handleEscape(c, result, stream);
+      escaped = false;
     } else if (matcher(c, closeQuote)) {
       openQuote = c;
     } else if (c == '\\') {
@@ -191,12 +187,6 @@ protected:
 
 private:
   matcherFunction matcher;
-
-  void handleEscapeAndState(T c, T &result, InputStream<T> &stream) {
-    if (handleEscape(c, result, stream) != EscapeHandlerResult::BUSY) {
-      escaped = false;
-    }
-  }
 
   bool escaped = false;
   T openQuote = 0;
@@ -237,225 +227,258 @@ private:
   util::InputStream<T> &input;
 };
 
-template <typename T>
-class AbstractCommentStream : public QuoteAndEscapeState<T>,
-                              public InputStream<T> {
-  int position;
-  int replay;
-  T nonComment;
-  unsigned level;
-  const unsigned nesting;
+enum class MatchCommentStartResult { True, False, Continue };
 
-protected:
-  const T *const comment;
+template <typename T>
+class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
+  class Replay {
+    int position = -1;
+    int replayPos = 0;
+    T nonComment = 0;
+    const T *comment = nullptr;
+
+  public:
+    bool next(T &result) {
+      if (position >= 0) {
+        if (position < replayPos) {
+          result = comment[position++];
+        } else {
+          result = nonComment;
+          reset();
+        }
+        return true;
+      }
+      return false;
+    }
+
+    void start(const T *commentString, int failPosition,
+               T firstNonCommentCharacter) {
+      if (commentString == nullptr) {
+        *this = {};
+      } else {
+        comment = commentString;
+        replayPos = failPosition;
+        position = 1;
+        nonComment = firstNonCommentCharacter ? firstNonCommentCharacter
+                                              : commentString[replayPos];
+      }
+    }
+
+    void reset() { *this = {}; }
+  } replay;
+
+  class Nesting {
+    const unsigned nesting;
+    unsigned level;
+    unsigned inLine;
+
+  public:
+    Nesting(unsigned nestingLevels)
+        : nesting(nestingLevels + 1), level(0), inLine(0) {}
+
+    bool nestingAllowed() { return level < nesting; }
+
+    void startBlockComment() { level = 1; }
+
+    void startLineComment() { inLine = 1; }
+
+    void endLineComment() { inLine = 0; }
+
+    bool pushNestingLevel() {
+      if (nestingAllowed()) {
+        level++;
+        return true;
+      }
+      return false;
+    }
+
+    unsigned getLevel() const { return level + inLine; }
+
+    bool popNestingLevelGetDone() { return level > 0 && --level == 0; }
+  } nesting;
+
+  const T *const lineComment;
+  const T *const blockComment;
+  const int commentEnd;
   InputStream<T> &input;
 
-  virtual bool readUntilEnd(T &result, InputStream<T> &input) = 0;
+  static int getCommentEnd(const T *comment) {
+    int commentEnd;
+    for (commentEnd = 0; comment[commentEnd] != '\0'; commentEnd++)
+      ;
+    return commentEnd - 1;
+  }
 
-  EscapeHandlerResult handleEscape(T c, T &result,
-                                   InputStream<T> &stream) final {
-    if (nestedState) {
-      auto handled = inQuote() || inComment()
-                         ? EscapeHandlerResult::IGNORED
-                         : handleEscapeLocal(c, result, stream);
-      if (handled != EscapeHandlerResult::IGNORED) {
-        return handled;
+  static const T *validCommentString(const T *value, const T *lineComment) {
+    if (value != nullptr && lineComment != nullptr) {
+      int i;
+      for (i = 0; value[i] != '\0' && lineComment[i] != '\0'; i++) {
+        if (value[i] != lineComment[i]) {
+          return value;
+        }
       }
-      return nestedState->handleEscape(c, result, stream);
+      if (lineComment[i] == '\0' && value[i] != '\0') {
+        throw std::invalid_argument("CommentStream: Block-comment that starts "
+                                    "with line-comment will never be used.");
+      }
     }
-    return EscapeHandlerResult::IGNORED;
-  }
-  virtual EscapeHandlerResult handleEscapeLocal(T, T &, InputStream<T> &) {
-    return EscapeHandlerResult::IGNORED;
+    return value;
   }
 
-  bool nestingAllowed() { return level < nesting; }
+  bool readUntilEndOfLineComment(T &result) {
+    nesting.startLineComment();
+    T c;
+    while (input.get(c)) {
+      if (c == '\n') {
+        result = '\n';
+        nesting.endLineComment();
+        return true;
+      }
+    }
+    nesting.endLineComment();
+    return false;
+  }
 
-  bool pushNestingLevel() {
-    if (nestingAllowed()) {
-      level++;
-      return true;
+  bool readUntilEndOfBlock(T &result) {
+    nesting.startBlockComment();
+    int commentPos = commentEnd;
+    bool holdLast = false;
+    T c;
+    while (holdLast || input.get(c)) {
+      holdLast = false;
+      if (c == blockComment[commentPos]) {
+        commentPos--;
+        if (commentPos < 0) {
+          bool done = nesting.popNestingLevelGetDone();
+          if (!input.get(c)) {
+            return false;
+          }
+          if (done) {
+            result = c;
+            return true;
+          }
+          commentPos = commentEnd;
+          holdLast = true;
+        }
+      } else if (nesting.nestingAllowed()) {
+        int pos;
+        for (pos = 0; blockComment[pos] != '\0' && c == blockComment[pos];
+             pos++) {
+          if (!input.get(c)) {
+            return false;
+          }
+        }
+        if (pos > 0 && blockComment[pos] == '\0') {
+          nesting.pushNestingLevel();
+          commentPos = commentEnd;
+        }
+      }
     }
     return false;
   }
 
-  bool popNestingLevelGetDone() { return level > 0 && --level == 0; }
+  MatchCommentStartResult matchCommentStart(T chr, T &result) {
+    T c = chr;
+    const T *comment = nullptr;
+    bool matchLine = lineComment && lineComment[0] && lineComment[0] == c;
+    bool matchBlock = blockComment && blockComment[0] && blockComment[0] == c;
+    int pos;
+    if (!(matchLine || matchBlock)) {
+      pos = 0;
+    }
+    else {
+      pos = 1;
+      while (true) {
+        comment = matchLine ? lineComment : blockComment;
+        if (input.get(c)) {
+          if (matchLine) {
+            if ((matchLine = lineComment[pos] && lineComment[pos] == c)) {
+              if (lineComment[pos +1] == '\0') {
+                return readUntilEndOfLineComment(result)
+                           ? MatchCommentStartResult::True
+                           : MatchCommentStartResult::False;
+              }
+            }
+          }
+          if (matchBlock) {
+            if ((matchBlock = blockComment[pos] && blockComment[pos] == c)) {
+              if (blockComment[pos + 1] == '\0') {
+                return readUntilEndOfBlock(result)
+                           ? MatchCommentStartResult::True
+                           : MatchCommentStartResult::False;
+              }
+            }
+          }
+          if (!(matchLine || matchBlock)) {
+            break;
+          }
+        } else {
+          if (pos == 0) {
+            result = comment[0];
+            return MatchCommentStartResult::True;
+          } else if (matchLine || matchBlock) {
+            result = comment[pos];
+            return MatchCommentStartResult::True;
+          } else if (comment[pos + 1] == '\0') {
+            return MatchCommentStartResult::False;
+          } else {
+            result = comment[0];
+            replay.start(comment, pos, 0);
+          }
+          return MatchCommentStartResult::True;
+        }
+        pos++;
+      }
+      replay.start(comment, pos, c);
+      result = comment[0];
+      return MatchCommentStartResult::True;
+    }
+    return MatchCommentStartResult::Continue;
+  }
 
 public:
-  template <class V>
-  requires(std::is_base_of_v<InputStream<T>, V>)
-      AbstractCommentStream(V &stream, const T *commentString,
-                            unsigned nestingLevels = 0)
-      : position(-1), replay(0), nonComment(0), level(0),
-        nesting(nestingLevels + 1), comment(commentString), input(stream) {
-    if constexpr (std::is_base_of_v<AbstractCommentStream<T>, V>) {
-      nestedCommentStream = &stream;
-    } else {
-      nestedCommentStream = nullptr;
-    }
-    if constexpr (std::is_base_of_v<QuoteAndEscapeState<T>, V>) {
-      nestedState = &stream;
-    } else {
-      nestedState = nullptr;
-    }
-  }
+  CommentStream(InputStream<T> &stream, const T *lineCommentString,
+                const T *blockCommentString, unsigned nestingLevels,
+                typename charClass::QuoteMatcher<T>::function quoteMatcher)
+      : QuoteAndEscapeHandler<T>(quoteMatcher), nesting(nestingLevels),
+        lineComment(lineCommentString),
+        blockComment(validCommentString(blockCommentString, lineComment)),
+        commentEnd(getCommentEnd(blockComment)), input(stream) {}
 
-  bool inQuote() const final { return nestedState ? nestedState->inQuote() : false; }
-  T getOpenQuote() const final { return nestedState ? nestedState->getOpenQuote() : 0; }
-  T getCloseQuote() const final { return nestedState ? nestedState->getCloseQuote() : 0; }
-  bool isEscaped() const final { return nestedState ? nestedState->isEscaped() : 0; }
+  CommentStream(InputStream<T> &stream, const T *lineCommentString,
+                const T *blockCommentString, unsigned nestingLevels,
+                const T *symmetricQuotesString)
+      : CommentStream(stream, lineCommentString, blockCommentString,
+                      nestingLevels,
+                      charClass::QuoteMatchers::getDefaultMatcherFor(
+                          symmetricQuotesString, nullptr)) {}
 
-  unsigned getLevel() const {
-    return nestedCommentStream ? nestedCommentStream->getLevel() + level
-                               : level;
-  }
+  unsigned getLevel() const { return nesting.getLevel(); }
   bool inComment() const { return getLevel() != 0; }
 
   bool get(T &result) override {
-    if (position >= 0) {
-      if (position < replay) {
-        result = comment[position++];
-      } else {
-        result = nonComment;
-        position = -1;
-      }
+    if (replay.next(result)) {
       return true;
     }
     T c;
     if (!input.get(c)) {
       return false;
     }
-    if (inQuote() || isEscaped()) {
+    QuoteAndEscapeHandler<T>::handle(c, result, input);
+    if (QuoteAndEscapeHandler<T>::isEscaped() ||
+        QuoteAndEscapeHandler<T>::inQuote()) {
+      return true;
+    }
+    switch (matchCommentStart(c, result)) {
+    case MatchCommentStartResult::True:
+      return true;
+    case MatchCommentStartResult::False:
+      return false;
+    default:
       result = c;
       return true;
     }
-    int pos;
-    for (pos = 0; comment[pos] != '\0' && c == comment[pos]; pos++) {
-      if (!input.get(c)) {
-        if (pos == 0) {
-          result = comment[0];
-          return true;
-        } else if (comment[pos + 1] == '\0') {
-          return false;
-        } else {
-          result = comment[0];
-          nonComment = comment[pos];
-          position = 1;
-          replay = pos;
-        }
-        return true;
-      }
-    }
-    if (pos == 0) {
-      result = c;
-      return true;
-    }
-    if (comment[pos] == '\0') {
-      level = 1;
-      return readUntilEnd(result, input);
-    }
-    replay = pos;
-    nonComment = c;
-    position = 1;
-    result = comment[0];
-    return true;
   }
-
-private:
-  QuoteAndEscapeState<T> *nestedState;
-  const AbstractCommentStream<T> *nestedCommentStream;
-};
-
-template <typename T>
-class LineCommentStream : public AbstractCommentStream<T> {
-protected:
-  using AbstractCommentStream<T>::popNestingLevelGetDone;
-
-  bool readUntilEnd(T &result, InputStream<T> &input) override {
-    T c;
-    while (input.get(c)) {
-      if (c == '\n') {
-        result = '\n';
-        popNestingLevelGetDone();
-        return true;
-      }
-    }
-    return false;
-  }
-
-public:
-  template <class V>
-  requires(std::is_base_of_v<InputStream<T>, V>)
-      LineCommentStream(V &stream, const T *commentString)
-      : AbstractCommentStream<T>(stream, commentString) {}
-};
-
-template <typename T>
-class BlockCommentStream : public AbstractCommentStream<T> {
-
-  int getCommentEnd() const {
-    int commentEnd;
-    for (commentEnd = 0; comment[commentEnd] != '\0'; commentEnd++)
-      ;
-    commentEnd--;
-    return commentEnd;
-  }
-
-protected:
-  using AbstractCommentStream<T>::comment;
-  using AbstractCommentStream<T>::inQuote;
-  using AbstractCommentStream<T>::isEscaped;
-  using AbstractCommentStream<T>::nestingAllowed;
-  using AbstractCommentStream<T>::pushNestingLevel;
-  using AbstractCommentStream<T>::popNestingLevelGetDone;
-
-  bool readUntilEnd(T &result, InputStream<T> &input) override {
-    const int commentEnd = getCommentEnd();
-    int commentPos = commentEnd;
-    bool holdLast = false;
-    T c;
-    while (holdLast || input.get(c)) {
-      holdLast = false;
-      if (!inQuote() && !isEscaped()) {
-        if (c == comment[commentPos]) {
-          commentPos--;
-          if (commentPos < 0) {
-            bool done = popNestingLevelGetDone();
-            if (!input.get(c)) {
-              return false;
-            }
-            if (done) {
-              result = c;
-              return true;
-            }
-            commentPos = commentEnd;
-            holdLast = true;
-          }
-        } else if (nestingAllowed()) {
-          int pos;
-          for (pos = 0; comment[pos] != '\0' && c == comment[pos]; pos++) {
-            if (!input.get(c)) {
-              return false;
-            }
-          }
-          if (pos > 0 && comment[pos] == '\0') {
-            pushNestingLevel();
-            commentPos = commentEnd;
-          }
-        }
-      } else {
-        commentPos = commentEnd;
-      }
-    }
-    return false;
-  }
-
-public:
-  template <class V>
-  requires(std::is_base_of_v<InputStream<T>, V>)
-      BlockCommentStream(V &stream, const T *commentString,
-                         unsigned nestingLevels = 0)
-      : AbstractCommentStream<T>(stream, commentString, nestingLevels) {}
 };
 
 } // namespace org::simple::util
