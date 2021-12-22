@@ -184,6 +184,8 @@ struct Classifiers {
 
 template <typename T> struct QuoteMatcher {
   typedef bool (*function)(T cp, T &endQuote);
+
+  static bool none(T, T&) { return false; }
 };
 
 struct QuoteMatchers {
