@@ -21,6 +21,8 @@
  * limitations under the License.
  */
 
+#include<limits>
+
 namespace org::simple::util {
 
 enum class StreamState { OK, END };
@@ -50,6 +52,54 @@ public:
   static InputStream<T> *instance() {
     static DeadPillStream<T> instance;
     return &instance;
+  }
+};
+
+
+template <typename T> class ReplayStream : public InputStream<T> {
+  InputStream<T> *input = nullptr;
+
+public:
+  bool get(T &c) final {
+    if (input == nullptr) {
+      return false;
+    }
+    if (input->get(c)) {
+      return true;
+    }
+    input = nullptr;
+    return false;
+  }
+
+  bool assignedStream(InputStream<T> *stream) {
+    input = stream;
+    return stream != DeadPillStream<T>::instance();
+  }
+};
+
+template <typename T, unsigned N>
+class ReplayCharacterStream : public InputStream<T> {
+  static_assert(N > 0 &&
+                N < std::numeric_limits<unsigned>::max() / sizeof(T));
+
+  unsigned replayCount = 0;
+  T v[N];
+
+public:
+  bool get(T &result) final {
+    if (replayCount) {
+      replayCount--;
+      result = v[N - 1 - replayCount];
+      return true;
+    }
+    return false;
+  }
+
+  ReplayCharacterStream &operator << (T value) {
+    if (replayCount < N) {
+      v[replayCount++] = value;
+    }
+    return *this;
   }
 };
 
