@@ -71,6 +71,10 @@ public:
     return false;
   }
 
+  bool available() final {
+    return input && input->available();
+  }
+
   bool assignedStream(InputStream<T> *stream) {
     input = stream;
     return stream != DeadPillStream<T>::instance();
@@ -93,6 +97,10 @@ public:
       return true;
     }
     return false;
+  }
+
+  bool available() final {
+    return replayCount > 0;
   }
 
   ReplayCharacterStream &operator << (T value) {

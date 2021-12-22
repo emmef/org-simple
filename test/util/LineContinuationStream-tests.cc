@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(testInputWithCorrectContinuation) {
 
 BOOST_AUTO_TEST_CASE(testInputWithContinuationAtEnd) {
   std::string string = "This text\nUses\nPosix-newlines!\n\\";
-  std::string expected = string;
+  std::string expected = "This text\nUses\nPosix-newlines!\n";
   org::simple::util::StringInputStream<char> stringStream(string);
   org::simple::util::LineContinuationStream<char> stream(stringStream);
   org::simple::util::InputCollector<char> collector(string.length());

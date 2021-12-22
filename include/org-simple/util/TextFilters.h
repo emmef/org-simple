@@ -27,105 +27,177 @@
 
 namespace org::simple::util {
 
-template <typename T> class PosixNewlineStream : public util::InputStream<T> {
-  util::InputStream<T> &input;
-  std::size_t line;
-  std::size_t position;
-  std::size_t column;
-  bool lastCR;
+/**
+ * Describes what action the caller of a filter step should take after the
+ * filtering.
+ */
+enum class TextFilterResult {
+  /**
+   * The receiver of the result should return {@code true}.
+   */
+  True,
+  /**
+   * The receiver of the result should return {@code false}.
+   */
+  False,
+  /**
+   * The receiver of the result should proceed processing.
+   */
+  Continue,
+  /**
+   * The receiver of the result should swallow and seek more input
+   */
+  Swallow
+};
+
+template <typename C, class S = InputStream<C>> class AbstractTextFilter {
+  static_assert(std::is_base_of_v<InputStream<C>, S>);
 
 public:
-  explicit PosixNewlineStream(util::InputStream<T> &stream)
-      : input(stream), line(0), position(0), column(0), lastCR(false) {}
+  /**
+   * Apply the filter, where the input and the output reside in {@code result}.
+   * Additional input can be read from the stream provided in {@code input}.
+   *
+   * @param result The result that can be written, which should only happen if
+   * {@code TextFilterResult::True} is returned.
+   * @param input The input stream that can be used to read ahead.
+   * @return What the caller of the filter should do next.
+   */
+  virtual TextFilterResult filter(C &result, S &input) = 0;
+  /**
+   * Returns whether there are characters available without further input from
+   * the input stream.
+   */
+  virtual bool available() { return false; }
 
-  void reset() {
-    line = 0;
-    position = 0;
-    column = 0;
-    lastCR = false;
+  /**
+   * Implements a filtered form of {@code input.get(result)}, that can both add
+   * end omit characters. This function can be used to translate this filter
+   * right-away into a filtered stream with the same characteristics.
+   * @param result The result character.
+   * @param input The input stream.
+   * @return Whether result contains the valid next character.
+   */
+  bool get(C &result, S &input) {
+    while (true) {
+      if (!available()) {
+        if (!input.get(result)) {
+          return false;
+        }
+      }
+      switch (filter(result, input)) {
+      case TextFilterResult::True:
+        return true;
+      case TextFilterResult::Swallow:
+        break;
+      default:
+        return false;
+      }
+    }
   }
+  virtual ~AbstractTextFilter() = default;
+};
 
+template <typename C>
+class ToPosixNewlineFilter : public AbstractTextFilter<C> {
+  std::size_t line = 0;
+  std::size_t position = 0;
+  std::size_t column = 0;
+  bool lastCR = false;
+
+public:
   std::size_t getLine() const { return line; }
   std::size_t getPosition() const { return position; }
   std::size_t getColumn() const { return column; }
 
-  bool get(T &result) override {
-    T c;
-    while (input.get(c)) {
-      position++;
-      if (c == '\n') {
-        if (lastCR) {
-          lastCR = false;
-        } else {
-          line++;
-          column = 0;
-          result = '\n';
-          return true;
-        }
-      } else if (c == '\r') {
+  void reset() { *this = {}; }
+
+  TextFilterResult filter(C &result, InputStream<C> &) final {
+    position++;
+    if (result == '\n') {
+      if (lastCR) {
+        lastCR = false;
+        return TextFilterResult::Swallow;
+      } else {
         line++;
         column = 0;
-        lastCR = true;
         result = '\n';
-        return true;
-      } else {
-        lastCR = false;
-        result = c;
-        column++;
-        return true;
+        return TextFilterResult::True;
       }
+    } else if (result == '\r') {
+      line++;
+      column = 0;
+      lastCR = true;
+      result = '\n';
+      return TextFilterResult::True;
+    } else {
+      lastCR = false;
+      column++;
+      return TextFilterResult::True;
     }
-    return false;
   }
 };
 
-template <typename T>
-class LineContinuationStream : public util::InputStream<T> {
-  util::InputStream<T> &input;
-
-  enum class State { NORMAL, MARKED, RETURN_NEXT };
-  State state;
-  T next;
+template <typename C>
+class LineContinuationFilter : public AbstractTextFilter<C> {
+  enum class State { Normal, Marked, ReturnNext };
+  State state = State::Normal;
+  C next = 0;
 
 public:
-  explicit LineContinuationStream(util::InputStream<T> &stream)
-      : input(stream), state(State::NORMAL), next(0) {}
+  void reset() { *this = {}; }
 
-  bool get(T &result) override {
-    while (true) {
-      if (state == State::RETURN_NEXT) {
-        state = State::NORMAL;
-        result = next;
-        return true;
-      }
-      T c;
-      if (!input.get(c)) {
-        if (state == State::MARKED) {
-          state = State::NORMAL;
-          result = '\\';
-          return true;
-        }
-        return false;
-      }
-      if (state == State::NORMAL) {
-        if (c == '\\') {
-          state = State::MARKED;
-        } else {
-          result = c;
-          return true;
-        }
-      } else if (state == State::MARKED) {
-        if (c == '\n') {
-          state = State::NORMAL;
-          continue;
-        }
-        next = c;
-        state = State::RETURN_NEXT;
-        result = '\\';
-        return true;
+  bool available() final { return state == State::ReturnNext; }
+
+  TextFilterResult filter(C &c, InputStream<C> &) final {
+    if (state == State::ReturnNext) {
+      state = State::Normal;
+      c = next;
+      return TextFilterResult::True;
+    }
+    if (state == State::Normal) {
+      if (c == '\\') {
+        state = State::Marked;
+        return TextFilterResult::Swallow;
+      } else {
+        return TextFilterResult::True;
       }
     }
+    if (state == State::Marked) {
+      if (c == '\n') {
+        state = State::Normal;
+        return TextFilterResult::Swallow;
+      } else {
+        next = c;
+        state = State::ReturnNext;
+        c = '\\';
+        return TextFilterResult::True;
+      }
+    }
+    return TextFilterResult::True;
   }
+};
+
+template <typename C> class PosixNewlineStream : public util::InputStream<C> {
+  util::InputStream<C> &input;
+  ToPosixNewlineFilter<C> filter;
+
+public:
+  explicit PosixNewlineStream(util::InputStream<C> &stream) : input(stream) {}
+
+  bool get(C &result) final { return filter.get(result, input); }
+};
+
+template <typename C>
+class LineContinuationStream : public util::InputStream<C> {
+  util::InputStream<C> &input;
+  LineContinuationFilter<C> filter;
+
+public:
+  explicit LineContinuationStream(util::InputStream<C> &stream)
+      : input(stream) {}
+
+  bool get(C &result) override { return filter.get(result, input); }
 };
 
 template <typename T> class QuoteAndEscapeState {
@@ -239,7 +311,7 @@ class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
 
   public:
     bool next(T &result) {
-      if (position >= 0) {
+      if (available()) {
         if (position < replayPos) {
           result = comment[position++];
         } else {
@@ -250,6 +322,8 @@ class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
       }
       return false;
     }
+
+    bool available() { return position >= 0; }
 
     void start(const T *commentString, int failPosition,
                T firstNonCommentCharacter) {
@@ -385,15 +459,14 @@ class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
     int pos;
     if (!(matchLine || matchBlock)) {
       pos = 0;
-    }
-    else {
+    } else {
       pos = 1;
       while (true) {
         comment = matchLine ? lineComment : blockComment;
         if (input.get(c)) {
           if (matchLine) {
             if ((matchLine = lineComment[pos] && lineComment[pos] == c)) {
-              if (lineComment[pos +1] == '\0') {
+              if (lineComment[pos + 1] == '\0') {
                 return readUntilEndOfLineComment(result)
                            ? MatchCommentStartResult::True
                            : MatchCommentStartResult::False;

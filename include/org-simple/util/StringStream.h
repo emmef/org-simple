@@ -44,6 +44,10 @@ public:
     return false;
   }
 
+  bool available() const {
+    return input[pos] != '\0';
+  }
+
   void rewind() { pos = 0; }
 
   void set(const T *string) {
@@ -65,13 +69,17 @@ public:
   explicit StringInputStream(const T *string) : input(string), pos(0) {}
   StringInputStream(StringInputStream &&) = default;
 
-  bool get(T &result) override {
-    if (pos < input.length()) {
+  bool get(T &result) final {
+    if (available()) {
       result = input[pos];
       ++pos;
       return true;
     }
     return false;
+  }
+
+  bool available() const {
+    return pos < input.length();
   }
 
   void rewind() { pos = 0; }
