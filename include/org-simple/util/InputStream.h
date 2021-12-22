@@ -29,7 +29,31 @@ template <typename T> class InputStream {
 public:
   virtual bool get(T &) = 0;
   virtual ~InputStream() = default;
+
 };
+
+template<typename T>
+class EmptyInputStream : public InputStream<T>{
+public:
+  static InputStream<T> *instance() {
+    static EmptyInputStream<T> instance;
+    return &instance;
+  }
+
+  bool get(T &) final { return false; }
+};
+
+template <typename T>
+class DeadPillStream : public EmptyInputStream<T> {
+
+public:
+  static InputStream<T> *instance() {
+    static DeadPillStream<T> instance;
+    return &instance;
+  }
+};
+
+
 
 } // namespace org::simple::util
 
