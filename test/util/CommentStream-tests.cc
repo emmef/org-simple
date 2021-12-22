@@ -54,7 +54,6 @@ BOOST_AUTO_TEST_CASE(testNoCommentIdentical) {
   CommentStream stream("This is a text without a block-comment");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -65,7 +64,6 @@ BOOST_AUTO_TEST_CASE(testNoCommentWithQuoteIdentical) {
   CommentStream stream("This is a text 'without' a block-comment");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -76,7 +74,6 @@ BOOST_AUTO_TEST_CASE(testNoCommentWithQuoteUnclosedIdentical) {
   CommentStream stream("This is a text 'without a block-comment");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(true, stream.inQuote());
@@ -87,7 +84,6 @@ BOOST_AUTO_TEST_CASE(testNoCommentWithQuoteEscapedClosedIdentical) {
   CommentStream stream("This is a text 'without\\' a block-comment");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(true, stream.inQuote());
@@ -98,7 +94,6 @@ BOOST_AUTO_TEST_CASE(testNoCommentWithQuoteUnclosedEscapeAtEndIdentical) {
   CommentStream stream("This is a text 'without a block-comment\\");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(true, stream.inQuote());
@@ -109,7 +104,6 @@ BOOST_AUTO_TEST_CASE(testLineCommentInQuoteIdentical) {
   CommentStream stream("This is a text 'without //' a block-comment");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -120,7 +114,6 @@ BOOST_AUTO_TEST_CASE(testBlockCommentInQuoteIdentical) {
   CommentStream stream("This is a text 'without /*' a block-comment");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -131,7 +124,6 @@ BOOST_AUTO_TEST_CASE(testLineCommentBothCharsEscapedIdentical) {
   CommentStream stream("This is a text.\\/\\/");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -142,7 +134,6 @@ BOOST_AUTO_TEST_CASE(testLineCommentEscapedOmitted) {
   CommentStream stream("This is a text.\\//");
   std::string expected = "This is a text.\\";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -153,7 +144,6 @@ BOOST_AUTO_TEST_CASE(testLineCommentNoNewLineOmitted) {
   CommentStream stream("This is a text.// The rest is history");
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -164,7 +154,6 @@ BOOST_AUTO_TEST_CASE(testLineCommentNewLineOmitted) {
   CommentStream stream("This is a text.// The rest is history\n");
   std::string expected = "This is a text.\n";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -175,7 +164,6 @@ BOOST_AUTO_TEST_CASE(testLineCommentWithBlockCommentIgnored) {
   CommentStream stream("This is a text.// The rest is /*history");
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -186,7 +174,6 @@ BOOST_AUTO_TEST_CASE(testLineCommentWithBlockCommentCloseIgnored) {
   CommentStream stream("This is a text.// The rest is */history");
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -197,7 +184,6 @@ BOOST_AUTO_TEST_CASE(testLineCommentWithBlockCommentIgnoredNewLine) {
   CommentStream stream("This is a text.// The rest is /*history\n");
   std::string expected = "This is a text.\n";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -208,7 +194,6 @@ BOOST_AUTO_TEST_CASE(testLineCommentWithBlockCommentCloseIgnoredNewLine) {
   CommentStream stream("This is a text.// The rest is */history\n");
   std::string expected = "This is a text.\n";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -219,7 +204,6 @@ BOOST_AUTO_TEST_CASE(testBlockCommentSingleLineOmitted) {
   CommentStream stream("This is a text./* The rest is history.*/");
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -230,7 +214,6 @@ BOOST_AUTO_TEST_CASE(testBlockCommentSingleLineOmittedNewLine) {
   CommentStream stream("This is a text./* The rest is history.*/\n");
   std::string expected = "This is a text.\n";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -243,7 +226,6 @@ BOOST_AUTO_TEST_CASE(testBlockCommentMultiLineOmittedNewLine) {
                        "*/\n");
   std::string expected = "This is a text.\n";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -256,7 +238,6 @@ BOOST_AUTO_TEST_CASE(testBlockCommentMultiLineOmitted) {
                        "*/");
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -269,7 +250,6 @@ BOOST_AUTO_TEST_CASE(testBlockCommentMultiLineWithLineCommentOmittedNewLine) {
                        "*/\n");
   std::string expected = "This is a text.\n";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -282,7 +262,6 @@ BOOST_AUTO_TEST_CASE(testBlockCommentMultiLineWithLineCommentOmitted) {
                        "*/");
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -294,7 +273,6 @@ BOOST_AUTO_TEST_CASE(testSingleNestedComment) {
       "This is a text/* with a block comment/* with a block comment */*/.", 1);
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
 }
@@ -305,7 +283,6 @@ BOOST_AUTO_TEST_CASE(
                        "comment */Doesn't (see the quote?) really matter*/.", 1);
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
 }
@@ -315,7 +292,6 @@ BOOST_AUTO_TEST_CASE(testSingleNestedCommentWithExtraTextBetweenCloses) {
                        "comment */Does not really matter*/.", 1);
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
 }
@@ -326,7 +302,6 @@ BOOST_AUTO_TEST_CASE(
                        "comment */Does not \\'t not really matter*/.", 1);
   std::string expected = "This is a text.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
 }
@@ -336,7 +311,6 @@ BOOST_AUTO_TEST_CASE(testSingleNestedCommentNotClosed) {
       "This is a text/* with a block comment/* with a block comment */.", 1);
   std::string expected = "This is a text";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(true, stream.inComment());
 }
@@ -346,7 +320,6 @@ BOOST_AUTO_TEST_CASE(testDoubleNestedCommentWhenSingleAllowed) {
                        "comment/* and too deep!*/*/*/.", 1);
   std::string expected = "This is a text*/.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
 }
@@ -356,7 +329,6 @@ BOOST_AUTO_TEST_CASE(testDoubleNestedCommentWhenDoubleAllowed) {
                        "comment/* and too deep!*/*/*/.", 1);
   std::string expected = "This is a text*/.";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
 }
@@ -365,7 +337,6 @@ BOOST_AUTO_TEST_CASE(testCommentLong) {
   CommentStream stream("This text12345 has no quality!!54321...", 0, "12345");
   std::string expected = "This text...";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.inComment());
 }
@@ -374,7 +345,6 @@ BOOST_AUTO_TEST_CASE(testCommentLongUnfinishedEnd_5_4) {
   CommentStream stream("This text 12345 has no quality!!5432...", 0, "12345");
   std::string expected = "This text ";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(true, stream.inComment());
 }
@@ -383,7 +353,6 @@ BOOST_AUTO_TEST_CASE(testCommentLongUnfinishedEnd_5_3) {
   CommentStream stream("This text 12345 has no quality!!543...", 0, "12345");
   std::string expected = "This text ";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(true, stream.inComment());
 }
@@ -392,7 +361,6 @@ BOOST_AUTO_TEST_CASE(testCommentLongUnfinishedEnd_5_4_EOF) {
   CommentStream stream("This text 12345 has no quality!!5432", 0, "12345");
   std::string expected = "This text ";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(true, stream.inComment());
 }
@@ -401,7 +369,6 @@ BOOST_AUTO_TEST_CASE(testCommentLongUnfinishedEnd_5_3_EOF) {
   CommentStream stream("This text 12345 has no quality!!543", 0, "12345");
   std::string expected = "This text ";
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(true, stream.inComment());
 }
@@ -411,7 +378,6 @@ BOOST_AUTO_TEST_CASE(testNoQuotesIdentical) {
   CommentStream stream("This is a text without any quotes");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -424,7 +390,6 @@ BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_NotAtEndOrStart) {
   CommentStream stream("This is a 'text with quotes'.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -436,7 +401,6 @@ BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_AtEnd) {
   CommentStream stream("This is a 'text with quotes.'");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -448,7 +412,6 @@ BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_AtStart) {
   CommentStream stream("'This is a text', with quotes.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -460,7 +423,6 @@ BOOST_AUTO_TEST_CASE(testWithQuotesIdentical_AtStartAndEnd) {
   CommentStream stream("'This is a text with quotes.'");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -472,7 +434,6 @@ BOOST_AUTO_TEST_CASE(testUnclosedQuote) {
   CommentStream stream("This is a 'text with quotes.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(true, stream.inQuote());
@@ -484,7 +445,6 @@ BOOST_AUTO_TEST_CASE(testUnclosedQuoteEscaped) {
   CommentStream stream("This is a 'text with quotes.\\");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(true, stream.isEscaped());
   BOOST_CHECK_EQUAL(true, stream.inQuote());
@@ -496,7 +456,6 @@ BOOST_AUTO_TEST_CASE(testUnclosedQuoteEscapedQuote) {
   CommentStream stream("This is a 'text with quotes.\\'");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(true, stream.inQuote());
@@ -508,7 +467,6 @@ BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_NotAtEndOrStart) {
   CommentStream stream("This is a 'text with quotes'.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -520,7 +478,6 @@ BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_AtEnd) {
   CommentStream stream("This is a 'text with quotes.'");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -532,7 +489,6 @@ BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_AtStart) {
   CommentStream stream("'This is a text', with quotes.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -544,7 +500,6 @@ BOOST_AUTO_TEST_CASE(testWithSecondQuotesIdentical_AtStartAndEnd) {
   CommentStream stream("'This is a text with quotes.'");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -556,7 +511,6 @@ BOOST_AUTO_TEST_CASE(testUnclosedSecondQuote) {
   CommentStream stream("This is a 'text with quotes.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(true, stream.inQuote());
@@ -568,7 +522,6 @@ BOOST_AUTO_TEST_CASE(testUnclosedSecondQuoteEscaped) {
   CommentStream stream("This is a 'text with quotes.\\");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(true, stream.isEscaped());
   BOOST_CHECK_EQUAL(true, stream.inQuote());
@@ -580,7 +533,6 @@ BOOST_AUTO_TEST_CASE(testUnclosedSecondQuoteEscapedSecondQuote) {
   CommentStream stream("This is a 'text with quotes.\\'");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(true, stream.inQuote());
@@ -592,7 +544,6 @@ BOOST_AUTO_TEST_CASE(testEscaped) {
   CommentStream stream("This is escaped:\\");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(true, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -604,7 +555,6 @@ BOOST_AUTO_TEST_CASE(testEscapedQuote) {
   CommentStream stream("This is escaped:\\'");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -616,7 +566,6 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedQuotes_StartEnd) {
   CommentStream stream("'This is Peter\\'s text with quotes.'");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -628,7 +577,6 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedQuotes) {
   CommentStream stream("This is 'Peter\\'s text' with quotes.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -640,7 +588,6 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingSecondQuote) {
   CommentStream stream("This is 'Peter 9\" text' with quotes.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -652,7 +599,6 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedSecondQuote) {
   CommentStream stream("This is 'Peter 9\\\" text' with quotes.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -664,7 +610,6 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingFirstQuote) {
   CommentStream stream("This is \"Peter 9' text\" with quotes.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
@@ -676,7 +621,6 @@ BOOST_AUTO_TEST_CASE(testQuotesContainingEscapedFirstQuote) {
   CommentStream stream("This is \"Peter 9\\' text\" with quotes.");
   std::string expected = stream.getInput();
 
-  BOOST_CHECK_EQUAL(expected.length(), stream.length());
   BOOST_CHECK_EQUAL(expected, stream.getOutput());
   BOOST_CHECK_EQUAL(false, stream.isEscaped());
   BOOST_CHECK_EQUAL(false, stream.inQuote());
