@@ -25,27 +25,7 @@ using ReaderState = org::simple::charEncode::DecodingReaderState;
 
 template <typename number, bool separators = true>
 static const char *binary(number num) {
-  static constexpr size_t bits = sizeof(num) * 8;
-  static char buffer[bits + 1 + bits / 3];
-  number test = number(1) << (sizeof(num) * 8 - 1);
-  if constexpr (separators) {
-    int i;
-    int j;
-    for (i = 0, j = 0; i < bits; i++, test >>= 1) {
-      if (i != 0 && (i % 4) == 0) {
-        buffer[j++] = '_';
-      }
-      buffer[j++] = test & num ? '1' : '0';
-    }
-    buffer[j] = '\0';
-  } else {
-    int i;
-    for (i = 0; i < bits; i++, test >>= 1) {
-      buffer[i++] = test & num ? '1' : '0';
-    }
-    buffer[i] = '\0';
-  }
-  return buffer;
+  return org::simple::core::bits::renderBits<number, '_', separators ? 4 : 0>(num);
 }
 
 static const std::vector<long long unsigned> &generatePatterns() {

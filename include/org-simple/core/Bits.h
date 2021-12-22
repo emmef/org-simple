@@ -299,6 +299,84 @@ static constexpr unsigned_type bit_mask_not_exceeding(unsigned_type index) {
   return Bits<unsigned_type>::bit_mask_not_exceeding(index);
 }
 
+
+template <typename number, unsigned separatorInterval>
+concept isValidBitRenderConfiguration = std::is_integral_v<number> &&
+    (separatorInterval == 0 || is_power_of_two(separatorInterval));
+
+/**
+ * Gets the number of characters needed render the bits using \c renderBitsInfo.
+ * @tparam number The type of number to display the bits for.
+ * @tparam separator The separator character to be used if not '_'.
+ * @tparam separatorInterval The separator interval in bits, that must be a
+ * power of two.
+ * @return The number
+ */
+template <typename number, unsigned separatorInterval = 0>
+static constexpr unsigned renderBitsCharacters() requires
+    isValidBitRenderConfiguration<number, separatorInterval> {
+  const unsigned bits = sizeof(number) * 8;
+  return bits + 1 + (separatorInterval ? bits / separatorInterval : 0);
+}
+
+/**
+ * Renders the number in binary format into the specified buffer, that must at
+ * least have a length of \c binaryDisplayLength, and returns a pointer to the
+ * buffer after the rendered bits.
+ *
+ * @tparam number The type of number to display the bits for.
+ * @tparam separator The separator character to be used if not '_'.
+ * @tparam separatorInterval The separator interval in bits, that must be a
+ * power of two.
+ * @param num The number of the specified type.
+ * @param buffer The buffer to write into.
+ * @return A pointer to the buffer after the rendered bits.
+ */
+template <typename C, typename number, char separator = '_',
+          unsigned separatorInterval = 0>
+static const C *renderBitsInto(number num, C *buffer)  requires
+    isValidBitRenderConfiguration<number, separatorInterval> {
+  static constexpr int bits = sizeof(num) * 8;
+  number test = number(sizeof(1) << (sizeof(num) * 8 - 1));
+  if constexpr (separatorInterval) {
+    int i;
+    int j;
+    for (i = 0, j = 0; i < bits; i++, test >>= 1) {
+      if (i != 0 && (i % separatorInterval) == 0) {
+        buffer[j++] = separator;
+      }
+      buffer[j++] = test & num ? '1' : '0';
+    }
+  } else {
+    int i;
+    for (i = 0; i < bits; i++, test >>= 1) {
+      buffer[i] = test & num ? '1' : '0';
+    }
+  }
+  return buffer + renderBitsCharacters<number, separatorInterval>();
+}
+
+/**
+ * Renders the number in binary format a static buffer and returns a pointer to
+ * that buffer.
+ *
+ * @tparam number The type of number to display the bits for.
+ * @tparam separator The separator character to be used if not '_'.
+ * @tparam separatorInterval The separator interval in bits, that must be a
+ * power of two.
+ * @param num The number of the specified type.
+ * @return A pointer to the buffer with the rendered bits.
+ */
+template <typename number, char separator = '_', unsigned separatorInterval = 0>
+static const char *renderBits(number num) requires
+    isValidBitRenderConfiguration<number, separatorInterval>{
+  static constexpr size_t length = renderBitsCharacters<number, separatorInterval>();
+  static char buffer[length + 1];
+  renderBitsInto<char, number, separator, separatorInterval>(num, buffer);
+  buffer[length] = '\0';
+  return buffer;
+}
+
 } // namespace bits
 } // namespace org::simple::core
 

@@ -5,6 +5,7 @@
 #include "boost-unit-tests.h"
 #include <org-simple/util/StringStream.h>
 #include <org-simple/util/Utf8Stream.h>
+#include <org-simple/core/Bits.h>
 
 using Utf8 = org::simple::charEncode::Utf8Encoding;
 
@@ -29,32 +30,6 @@ public:
   char getLastRead() const { return lastRead; }
   const std::string getString() const { return string; }
 };
-
-template <typename number, bool separators = false>
-static const char *binary(number num) {
-  static constexpr size_t bits = sizeof(num) * 8;
-  static char buffer[bits + 1 + bits / 3];
-  number test = number(1) << (sizeof(num) * 8 - 1);
-  if constexpr (separators) {
-    int i;
-    int j;
-    for (i = 0, j = 0; i < bits; i++, test >>= 1) {
-      if (i != 0 && (i % 4) == 0) {
-        buffer[j++] = '_';
-      }
-      buffer[j++] = test & num ? '1' : '0';
-    }
-    buffer[j] = '\0';
-  } else {
-    int i;
-    for (i = 0; i < bits; i++, test >>= 1) {
-      buffer[i] = test & num ? '1' : '0';
-    }
-    buffer[i] = '\0';
-  }
-  return buffer;
-}
-
 } // anonymous namespace
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_ValidateUtf8Stream_Tests)
@@ -97,9 +72,9 @@ BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
     }
     if (failed) {
       std::stringstream out;
-      out << "Failure\n\tcp = " << binary(cp) << "\n\tbytes  =";
+      out << "Failure\n\tcp = " << org::simple::core::bits::renderBits(cp) << "\n\tbytes  =";
       for (int p = 0; p < length; p++) {
-        out << " " << binary(charArray[p]);
+        out << " " << org::simple::core::bits::renderBits(charArray[p]);
       }
       out << "\n\tstream =";
       sstream.rewind();
@@ -108,7 +83,7 @@ BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
         out << " ";
         char c;
         if (stream.get(c)) {
-          out << binary(c);
+          out << org::simple::core::bits::renderBits(c);
         }
         else {
           out << "????????";
