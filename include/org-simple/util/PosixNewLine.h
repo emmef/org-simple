@@ -1,0 +1,83 @@
+#ifndef ORG_SIMPLE_POSIXNEWLINE_H
+#define ORG_SIMPLE_POSIXNEWLINE_H
+/*
+ * org-simple/util/PosixNewLine.h
+ *
+ * Added by michel on 2021-12-22
+ * Copyright (C) 2015-2021 Michel Fleur.
+ * Source https://github.com/emmef/org-simple
+ * Email org-simple@emmef.org
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <org-simple/util/TextFilters.h>
+
+namespace org::simple::util {
+
+template <typename C>
+class ToPosixNewlineFilter : public AbstractTextFilter<C> {
+  std::size_t line = 0;
+  std::size_t position = 0;
+  std::size_t column = 0;
+  bool lastCR = false;
+
+public:
+  std::size_t getLine() const { return line; }
+  std::size_t getPosition() const { return position; }
+  std::size_t getColumn() const { return column; }
+
+  void reset() { *this = {}; }
+
+  TextFilterResult filter(C &result, InputStream<C> &) final {
+    position++;
+    if (result == '\n') {
+      if (lastCR) {
+        lastCR = false;
+        return TextFilterResult::Swallow;
+      } else {
+        line++;
+        column = 0;
+        result = '\n';
+        return TextFilterResult::True;
+      }
+    } else if (result == '\r') {
+      line++;
+      column = 0;
+      lastCR = true;
+      result = '\n';
+      return TextFilterResult::True;
+    } else {
+      lastCR = false;
+      column++;
+      return TextFilterResult::True;
+    }
+  }
+};
+
+template <typename C> class PosixNewlineStream : public util::InputStream<C> {
+  util::InputStream<C> &input;
+  ToPosixNewlineFilter<C> filter;
+
+public:
+  explicit PosixNewlineStream(util::InputStream<C> &stream) : input(stream) {}
+
+  const ToPosixNewlineFilter<C> &state() { return filter; }
+  bool get(C &result) final { return filter.get(result, input); }
+  void reset() { filter.reset(); }
+};
+
+
+} // namespace org::simple::util
+
+#endif // ORG_SIMPLE_POSIXNEWLINE_H

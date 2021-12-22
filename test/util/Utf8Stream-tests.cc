@@ -98,6 +98,34 @@ BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(tesUnicodeToUtf8ToUnicode) {
+  class CodePointGenerator : public org::simple::util::InputStream<Utf8::codePoint > {
+    Utf8::codePoint cp = 0;
+    const Utf8::codePoint end = Utf8::maximumCodePoint;
+
+  public:
+    bool get(Utf8::codePoint &result) {
+      if (cp <= end) {
+        result = cp++;
+        return true;
+      }
+      return false;
+    }
+  } generator;
+
+  org::simple::charEncode::UnicodeToUtf8CharStream charStream(generator);
+  org::simple::charEncode::Utf8CharToUnicodeStream uniStream(charStream);
+
+  Utf8::codePoint expected;
+  const Utf8::codePoint end = Utf8::maximumCodePoint;
+
+  for (expected = 0; expected <= end; expected++) {
+    Utf8::codePoint actual;
+    BOOST_CHECK(uniStream.get(actual));
+    BOOST_CHECK_EQUAL(expected, actual);
+  }
+}
+
 BOOST_AUTO_TEST_CASE(testInvalidStartByteOmitted) {
   std::string string = "01234\xff 56";
   std::string expected = "01234 56";

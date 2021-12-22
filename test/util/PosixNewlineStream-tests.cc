@@ -3,7 +3,7 @@
 //
 
 #include <org-simple/util/StringStream.h>
-#include <org-simple/util/TextFilters.h>
+#include <org-simple/util/PosixNewLine.h>
 #include "boost-unit-tests.h"
 
 

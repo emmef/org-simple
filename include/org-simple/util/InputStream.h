@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-#include<limits>
+#include <limits>
 
 namespace org::simple::util {
 
@@ -31,11 +31,9 @@ template <typename T> class InputStream {
 public:
   virtual bool get(T &) = 0;
   virtual ~InputStream() = default;
-
 };
 
-template<typename T>
-class EmptyInputStream : public InputStream<T>{
+template <typename T> class EmptyInputStream : public InputStream<T> {
 public:
   static InputStream<T> *instance() {
     static EmptyInputStream<T> instance;
@@ -45,8 +43,7 @@ public:
   bool get(T &) final { return false; }
 };
 
-template <typename T>
-class DeadPillStream : public EmptyInputStream<T> {
+template <typename T> class DeadPillStream : public EmptyInputStream<T> {
 
 public:
   static InputStream<T> *instance() {
@@ -55,6 +52,13 @@ public:
   }
 };
 
+template <typename T> class EchoStream : public InputStream<T> {
+  InputStream<T> &input;
+
+public:
+  bool get(T &result) final { return input.get(result); }
+  EchoStream(InputStream<T> &source) : input(source) {}
+};
 
 template <typename T> class ReplayStream : public InputStream<T> {
   InputStream<T> *input = nullptr;
@@ -71,10 +75,6 @@ public:
     return false;
   }
 
-  bool available() final {
-    return input && input->available();
-  }
-
   bool assignedStream(InputStream<T> *stream) {
     input = stream;
     return stream != DeadPillStream<T>::instance();
@@ -83,8 +83,7 @@ public:
 
 template <typename T, unsigned N>
 class ReplayCharacterStream : public InputStream<T> {
-  static_assert(N > 0 &&
-                N < std::numeric_limits<unsigned>::max() / sizeof(T));
+  static_assert(N > 0 && N < std::numeric_limits<unsigned>::max() / sizeof(T));
 
   unsigned replayCount = 0;
   T v[N];
@@ -99,19 +98,15 @@ public:
     return false;
   }
 
-  bool available() final {
-    return replayCount > 0;
-  }
+  bool available() final { return replayCount > 0; }
 
-  ReplayCharacterStream &operator << (T value) {
+  ReplayCharacterStream &operator<<(T value) {
     if (replayCount < N) {
       v[replayCount++] = value;
     }
     return *this;
   }
 };
-
-
 
 } // namespace org::simple::util
 

@@ -4,7 +4,7 @@
 
 #include "boost-unit-tests.h"
 #include <org-simple/util/StringStream.h>
-#include <org-simple/util/TextFilters.h>
+#include <org-simple/util/CommentStream.h>
 
 namespace {
 static constexpr const char *singleLineComment = "//";

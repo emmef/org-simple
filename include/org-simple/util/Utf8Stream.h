@@ -20,14 +20,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <org-simple/util/Characters.h>
 #include <org-simple/util/CharEncode.h>
+#include <org-simple/util/Characters.h>
 #include <org-simple/util/InputStream.h>
 
 namespace org::simple::charEncode {
-template <typename T>
-class AsciiNewLineStream : public util::InputStream<T> {
+template <typename T> class AsciiNewLineStream : public util::InputStream<T> {
   util::InputStream<T> &input;
+
 public:
   AsciiNewLineStream(util::InputStream<T> &stream) : input(stream) {}
 
@@ -36,27 +36,22 @@ public:
     if (input.get(c)) {
       if (c != '\r' && charClass::Unicode::isLineBreak(c)) {
         result = '\n';
-      }
-      else {
+      } else {
         result = c;
       }
       return true;
     }
     return false;
   }
-
 };
 
-template <>
-class AsciiNewLineStream<char> : public util::InputStream<char> {
+template <> class AsciiNewLineStream<char> : public util::InputStream<char> {
   util::InputStream<char> &input;
+
 public:
   AsciiNewLineStream(util::InputStream<char> &stream) : input(stream) {}
 
-  bool get(char &result) override {
-    return input.get(result);
-  }
-
+  bool get(char &result) override { return input.get(result); }
 };
 
 class ValidatedUtf8Stream : public util::InputStream<char> {
@@ -89,9 +84,11 @@ class ValidatedUtf8Stream : public util::InputStream<char> {
     } // if invalid v, continue and skip invalid code point
     return true;
   }
+
 public:
-  ValidatedUtf8Stream(util::InputStream<char> &stream) : input(stream), pos(-1) {}
-  
+  ValidatedUtf8Stream(util::InputStream<char> &stream)
+      : input(stream), pos(-1) {}
+
   bool get(char &result) override {
     while (true) {
       if (pos >= 0) {
@@ -100,8 +97,7 @@ public:
           result = replay;
           ++pos;
           return true;
-        }
-        else {
+        } else {
           pos = -1;
         }
       }
@@ -120,6 +116,73 @@ public:
   }
 };
 
-} // namespace org::simple
+template <typename C>
+class Utf8ToUnicodeStream : public util::InputStream<Utf8Encoding::codePoint> {
+  static constexpr bool isSigned = std::is_same_v<char, C>;
+  static_assert(isSigned || std::is_same_v<Utf8Encoding::byte, C>);
+  util::InputStream<C> &input;
+  Utf8Encoding::Reader reader;
+
+public:
+  Utf8ToUnicodeStream(util::InputStream<C> &source) : input(source) {}
+
+  bool get(Utf8Encoding::codePoint &result) final {
+    C byte;
+    while (input.get(byte)) {
+      if (reader.addGetState(byte) == DecodingReaderState::OK) {
+        result = reader.getValueAndReset();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void reset() {
+    reader.reset();
+  }
+};
+
+
+template <typename C>
+class UnicodeToUtf8Stream : public util::InputStream<C> {
+  static constexpr bool isSigned = std::is_same_v<char, C>;
+  static_assert(isSigned || std::is_same_v<Utf8Encoding::byte, C>);
+  util::InputStream<Utf8Encoding::codePoint> &input;
+  C buffer[5];
+  int pos = -1;
+  int end = 0;
+
+public:
+  UnicodeToUtf8Stream(util::InputStream<Utf8Encoding::codePoint> &source) : input(source) {}
+
+  bool get(C &result) final {
+    if (pos >= 0) {
+      result = buffer[pos++];
+      if (pos == end) {
+        pos = -1;
+      }
+      return true;
+    }
+    Utf8Encoding::codePoint cp;
+    if (!input.get(cp)) {
+      return false;
+    }
+    end = Utf8Encoding ::unsafeEncode(cp, buffer) - buffer;
+    result = buffer[0];
+    if (end > 1) {
+      pos = 1;
+    }
+    return true;
+  }
+
+  void reset() {
+    pos = -1;
+  }
+};
+
+typedef Utf8ToUnicodeStream<char> Utf8CharToUnicodeStream;
+typedef UnicodeToUtf8Stream<char> UnicodeToUtf8CharStream;
+
+} // namespace org::simple::charEncode
 
 #endif // ORG_SIMPLE_UTF8STREAM_H

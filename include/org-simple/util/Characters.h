@@ -60,12 +60,13 @@ struct Ascii {
 struct Unicode {
   const std::locale locale = std::locale("en_US.UTF8");
   const Ascii ascii;
-  
+
   template <typename codePoint> bool isWhiteSpace(codePoint c) const {
     return std::isspace(c, locale);
   }
   template <typename codePoint> bool isLineBreak(codePoint c) const {
-    return ascii.isLineBreak(c, locale) || c == codePoint(0x0085) || c == codePoint(0x2028) || c == codePoint(0x2029);
+    return ascii.isLineBreak(c, locale) || c == codePoint(0x0085) ||
+           c == codePoint(0x2028) || c == codePoint(0x2029);
   }
   template <typename codePoint> bool isBlank(codePoint c) const {
     return std::isblank(c, locale);
@@ -170,6 +171,7 @@ struct Unicode {
   char getMatchingQuote(char c) const;
   bool isQuote(char c) const { return ascii.isQuote(c); }
 };
+
 struct Classifiers {
   static const Ascii &ascii() {
     static const Ascii ascii;
@@ -179,13 +181,23 @@ struct Classifiers {
     static const Unicode uc{};
     return uc;
   }
-};
 
+  template <class T>
+  requires(std::is_same_v<T, Ascii>) static constexpr const T &instance() {
+    return ascii();
+  }
+
+  template <class T>
+  requires(std::is_same_v<T, Unicode>) static const T &instance() {
+    return unicode();
+  }
+
+};
 
 template <typename T> struct QuoteMatcher {
   typedef bool (*function)(T cp, T &endQuote);
 
-  static bool none(T, T&) { return false; }
+  static bool none(T, T &) { return false; }
 };
 
 struct QuoteMatchers {
@@ -344,7 +356,6 @@ struct QuoteMatchers {
     throw std::invalid_argument("No matcher for string.");
   }
 };
-
 
 } // namespace org::simple::charClass
 

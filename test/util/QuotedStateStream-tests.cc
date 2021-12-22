@@ -3,8 +3,8 @@
 //
 
 #include "boost-unit-tests.h"
+#include <org-simple/util/QuoteState.h>
 #include <org-simple/util/StringStream.h>
-#include <org-simple/util/TextFilters.h>
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_QuotedStateStream_Tests)
 
