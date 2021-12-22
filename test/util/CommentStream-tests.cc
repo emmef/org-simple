@@ -11,7 +11,7 @@ static constexpr const char *singleLineComment = "//";
 static constexpr const char *blockComment = "/*";
 static constexpr const char *symmetricQuotes = "\"'";
 
-class CommentStream : public org::simple::util::QuoteAndEscapeState<char> {
+class CommentStream {
   org::simple::util::StringInputStream<char> input;
   org::simple::util::InputCollector<char> collector;
   org::simple::util::CommentStream<char> stream;
@@ -39,10 +39,10 @@ public:
     l = collector.consume(stream);
   }
 
-  bool inQuote() const override { return stream.inQuote(); }
-  char getOpenQuote() const override { return stream.getOpenQuote(); }
-  char getCloseQuote() const override { return stream.getCloseQuote(); }
-  bool isEscaped() const override { return stream.isEscaped(); }
+  bool inQuote() const { return stream.inQuote(); }
+  char getOpenQuote() const { return stream.getOpenQuote(); }
+  char getCloseQuote() const { return stream.getCloseQuote(); }
+  bool isEscaped() const { return stream.isEscaped(); }
   unsigned getLevel() const { return stream.getLevel(); }
   bool inComment() const { return stream.inComment(); }
 };

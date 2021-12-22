@@ -178,6 +178,47 @@ public:
   }
 };
 
+template <typename C> class QuoteState {
+  bool escaped = false;
+  C openQuote = 0;
+  C closeQuote = 0;
+  typename charClass::QuoteMatcher<C>::function matcher;
+
+public:
+  QuoteState(typename charClass::QuoteMatcher<C>::function function)
+      : matcher(function ? function : charClass::QuoteMatcher<C>::none) {}
+
+  QuoteState(const C *symmetricQuoteChars)
+      : matcher(charClass::QuoteMatchers::getDefaultMatcherFor(
+            symmetricQuoteChars, charClass::QuoteMatcher<C>::none)) {}
+
+  void reset() { *this = {matcher}; }
+
+  C getOpenQuote() const { return openQuote; }
+  C getCloseQuote() const { return closeQuote; }
+  bool isEscaped() const { return escaped; }
+  bool inQuote() const { return openQuote != 0; }
+
+  void probe(C c) {
+    if (openQuote != 0) {
+      if (escaped) {
+        escaped = false;
+      } else if (c == '\\') {
+        escaped = true;
+      } else if (c == closeQuote) {
+        openQuote = 0;
+        closeQuote = 0;
+      }
+    } else if (escaped) {
+      escaped = false;
+    } else if (matcher && matcher(c, closeQuote)) {
+      openQuote = c;
+    } else if (c == '\\') {
+      escaped = true;
+    }
+  }
+};
+
 template <typename C> class PosixNewlineStream : public util::InputStream<C> {
   util::InputStream<C> &input;
   ToPosixNewlineFilter<C> filter;
@@ -200,98 +241,21 @@ public:
   bool get(C &result) override { return filter.get(result, input); }
 };
 
-template <typename T> class QuoteAndEscapeState {
-public:
-  virtual bool inQuote() const = 0;
-  virtual T getOpenQuote() const = 0;
-  virtual T getCloseQuote() const = 0;
-  virtual bool isEscaped() const = 0;
-  virtual ~QuoteAndEscapeState() = default;
-};
-
 template <typename T>
-class QuoteAndEscapeHandler : public QuoteAndEscapeState<T> {
-public:
-  using matcherFunction = typename charClass::QuoteMatcher<T>::function;
-
-  bool inQuote() const final { return openQuote != 0; }
-  T getOpenQuote() const final { return openQuote; }
-  T getCloseQuote() const final { return closeQuote; }
-  bool isEscaped() const final { return escaped; }
-  virtual void handleEscape(T, T &, InputStream<T> &) {}
-
-  void reset() {
-    escaped = false;
-    openQuote = 0;
-    closeQuote = 0;
-  }
-
-  QuoteAndEscapeHandler(matcherFunction function)
-      : matcher(validMatcherFunction(function)), escaped(false), openQuote(0),
-        closeQuote(0) {}
-
-  QuoteAndEscapeHandler(const T *quotes)
-      : QuoteAndEscapeHandler(
-            charClass::QuoteMatchers::getDefaultMatcherFor(quotes, nullptr)) {}
-
-protected:
-  void handle(T c, T &result, InputStream<T> &stream) {
-    if (openQuote != 0) {
-      if (escaped) {
-        handleEscape(c, result, stream);
-        escaped = false;
-      } else if (c == '\\') {
-        escaped = true;
-      } else if (c == closeQuote) {
-        openQuote = 0;
-        closeQuote = 0;
-      }
-    } else if (escaped) {
-      handleEscape(c, result, stream);
-      escaped = false;
-    } else if (matcher(c, closeQuote)) {
-      openQuote = c;
-    } else if (c == '\\') {
-      escaped = true;
-    }
-    result = c;
-  }
-
-private:
-  matcherFunction matcher;
-
-  bool escaped = false;
-  T openQuote = 0;
-  T closeQuote = 0;
-
-  static matcherFunction validMatcherFunction(matcherFunction f) {
-    if (f != nullptr) {
-      return f;
-    }
-    throw std::invalid_argument(
-        "QuoteAndEscapeHandler: require quote matcher function.");
-  }
-};
-
-template <typename T>
-class QuotedStateStream : public QuoteAndEscapeHandler<T>,
-                          public util::InputStream<T> {
+class QuotedStateStream : public QuoteState<T>, public util::InputStream<T> {
 
 public:
   using matcherFunction = typename charClass::QuoteMatcher<T>::function;
 
-  QuotedStateStream(util::InputStream<T> &stream, matcherFunction function)
-      : QuoteAndEscapeHandler<T>(function), input(stream) {}
-
-  QuotedStateStream(util::InputStream<T> &stream, const T *quotes)
-      : QuoteAndEscapeHandler<T>(quotes), input(stream) {}
+  template <typename Q>
+  QuotedStateStream(util::InputStream<T> &stream, Q functionOrQuotes)
+      : QuoteState<T>(functionOrQuotes), input(stream) {}
 
   bool get(T &result) override {
-    T c;
-    if (!input.get(c)) {
+    if (!input.get(result)) {
       return false;
     }
-    QuoteAndEscapeHandler<T>::handle(c, result, input);
+    QuoteState<T>::probe(result);
     return true;
   }
 
@@ -299,15 +263,26 @@ private:
   util::InputStream<T> &input;
 };
 
-enum class MatchCommentStartResult { True, False, Continue };
-
 template <typename T>
-class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
+class CommentStream : public QuoteState<T>, public InputStream<T> {
   class Replay {
     int position = -1;
     int replayPos = 0;
     T nonComment = 0;
     const T *comment = nullptr;
+
+    void startBasic(const T *commentString, int failPosition,
+               T firstNonCommentCharacter) {
+      if (commentString == nullptr) {
+        *this = {};
+      } else {
+        comment = commentString;
+        replayPos = failPosition;
+        position = 1;
+        nonComment = firstNonCommentCharacter;
+      }
+    }
+
 
   public:
     bool next(T &result) {
@@ -327,15 +302,14 @@ class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
 
     void start(const T *commentString, int failPosition,
                T firstNonCommentCharacter) {
-      if (commentString == nullptr) {
-        *this = {};
-      } else {
-        comment = commentString;
-        replayPos = failPosition;
-        position = 1;
-        nonComment = firstNonCommentCharacter ? firstNonCommentCharacter
-                                              : commentString[replayPos];
-      }
+      comment = commentString;
+      replayPos = failPosition;
+      position = 1;
+      nonComment = firstNonCommentCharacter;
+    }
+
+    void start(const T *commentString, int failPosition) {
+      start(commentString, failPosition, commentString[replayPos]);
     }
 
     void reset() { *this = {}; }
@@ -451,8 +425,8 @@ class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
     return false;
   }
 
-  MatchCommentStartResult matchCommentStart(T chr, T &result) {
-    T c = chr;
+  TextFilterResult matchCommentStart(T &result) {
+    T c = result;
     const T *comment = nullptr;
     bool matchLine = lineComment && lineComment[0] && lineComment[0] == c;
     bool matchBlock = blockComment && blockComment[0] && blockComment[0] == c;
@@ -468,8 +442,8 @@ class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
             if ((matchLine = lineComment[pos] && lineComment[pos] == c)) {
               if (lineComment[pos + 1] == '\0') {
                 return readUntilEndOfLineComment(result)
-                           ? MatchCommentStartResult::True
-                           : MatchCommentStartResult::False;
+                           ? TextFilterResult::True
+                           : TextFilterResult::False;
               }
             }
           }
@@ -477,8 +451,8 @@ class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
             if ((matchBlock = blockComment[pos] && blockComment[pos] == c)) {
               if (blockComment[pos + 1] == '\0') {
                 return readUntilEndOfBlock(result)
-                           ? MatchCommentStartResult::True
-                           : MatchCommentStartResult::False;
+                           ? TextFilterResult::True
+                           : TextFilterResult::False;
               }
             }
           }
@@ -488,43 +462,35 @@ class CommentStream : public InputStream<T>, public QuoteAndEscapeHandler<T> {
         } else {
           if (pos == 0) {
             result = comment[0];
-            return MatchCommentStartResult::True;
+            return TextFilterResult::True;
           } else if (matchLine || matchBlock) {
             result = comment[pos];
-            return MatchCommentStartResult::True;
+            return TextFilterResult::True;
           } else if (comment[pos + 1] == '\0') {
-            return MatchCommentStartResult::False;
+            return TextFilterResult::False;
           } else {
             result = comment[0];
-            replay.start(comment, pos, 0);
+            replay.start(comment, pos);
           }
-          return MatchCommentStartResult::True;
+          return TextFilterResult::True;
         }
         pos++;
       }
       replay.start(comment, pos, c);
       result = comment[0];
-      return MatchCommentStartResult::True;
+      return TextFilterResult::True;
     }
-    return MatchCommentStartResult::Continue;
+    return TextFilterResult::Continue;
   }
 
 public:
+  template <typename Q>
   CommentStream(InputStream<T> &stream, const T *lineCommentString,
-                const T *blockCommentString, unsigned nestingLevels,
-                typename charClass::QuoteMatcher<T>::function quoteMatcher)
-      : QuoteAndEscapeHandler<T>(quoteMatcher), nesting(nestingLevels),
+                const T *blockCommentString, unsigned nestingLevels, Q quotes)
+      : QuoteState<T>(quotes), nesting(nestingLevels),
         lineComment(lineCommentString),
         blockComment(validCommentString(blockCommentString, lineComment)),
         commentEnd(getCommentEnd(blockComment)), input(stream) {}
-
-  CommentStream(InputStream<T> &stream, const T *lineCommentString,
-                const T *blockCommentString, unsigned nestingLevels,
-                const T *symmetricQuotesString)
-      : CommentStream(stream, lineCommentString, blockCommentString,
-                      nestingLevels,
-                      charClass::QuoteMatchers::getDefaultMatcherFor(
-                          symmetricQuotesString, nullptr)) {}
 
   unsigned getLevel() const { return nesting.getLevel(); }
   bool inComment() const { return getLevel() != 0; }
@@ -533,22 +499,17 @@ public:
     if (replay.next(result)) {
       return true;
     }
-    T c;
-    if (!input.get(c)) {
+    if (!input.get(result)) {
       return false;
     }
-    QuoteAndEscapeHandler<T>::handle(c, result, input);
-    if (QuoteAndEscapeHandler<T>::isEscaped() ||
-        QuoteAndEscapeHandler<T>::inQuote()) {
+    QuoteState<T>::probe(result);
+    if (QuoteState<T>::isEscaped() || QuoteState<T>::inQuote()) {
       return true;
     }
-    switch (matchCommentStart(c, result)) {
-    case MatchCommentStartResult::True:
-      return true;
-    case MatchCommentStartResult::False:
+    switch (matchCommentStart(result)) {
+    case TextFilterResult::False:
       return false;
     default:
-      result = c;
       return true;
     }
   }
