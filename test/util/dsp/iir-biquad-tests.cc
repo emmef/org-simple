@@ -2,8 +2,8 @@
 // Created by michel on 30-07-21.
 //
 
-#include "iir-coefficients-test-helper.h"
-#include <org-simple/util/dsp/iir-biquad.h>
+#include "util/text/iir-coefficients-test-helper.h"
+#include "org-simple/util/dsp/iir-biquad.h"
 
 using namespace org::simple::util::dsp;
 

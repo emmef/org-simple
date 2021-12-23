@@ -21,8 +21,8 @@
  * limitations under the License.
  */
 
-#include <org-simple/util/Array.h>
-#include <org-simple/util/dsp/iir-coefficients.h>
+#include "org-simple/util/Array.h"
+#include "org-simple/util/dsp/iir-coefficients.h"
 #include <iostream>
 
 namespace {

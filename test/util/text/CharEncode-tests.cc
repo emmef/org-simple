@@ -5,7 +5,7 @@
 #include "boost-unit-tests.h"
 #include <iostream>
 #include "org-simple/core/Bits.h"
-#include <org-simple/util/text/CharEncode.h>
+#include "org-simple/util/text/CharEncode.h"
 
 typedef char8_t byte;
 typedef char32_t codePoint;

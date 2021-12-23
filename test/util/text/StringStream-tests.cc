@@ -2,7 +2,7 @@
 // Created by michel on 20-12-21.
 //
 
-#include <org-simple/util/text/StringStream.h>
+#include "org-simple/util/text/StringStream.h"
 #include "boost-unit-tests.h"
 
 using CStringInputStream = org::simple::util::text::CStringInputStream<char>;

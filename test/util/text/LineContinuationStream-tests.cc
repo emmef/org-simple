@@ -2,8 +2,8 @@
 // Created by michel on 20-12-21.
 //
 
-#include <org-simple/util/text/StringStream.h>
-#include <org-simple/util/text/LineContinuation.h>
+#include "org-simple/util/text/StringStream.h"
+#include "org-simple/util/text/LineContinuation.h"
 #include "boost-unit-tests.h"
 
 BOOST_AUTO_TEST_SUITE(org_simple_util_LineContinuationStream_Tests)

@@ -3,8 +3,8 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/text/StringStream.h>
-#include <org-simple/util/text/CommentStream.h>
+#include "org-simple/util/text/StringStream.h"
+#include "org-simple/util/text/CommentStream.h"
 
 namespace {
 static constexpr const char *singleLineComment = "//";

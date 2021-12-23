@@ -5,10 +5,10 @@
 #include "test-helper.h"
 #include <boost/math/special_functions/relative_difference.hpp>
 #include <cmath>
-#include <org-simple/util/dsp/iir-butterworth.h>
+#include "org-simple/util/dsp/iir-butterworth.h"
 #include <vector>
 
-#include "iir-coefficients-test-helper.h"
+#include "util/text/iir-coefficients-test-helper.h"
 
 using namespace org::simple::util::dsp;
 

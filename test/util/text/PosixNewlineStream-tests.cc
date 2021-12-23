@@ -2,8 +2,8 @@
 // Created by michel on 20-12-21.
 //
 
-#include <org-simple/util/text/StringStream.h>
-#include <org-simple/util/text/PosixNewLine.h>
+#include "org-simple/util/text/StringStream.h"
+#include "org-simple/util/text/PosixNewLine.h"
 #include "boost-unit-tests.h"
 
 

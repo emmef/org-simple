@@ -3,8 +3,8 @@
 //
 
 #include <cstdio>
-#include <test-helper.h>
-#include "iir-coefficients-test-helper.h"
+#include "test-helper.h"
+#include "util/text/iir-coefficients-test-helper.h"
 
 static constexpr size_t SIZE = 10;
 static constexpr size_t INPUT = 0;

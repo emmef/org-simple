@@ -3,9 +3,9 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/text/StringStream.h>
-#include <org-simple/util/text/Utf8Stream.h>
-#include <org-simple/core/Bits.h>
+#include "org-simple/util/text/StringStream.h"
+#include "org-simple/util/text/Utf8Stream.h"
+#include "org-simple/core/Bits.h"
 
 using Utf8 = org::simple::util::text::Utf8Encoding;
 
