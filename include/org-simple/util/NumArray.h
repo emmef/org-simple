@@ -36,21 +36,17 @@ using NumArray = BaseNumArray<T, Array<T, S, A>>;
 
 namespace concepts {
 
-using namespace org::simple::core;
-
 template <typename L, typename R>
-concept NumberIsR2LAssignable = (is_complex_v<L> && is_number<R>) ||
+concept NumberIsR2LAssignable = (org::simple::core::is_complex_v<L> && org::simple::core::is_number<R>) ||
                                 (std::is_arithmetic_v<L> &&
                                  std::is_arithmetic_v<R>);
 
 } // namespace concepts
 
-using namespace concepts;
-
 template <typename T, class S> struct BaseNumArray : public S {
   static_assert(is_base_array<S>);
   static_assert(concept_base_array<S>::FIXED_CAPACITY != 0);
-  static_assert(org::simple::util::is_number<T>);
+  static_assert(org::simple::core::is_number<T>);
 
   typedef S Super;
   typedef typename Super::data_type data_type;

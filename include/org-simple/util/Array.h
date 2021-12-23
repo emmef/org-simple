@@ -508,21 +508,19 @@ template <typename T, size_t S> static constexpr size_t eff_capacity() {
 
 } // namespace helper
 
-using namespace helper;
-
 template <typename T, size_t S, size_t A>
-class Array : public AbstractArray<T, eff_capacity<T, S>(), eff_align<T>(A),
+class Array : public AbstractArray<T, helper::eff_capacity<T, S>(), helper::eff_align<T>(A),
                                    Array<T, S, A>> {
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
-  alignas(eff_align<T>(A)) T data_[S];
+  alignas(helper::eff_align<T>(A)) T data_[S];
 
   T *array_data() { return &data_[0]; }
   const T *array_data() const { return &data_[0]; }
 
 public:
-  typedef AbstractArray<T, eff_capacity<T, S>(), eff_align<T>(A),
+  typedef AbstractArray<T, helper::eff_capacity<T, S>(), helper::eff_align<T>(A),
                         Array<T, S, A>>
       Super;
   typedef typename Super::data_type data_type;
@@ -544,7 +542,7 @@ public:
 
 template <typename T, size_t S, size_t A = 0>
 class ArrayAllocatedFixedSize
-    : public AbstractArray<T, eff_capacity<T, S>(), eff_align<T>(A),
+    : public AbstractArray<T, helper::eff_capacity<T, S>(), helper::eff_align<T>(A),
                            ArrayAllocatedFixedSize<T, S, A>> {
 public:
   static_assert(std::is_trivially_constructible_v<T>);
@@ -552,14 +550,14 @@ public:
   static_assert(std::is_trivially_move_assignable_v<T>);
 
   struct DataStruct {
-    alignas(eff_align<T>(A)) T data_[S];
+    alignas(helper::eff_align<T>(A)) T data_[S];
   };
 
   T *array_data() { return data_->data_; }
   const T *array_data() const { return data_->data_; }
 
 public:
-  typedef AbstractArray<T, eff_capacity<T, S>(), eff_align<T>(A),
+  typedef AbstractArray<T, helper::eff_capacity<T, S>(), helper::eff_align<T>(A),
                         ArrayAllocatedFixedSize<T, S, A>>
       Super;
   typedef typename Super::data_type data_type;
@@ -638,7 +636,7 @@ public:
 
 template <typename T, size_t A>
 class ArrayDataRef
-    : public AbstractArray<T, 0, eff_align<T>(A), ArrayDataRef<T>> {
+    : public AbstractArray<T, 0, helper::eff_align<T>(A), ArrayDataRef<T>> {
 
   T *data_;
   size_t capacity_;
@@ -649,7 +647,7 @@ class ArrayDataRef
 
   T *check_valid_data(T *data) {
     T *r = core::Dereference::checked(data);
-    if (A == 0 || core::alignment_matches((uintptr_t)data, eff_align<T>(A))) {
+    if (A == 0 || core::alignment_matches((uintptr_t)data, helper::eff_align<T>(A))) {
       return r;
     };
     throw std::invalid_argument(
@@ -657,7 +655,7 @@ class ArrayDataRef
   }
 
 public:
-  typedef AbstractArray<T, 0, eff_align<T>(A), ArrayDataRef<T>> Super;
+  typedef AbstractArray<T, 0, helper::eff_align<T>(A), ArrayDataRef<T>> Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   friend Super;
@@ -673,7 +671,7 @@ public:
 
 template <typename T, size_t A>
 class ArrayAllocated
-    : public AbstractArray<T, 0, eff_align<T>(A), ArrayAllocated<T, A>> {
+    : public AbstractArray<T, 0, helper::eff_align<T>(A), ArrayAllocated<T, A>> {
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
@@ -691,7 +689,7 @@ class ArrayAllocated
   }
 
 public:
-  typedef AbstractArray<T, 0, eff_align<T>(A), ArrayAllocated<T, A>> Super;
+  typedef AbstractArray<T, 0, helper::eff_align<T>(A), ArrayAllocated<T, A>> Super;
   typedef typename Super::data_type data_type;
   typedef typename Super::Size Size;
   friend Super;
@@ -722,7 +720,7 @@ public:
   }
 
 private:
-  core::AlignedAlloc<T, eff_align<T>(A)> data_;
+  core::AlignedAlloc<T, helper::eff_align<T>(A)> data_;
 };
 
 } // namespace org::simple::util

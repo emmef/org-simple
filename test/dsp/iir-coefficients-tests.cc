@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(testFilterScenarioBufferCopyReverse) {
 BOOST_AUTO_TEST_CASE(testFilterSingleEqualsForwardWithOffset) {
   FilterScenarioBuffer<2> filter1(SIZE, BUFFERS);
   FilterScenarioBuffer<2> filter2(SIZE, BUFFERS);
-  FixedOrderCoefficients<double, 2> coeffs;
+  org::simple::util::dsp::FixedOrderCoefficients<double, 2> coeffs;
   filter1.generate_random_filter(coeffs);
 
   filter1.fill_with_random(INPUT);
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(testFilterSingleEqualsForwardWithOffset) {
 BOOST_AUTO_TEST_CASE(testForwardEqualsBackwardBothWithOffset) {
   FilterScenarioBuffer<2> filter1(SIZE, BUFFERS);
   FilterScenarioBuffer<2> filter2(SIZE, BUFFERS);
-  FixedOrderCoefficients<double, 2> coeffs;
+  org::simple::util::dsp::FixedOrderCoefficients<double, 2> coeffs;
   filter1.generate_random_filter(coeffs);
 
   filter1.fill_with_random(INPUT);
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(testForwardEqualsBackwardBothWithOffset) {
 BOOST_AUTO_TEST_CASE(testForwardEqualsBackwardBothWithZeroHistory) {
   FilterScenarioBuffer<2> filter1(SIZE, BUFFERS);
   FilterScenarioBuffer<2> filter2(SIZE, BUFFERS);
-  FixedOrderCoefficients<double, 2> coeffs;
+  org::simple::util::dsp::FixedOrderCoefficients<double, 2> coeffs;
   filter1.generate_random_filter(coeffs);
 
   filter1.fill_with_random(INPUT);

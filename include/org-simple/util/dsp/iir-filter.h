@@ -27,8 +27,6 @@
 
 namespace org::simple::util::dsp {
 
-using namespace org::simple::core;
-
 /**
  * Filters a single sample using the feed forward coefficients \c ff_coeffs,
  * feed backward coefficients \c fb_coeffs, sample histories for input and

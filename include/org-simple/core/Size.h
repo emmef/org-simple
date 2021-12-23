@@ -29,7 +29,7 @@
 #include <org-simple/core/Bits.h>
 #include <org-simple/core/bounds.h>
 
-namespace org::simple::traits {
+namespace org::simple::core {
 
 /**
  * Checks whether @p unsigned_type is a valid size value type. A valid size
@@ -38,7 +38,7 @@ namespace org::simple::traits {
  * @tparam T The type to be checked to be valid ofr containing size.
  */
 template <typename S>
-concept is_valid_size_type = core::unsignedIntegral<S> &&
+concept is_valid_size_type = unsignedIntegral<S> &&
     std::numeric_limits<S>::max()
 <= std::numeric_limits<size_t>::max();
 
@@ -60,11 +60,6 @@ template <typename S, typename T>
 static constexpr bool is_unwrapped_operand =
     size_type_max<T> <= size_type_max<S>;
 
-} // namespace org::simple::traits
-
-namespace org::simple::core {
-
-using namespace org::simple::traits;
 
 template <typename size_type = size_t,
           size_type SIZE_LIMIT = std::numeric_limits<size_type>::max()>
