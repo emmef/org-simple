@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_TEXTFILTERS_H
-#define ORG_SIMPLE_TEXTFILTERS_H
+#ifndef ORG_SIMPLE_INPUTFILTER_H
+#define ORG_SIMPLE_INPUTFILTER_H
 /*
  * org-simple/util/text/TextFilters.h
  *
@@ -124,4 +124,4 @@ bool InputFilterWithBuffer<C>::get(C &result, InputStream<C> &input) {
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_TEXTFILTERS_H
+#endif // ORG_SIMPLE_INPUTFILTER_H

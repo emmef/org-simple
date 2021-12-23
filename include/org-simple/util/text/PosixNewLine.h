@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-#include <org-simple/util/text/TextFilters.h>
+#include <org-simple/util/text/InputFilter.h>
 
 namespace org::simple::util::text {
 
