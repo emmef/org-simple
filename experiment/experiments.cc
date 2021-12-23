@@ -3,7 +3,7 @@
 //
 
 #include <iostream>
-#include <org-simple/dsp/iir-coefficients.h>
+#include <org-simple/util/dsp/iir-coefficients.h>
 
 using namespace std;
 

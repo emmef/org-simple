@@ -26,7 +26,7 @@
 #include <org-simple/core/denormal.h>
 #include <org-simple/util/Array.h>
 
-namespace org::simple::dsp::iir {
+namespace org::simple::util::dsp {
 
 using namespace org::simple::core;
 using namespace org::simple::util;
@@ -712,6 +712,6 @@ size_t effectiveIRLength(const CoefficientsFilter<S> &filter, size_t maxLength,
   return sample;
 }
 
-} // namespace org::simple::dsp::iir
+} // namespace org::simple::util::dsp
 
 #endif // ORG_SIMPLE_IIR_COEFFICIENTS_H

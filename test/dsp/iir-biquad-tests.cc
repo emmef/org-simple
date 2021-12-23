@@ -3,9 +3,9 @@
 //
 
 #include "iir-coefficients-test-helper.h"
-#include <org-simple/dsp/iir-biquad.h>
+#include <org-simple/util/dsp/iir-biquad.h>
 
-using namespace org::simple::dsp::iir;
+using namespace org::simple::util::dsp;
 
 using Filter = FixedOrderCoefficients<double, 2>;
 using IncompatibleFilter = FixedOrderCoefficients<double, 3>;

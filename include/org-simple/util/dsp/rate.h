@@ -27,7 +27,7 @@
 #include <org-simple/core/number_traits.h>
 #include <type_traits>
 
-namespace org::simple::dsp {
+namespace org::simple::util::dsp {
 
 class Rate {
 public:
@@ -130,6 +130,6 @@ private:
   double rate_;
 };
 
-} // namespace org::simple::dsp::frequency
+} // namespace org::simple::util::dsp
 
 #endif // ORG_SIMPLE_RATE_H

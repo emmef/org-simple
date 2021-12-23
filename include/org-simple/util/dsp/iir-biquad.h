@@ -22,10 +22,10 @@
  */
 
 #include <algorithm>
-#include <org-simple/dsp/iir-coefficients.h>
-#include <org-simple/dsp/rate.h>
+#include <org-simple/util/dsp/iir-coefficients.h>
+#include <org-simple/util/dsp/rate.h>
 
-namespace org::simple::dsp::iir {
+namespace org::simple::util::dsp {
 
 class Biquad {
 
@@ -38,7 +38,7 @@ class Biquad {
   };
 
   template <typename C>
-  static inline void setCoefficients(iir::CoefficientsFilter<C> &coefficients,
+  static inline void setCoefficients(CoefficientsFilter<C> &coefficients,
                                      const BiQuadCoefficients bqc) {
     coefficients.setFB(0, bqc.C0);
     coefficients.setFB(1, bqc.C1);
@@ -575,6 +575,6 @@ public:
     return lowPass(rate.relative(center));
   }
 };
-} // namespace org::simple::dsp::iir
+} // namespace org::simple::util::dsp
 
 #endif // ORG_SIMPLE_IIR_BIQUAD_H

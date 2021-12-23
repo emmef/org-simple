@@ -35,8 +35,8 @@ public:
   QuoteState(typename charClass::QuoteMatcher<C>::function function)
       : matcher(function ? function : charClass::QuoteMatcher<C>::none) {}
 
-  QuoteState(const C *symmetricQuoteChars)
-      : matcher(charClass::QuoteMatchers::getDefaultMatcherFor(
+  QuoteState(const char *symmetricQuoteChars)
+      : matcher(charClass::QuoteMatchers::getDefaultMatcherFor<C>(
             symmetricQuoteChars, charClass::QuoteMatcher<C>::none)) {}
 
   void reset() { *this = {matcher}; }

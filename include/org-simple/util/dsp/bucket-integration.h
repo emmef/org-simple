@@ -20,7 +20,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace org::simple {
+namespace org::simple::util::dsp {
 
 // Idea:
 // A set of N buckets
@@ -104,6 +104,6 @@ std::cout << N << " samples approached by " <<
 
 
 
-} // namespace org::simple
+} // namespace org::simple::util::dsp
 
 #endif // ORG_SIMPLE_BUCKET_INTEGRATION_H

@@ -22,11 +22,11 @@
  */
 
 #include <algorithm>
-#include <org-simple/dsp/iir-coefficients.h>
-#include <org-simple/dsp/rate.h>
+#include <org-simple/util/dsp/iir-coefficients.h>
+#include <org-simple/util/dsp/rate.h>
 #include <stdexcept>
 
-namespace org::simple::dsp::iir {
+namespace org::simple::util::dsp {
 
 struct Butterworth {
   static constexpr size_t MAX_ORDER = 20;
@@ -272,6 +272,6 @@ private:
   }
 };
 
-} // namespace org::simple::dsp::iir
+} // namespace org::simple::util::dsp
 
 #endif // ORG_SIMPLE_IIR_BUTTERWORTH_H

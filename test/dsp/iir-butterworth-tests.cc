@@ -5,12 +5,12 @@
 #include "test-helper.h"
 #include <boost/math/special_functions/relative_difference.hpp>
 #include <cmath>
-#include <org-simple/dsp/iir-butterworth.h>
+#include <org-simple/util/dsp/iir-butterworth.h>
 #include <vector>
 
 #include "iir-coefficients-test-helper.h"
 
-using namespace org::simple::dsp::iir;
+using namespace org::simple::util::dsp;
 
 struct FilterGainScenario : public FilterScenario {
   size_t signal_period;

@@ -25,7 +25,7 @@
 #include <type_traits>
 #include <org-simple/core/denormal.h>
 
-namespace org::simple::dsp::iir {
+namespace org::simple::util::dsp {
 
 using namespace org::simple::denormal;
 
@@ -406,6 +406,6 @@ void filter_backward_zp(size_t order, size_t count,
   }
 }
 
-} // namespace org::simple::dsp::iir
+} // org::simple::util::dsp
 
 #endif // ORG_SIMPLE_IIR_FILTER_H

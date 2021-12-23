@@ -22,12 +22,12 @@
  */
 
 #include <org-simple/util/Array.h>
-#include <org-simple/dsp/iir-coefficients.h>
+#include <org-simple/util/dsp/iir-coefficients.h>
 #include <iostream>
 
 namespace {
 
-using namespace org::simple::dsp::iir;
+using namespace org::simple::util::dsp;
 
 static constexpr size_t TEST_SAMPLERATE = 65536;
 

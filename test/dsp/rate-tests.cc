@@ -2,7 +2,7 @@
 // Created by michel on 11-04-21.
 //
 
-#include <org-simple/dsp/rate.h>
+#include <org-simple/util/dsp/rate.h>
 #include <type_traits>
 
 template <typename T, typename R> struct IntegrationLogic {

@@ -39,7 +39,7 @@
  *
  * history_multipler = exp( -1 / integration_sample_count)
  */
-namespace org::simple::dsp::integration {
+namespace org::simple::util::dsp {
 
 /**
  * The minimum accuracy in "one out of N" that must be met by generated
@@ -53,6 +53,7 @@ static constexpr double integration_count_accuracy_minimum =
     ORG_SIMPLE_DSP_INTEGRATION_COUNT_ACCURACY_OVERRIDE;
 #endif
 
+struct Integration {
 /**
  * The minimum sample count (can be a fraction) that can be accurately
  * represented by a pair of history and input multipliers.
@@ -174,6 +175,7 @@ requires(std::is_floating_point_v<T> &&std::is_arithmetic_v<S>) inline static S
   integrate(history_multiplier, input_multiplier, history, input);
   return history;
 }
+};
 
 template <typename T> class BaseCoefficients {
   static_assert(std::is_floating_point_v<T>);
@@ -182,7 +184,7 @@ template <typename T> class BaseCoefficients {
 
   BaseCoefficients(T hm, T scale)
       : history_multiplier_(hm),
-        input_multiplier_(scale * (multiplier_to_multiplier(hm))) {}
+        input_multiplier_(scale * (Integration::multiplier_to_multiplier(hm))) {}
 
 public:
   BaseCoefficients(const BaseCoefficients &c) = default;
@@ -194,13 +196,13 @@ public:
 
   static BaseCoefficients from_count(T integration_sample_count, T scale = 1) {
     return BaseCoefficients(
-        sample_count_to_history_multiplier(integration_sample_count), scale);
+        Integration::sample_count_to_history_multiplier(integration_sample_count), scale);
   }
 
   static BaseCoefficients from_count_bound(T integration_sample_count,
                                            T scale = 1) {
     return BaseCoefficients(
-        sample_count_to_history_multiplier_bound(integration_sample_count),
+        Integration::sample_count_to_history_multiplier_bound(integration_sample_count),
         scale);
   }
 
@@ -219,44 +221,45 @@ public:
   template <typename S>
   requires(std::is_arithmetic_v<S>) inline S
       get_integrated(S history, S input) const {
-    return org::simple::dsp::integration::get_integrated(
+    return Integration::get_integrated(
         history_multiplier_, input_multiplier_, history, input);
   }
 
   template <typename S>
   requires(std::is_arithmetic_v<S>) inline void integrate(S &history,
                                                           S input) const {
-    org::simple::dsp::integration::integrate<T, S>(
+    Integration::integrate<T, S>(
         history_multiplier_, input_multiplier_, history, input);
   }
 
   template <typename S>
   requires(std::is_arithmetic_v<S>) inline S
       integrate_and_get(S &history, S input) const {
-    return org::simple::dsp::integration::integrate_and_get<T, S>(
+    return Integration::integrate_and_get<T, S>(
         history_multiplier_, input_multiplier_, history, input);
   }
 
   T scale() const {
     return input_multiplier_ /
-           org::simple::dsp::integration::multiplier_to_multiplier(
+           Integration::multiplier_to_multiplier(
                history_multiplier_);
   }
 
   T integration_sample_count() const {
-    return history_multiplier_to_sample_count_unchecked(history_multiplier_);
+    return Integration::history_multiplier_to_sample_count_unchecked(history_multiplier_);
   }
 
   T history_multiplier() const { return history_multiplier_; }
   T input_multiplier() const {
-    return org::simple::dsp::integration::multiplier_to_multiplier(
+    return Integration::multiplier_to_multiplier(
         history_multiplier_);
   }
   T input_multiplier_scaled() const { return input_multiplier_; }
 };
 
+
 typedef BaseCoefficients<double> Coefficients;
 
-} // namespace org::simple::dsp::integration
+} // namespace org::simple::util::dsp
 
 #endif // ORG_SIMPLE_INTEGRATION_H
