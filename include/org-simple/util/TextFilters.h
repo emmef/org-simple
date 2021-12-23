@@ -43,10 +43,7 @@ enum class TextFilterResult {
   GetNext
 };
 
-
-template <typename C, class S = InputStream<C>> class AbstractTextFilter {
-  static_assert(std::is_base_of_v<InputStream<C>, S>);
-
+template <typename C> class InputFilter {
 public:
   /**
    * Apply the filter, where the input and the output reside in {@code result}.
@@ -58,11 +55,6 @@ public:
    * @return What the caller of the filter should do next.
    */
   virtual TextFilterResult filter(C &result) = 0;
-  /**
-   * Returns whether there are characters available without further input from
-   * the input stream.
-   */
-  virtual bool available() { return false; }
 
   /**
    * Implements a filtered form of {@code input.get(result)}, that can both add
@@ -72,25 +64,63 @@ public:
    * @param input The input stream.
    * @return Whether result contains the valid next character.
    */
-  bool get(C &result, S &input) {
-    while (true) {
-      if (!available()) {
+  virtual bool get(C &result, InputStream<C> &input);
+  virtual ~InputFilter() = default;
+};
+template <typename C> class InputFilterWithBuffer : public InputFilter<C> {
+
+public:
+  virtual bool available() = 0;
+
+  /**
+   * Implements a filtered form of {@code input.get(result)}, that can both add
+   * end omit characters. This function can be used to translate this filter
+   * right-away into a filtered stream with the same characteristics.
+   * @param result The result character.
+   * @param input The input stream.
+   * @return Whether result contains the valid next character.
+   */
+  bool get(C &result, InputStream<C> &input) override;
+  virtual ~InputFilterWithBuffer() = default;
+};
+
+template <typename C, class F>
+static inline bool getFiltered(C &result, F &filter, InputStream<C> &input) requires(
+    std::is_base_of_v<InputFilter<C>, F>) {
+  do {
+    if constexpr (std::is_base_of_v<InputFilterWithBuffer<C>, F>) {
+      if (!filter.available()) {
         if (!input.get(result)) {
           return false;
         }
       }
-      switch (filter(result)) {
-      case TextFilterResult::Ok:
-        return true;
-      case TextFilterResult::GetNext:
-        break;
-      default:
+    }
+    else {
+      if (!input.get(result)) {
         return false;
       }
     }
-  }
-  virtual ~AbstractTextFilter() = default;
-};
+
+    switch (filter.filter(result)) {
+    case TextFilterResult::Ok:
+      return true;
+    case TextFilterResult::GetNext:
+      break;
+    default:
+      return false;
+    }
+  } while(true);
+}
+
+template <typename C>
+bool InputFilter<C>::get(C &result, InputStream<C> &input) {
+  return getFiltered(result, *this, input);
+}
+
+template <typename C>
+bool InputFilterWithBuffer<C>::get(C &result, InputStream<C> &input) {
+  return getFiltered(result, *this, input);
+}
 
 } // namespace org::simple::util
 

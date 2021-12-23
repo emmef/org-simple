@@ -25,7 +25,7 @@
 namespace org::simple::util {
 
 template <typename C>
-class LineContinuationFilter : public AbstractTextFilter<C> {
+class LineContinuationFilter : public InputFilterWithBuffer<C> {
   enum class State { Normal, Marked, ReturnNext };
   State state = State::Normal;
   C next = 0;

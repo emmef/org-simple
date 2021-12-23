@@ -26,7 +26,7 @@
 namespace org::simple::util {
 
 template <typename C>
-class ToPosixNewlineFilter : public AbstractTextFilter<C> {
+class ToPosixNewlineFilter : public InputFilter<C> {
   std::size_t line = 0;
   std::size_t position = 0;
   std::size_t column = 0;
