@@ -185,7 +185,9 @@ class CommentStream : public QuoteState<T>, public InputStream<T> {
     return false;
   }
 
-  TextFilterResult matchCommentStart(T &result) {
+  enum class MatchResult { Ok, EndOfInput };
+  
+  MatchResult matchCommentStart(T &result) {
     T c = result;
     const T *comment = nullptr;
     bool matchLine = lineComment && lineComment[0] && lineComment[0] == c;
@@ -202,8 +204,8 @@ class CommentStream : public QuoteState<T>, public InputStream<T> {
             if ((matchLine = lineComment[pos] && lineComment[pos] == c)) {
               if (lineComment[pos + 1] == '\0') {
                 return readUntilEndOfLineComment(result)
-                           ? TextFilterResult::True
-                           : TextFilterResult::False;
+                           ? MatchResult::Ok
+                           : MatchResult::EndOfInput;
               }
             }
           }
@@ -211,8 +213,8 @@ class CommentStream : public QuoteState<T>, public InputStream<T> {
             if ((matchBlock = blockComment[pos] && blockComment[pos] == c)) {
               if (blockComment[pos + 1] == '\0') {
                 return readUntilEndOfBlock(result)
-                           ? TextFilterResult::True
-                           : TextFilterResult::False;
+                           ? MatchResult::Ok
+                                                   : MatchResult::EndOfInput;
               }
             }
           }
@@ -222,25 +224,25 @@ class CommentStream : public QuoteState<T>, public InputStream<T> {
         } else {
           if (pos == 0) {
             result = comment[0];
-            return TextFilterResult::True;
+            return MatchResult::Ok;
           } else if (matchLine || matchBlock) {
             result = comment[pos];
-            return TextFilterResult::True;
+            return MatchResult::Ok;
           } else if (comment[pos + 1] == '\0') {
-            return TextFilterResult::False;
+            return MatchResult::EndOfInput;
           } else {
             result = comment[0];
             replay.start(comment, pos);
           }
-          return TextFilterResult::True;
+          return MatchResult::Ok;
         }
         pos++;
       }
       replay.start(comment, pos, c);
       result = comment[0];
-      return TextFilterResult::True;
+      return MatchResult::Ok;
     }
-    return TextFilterResult::Continue;
+    return MatchResult::Ok;
   }
 
 public:
@@ -267,7 +269,7 @@ public:
       return true;
     }
     switch (matchCommentStart(result)) {
-    case TextFilterResult::False:
+    case MatchResult::EndOfInput:
       return false;
     default:
       return true;

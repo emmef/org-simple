@@ -28,27 +28,21 @@
 namespace org::simple::util {
 
 /**
- * Describes what action the caller of a filter step should take after the
- * filtering.
+ * Describes state of the filtering, that tells the caller of a filter what to
+ * do.
  */
 enum class TextFilterResult {
   /**
-   * The receiver of the result should return {@code true}.
+   * The filtered result can be treated as valid and, say, returned.
    */
-  True,
+  Ok,
   /**
-   * The receiver of the result should return {@code false}.
+   * There is no output, so another input must be fetched and filtering must be
+   * applied again.
    */
-  False,
-  /**
-   * The receiver of the result should proceed processing.
-   */
-  Continue,
-  /**
-   * The receiver of the result should swallow and seek more input
-   */
-  Swallow
+  GetNext
 };
+
 
 template <typename C, class S = InputStream<C>> class AbstractTextFilter {
   static_assert(std::is_base_of_v<InputStream<C>, S>);
@@ -63,7 +57,7 @@ public:
    * @param input The input stream that can be used to read ahead.
    * @return What the caller of the filter should do next.
    */
-  virtual TextFilterResult filter(C &result, S &input) = 0;
+  virtual TextFilterResult filter(C &result) = 0;
   /**
    * Returns whether there are characters available without further input from
    * the input stream.
@@ -85,10 +79,10 @@ public:
           return false;
         }
       }
-      switch (filter(result, input)) {
-      case TextFilterResult::True:
+      switch (filter(result)) {
+      case TextFilterResult::Ok:
         return true;
-      case TextFilterResult::Swallow:
+      case TextFilterResult::GetNext:
         break;
       default:
         return false;
@@ -97,8 +91,6 @@ public:
   }
   virtual ~AbstractTextFilter() = default;
 };
-
-
 
 } // namespace org::simple::util
 

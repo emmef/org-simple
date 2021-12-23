@@ -39,28 +39,28 @@ public:
 
   void reset() { *this = {}; }
 
-  TextFilterResult filter(C &result, InputStream<C> &) final {
+  TextFilterResult filter(C &result) final {
     position++;
     if (result == '\n') {
       if (lastCR) {
         lastCR = false;
-        return TextFilterResult::Swallow;
+        return TextFilterResult::GetNext;
       } else {
         line++;
         column = 0;
         result = '\n';
-        return TextFilterResult::True;
+        return TextFilterResult::Ok;
       }
     } else if (result == '\r') {
       line++;
       column = 0;
       lastCR = true;
       result = '\n';
-      return TextFilterResult::True;
+      return TextFilterResult::Ok;
     } else {
       lastCR = false;
       column++;
-      return TextFilterResult::True;
+      return TextFilterResult::Ok;
     }
   }
 };

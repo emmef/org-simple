@@ -35,32 +35,32 @@ public:
 
   bool available() final { return state == State::ReturnNext; }
 
-  TextFilterResult filter(C &c, InputStream<C> &) final {
+  TextFilterResult filter(C &c) final {
     if (state == State::ReturnNext) {
       state = State::Normal;
       c = next;
-      return TextFilterResult::True;
+      return TextFilterResult::Ok;
     }
     if (state == State::Normal) {
       if (c == '\\') {
         state = State::Marked;
-        return TextFilterResult::Swallow;
+        return TextFilterResult::GetNext;
       } else {
-        return TextFilterResult::True;
+        return TextFilterResult::Ok;
       }
     }
     if (state == State::Marked) {
       if (c == '\n') {
         state = State::Normal;
-        return TextFilterResult::Swallow;
+        return TextFilterResult::GetNext;
       } else {
         next = c;
         state = State::ReturnNext;
         c = '\\';
-        return TextFilterResult::True;
+        return TextFilterResult::Ok;
       }
     }
-    return TextFilterResult::True;
+    return TextFilterResult::Ok;
   }
 };
 
