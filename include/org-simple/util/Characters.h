@@ -279,9 +279,9 @@ struct QuoteMatchers {
 
   template <typename T>
   static typename QuoteMatcher<T>::function
-  getDefaultMatcherFor(const T *string,
+  getDefaultMatcherFor(const char *string,
                        typename QuoteMatcher<T>::function fallback) {
-    static constexpr const T ALLOWED_QUOTE[] = "'\"`";
+    static constexpr const char ALLOWED_QUOTE[] = "'\"`";
     static constexpr int MAX_QUOTES = sizeof(ALLOWED_QUOTE) / sizeof(T);
 
     bool present[MAX_QUOTES];
