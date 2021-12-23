@@ -22,8 +22,8 @@
  */
 
 #include <cstdint>
-#include <org-simple/util/text/Characters.h>
 #include <org-simple/util/InputStream.h>
+#include <org-simple/util/text/Characters.h>
 
 namespace org::simple::util::text {
 
@@ -67,6 +67,7 @@ public:
   virtual bool get(C &result, InputStream<C> &input);
   virtual ~InputFilter() = default;
 };
+
 template <typename C> class InputFilterWithBuffer : public InputFilter<C> {
 
 public:
@@ -84,18 +85,27 @@ public:
   virtual ~InputFilterWithBuffer() = default;
 };
 
-template <typename C, class F>
-static inline bool getFiltered(C &result, F &filter, InputStream<C> &input) requires(
-    std::is_base_of_v<InputFilter<C>, F>) {
+template <class X, typename C>
+concept ConceptIsInputFilter = std::is_base_of_v<InputFilter<C>, X> ||
+    std::is_same_v<TextFilterResult, decltype(X().filter(std::declval<C &>()))>;
+
+template <class X, typename C>
+concept ConceptIsInputFilterWithBuffer = ConceptIsInputFilter<X, C> &&
+    (std::is_base_of_v<InputFilterWithBuffer<C>, X> ||
+     std::is_same_v<bool, decltype(std::add_const_t<X>().available())>);
+
+template <typename F, class C>
+requires(ConceptIsInputFilter<F, C>) static inline bool getFiltered(
+    C &result, F &filter,
+    InputStream<C> &input) requires(ConceptIsInputFilter<F, C>) {
   do {
-    if constexpr (std::is_base_of_v<InputFilterWithBuffer<C>, F>) {
+    if constexpr (ConceptIsInputFilterWithBuffer<F, C>) {
       if (!filter.available()) {
         if (!input.get(result)) {
           return false;
         }
       }
-    }
-    else {
+    } else {
       if (!input.get(result)) {
         return false;
       }
@@ -109,17 +119,17 @@ static inline bool getFiltered(C &result, F &filter, InputStream<C> &input) requ
     default:
       return false;
     }
-  } while(true);
+  } while (true);
 }
 
 template <typename C>
 bool InputFilter<C>::get(C &result, InputStream<C> &input) {
-  return getFiltered(result, *this, input);
+  return getFiltered<InputFilter<C>, C>(result, *this, input);
 }
 
 template <typename C>
 bool InputFilterWithBuffer<C>::get(C &result, InputStream<C> &input) {
-  return getFiltered(result, *this, input);
+  return getFiltered<InputFilterWithBuffer<C>, C>(result, *this, input);
 }
 
 } // namespace org::simple::util::text
