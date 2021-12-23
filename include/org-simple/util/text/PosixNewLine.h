@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_POSIXNEWLINE_H
 #define ORG_SIMPLE_POSIXNEWLINE_H
 /*
- * org-simple/util/PosixNewLine.h
+ * org-simple/util/text/PosixNewLine.h
  *
  * Added by michel on 2021-12-22
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -21,9 +21,9 @@
  * limitations under the License.
  */
 
-#include <org-simple/util/TextFilters.h>
+#include <org-simple/util/text/TextFilters.h>
 
-namespace org::simple::util {
+namespace org::simple::util::text {
 
 template <typename C>
 class ToPosixNewlineFilter : public InputFilter<C> {
@@ -78,6 +78,6 @@ public:
 };
 
 
-} // namespace org::simple::util
+} // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_POSIXNEWLINE_H

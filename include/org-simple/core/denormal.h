@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_DENORMAL_H
 #define ORG_SIMPLE_DENORMAL_H
 /*
- * org-simple/denormal.h
+ * org-simple/core/denormal.h
  *
  * Added by michel on 2021-04-11
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -32,7 +32,7 @@
 #undef ORG_SIMPLE_SSE_INSTRUCTIONS_AVAILABLE
 #endif
 
-namespace org::simple::denormal {
+namespace org::simple::core {
 
 /**
  * If applicable to the type and enabled and a value is denormal, it will be
@@ -123,6 +123,6 @@ public:
   }
 };
 
-} // namespace org::simple::denormal
+} // namespace org::simple::core
 
 #endif // ORG_SIMPLE_DENORMAL_H

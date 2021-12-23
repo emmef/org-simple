@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_CHARACTERS_H
 #define ORG_SIMPLE_CHARACTERS_H
 /*
- * org-simple/Characters.h
+ * org-simple/util/text/Characters.h
  *
  * Added by michel on 2021-12-04
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -23,9 +23,9 @@
 
 #include <algorithm>
 #include <locale>
-#include <org-simple/util/CharEncode.h>
+#include <org-simple/util/text/CharEncode.h>
 
-namespace org::simple::charClass {
+namespace org::simple::util::text {
 
 struct Ascii {
   bool isWhiteSpace(char c) const { return std::isspace(c); }
@@ -269,7 +269,7 @@ struct QuoteMatchers {
       FixedSingleSymmetricMatcher<T, '"'>::match;
 
   template <typename T> static bool uniCodeMatch(T cp, T &endQuote) {
-    T match = charClass::Classifiers::unicode().getMatchingQuote<T>(cp);
+    T match = Classifiers::unicode().getMatchingQuote<T>(cp);
     if (match != 0) {
       endQuote = match;
       return true;
@@ -357,6 +357,6 @@ struct QuoteMatchers {
   }
 };
 
-} // namespace org::simple::charClass
+} // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_CHARACTERS_H

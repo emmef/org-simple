@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_TEXTFILTERS_H
 #define ORG_SIMPLE_TEXTFILTERS_H
 /*
- * org-simple/TextFilters.h
+ * org-simple/util/text/TextFilters.h
  *
  * Added by michel on 2021-12-21
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -22,10 +22,10 @@
  */
 
 #include <cstdint>
-#include <org-simple/util/Characters.h>
+#include <org-simple/util/text/Characters.h>
 #include <org-simple/util/InputStream.h>
 
-namespace org::simple::util {
+namespace org::simple::util::text {
 
 /**
  * Describes state of the filtering, that tells the caller of a filter what to
@@ -122,6 +122,6 @@ bool InputFilterWithBuffer<C>::get(C &result, InputStream<C> &input) {
   return getFiltered(result, *this, input);
 }
 
-} // namespace org::simple::util
+} // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_TEXTFILTERS_H

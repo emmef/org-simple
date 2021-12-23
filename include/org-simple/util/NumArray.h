@@ -50,7 +50,7 @@ using namespace concepts;
 template <typename T, class S> struct BaseNumArray : public S {
   static_assert(is_base_array<S>);
   static_assert(concept_base_array<S>::FIXED_CAPACITY != 0);
-  static_assert(org::simple::traits::is_number<T>);
+  static_assert(org::simple::util::is_number<T>);
 
   typedef S Super;
   typedef typename Super::data_type data_type;

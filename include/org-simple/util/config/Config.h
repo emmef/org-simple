@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_CONFIG_H
 #define ORG_SIMPLE_CONFIG_H
 /*
- * org-simple/util/Config.h
+ * org-simple/util/config/Config.h
  *
  * Added by michel on 2021-12-05
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -23,16 +23,16 @@
 
 #include <cstddef>
 #include <exception>
-#include <org-simple/util/Characters.h>
-#include <org-simple/util/CommentStream.h>
+#include <org-simple/util/text/Characters.h>
+#include <org-simple/util/text/CommentStream.h>
 #include <org-simple/util/InputStream.h>
-#include <org-simple/util/LineContinuation.h>
-#include <org-simple/util/PosixNewLine.h>
-#include <org-simple/util/Utf8Stream.h>
+#include <org-simple/util/text/LineContinuation.h>
+#include <org-simple/util/text/PosixNewLine.h>
+#include <org-simple/util/text/Utf8Stream.h>
 #include <sstream>
 #include <string>
 
-namespace org::simple::config {
+namespace org::simple::util::config {
 
 class ParseError : public std::exception {
   unsigned ln;
@@ -79,19 +79,19 @@ public:
 template <typename T> struct KeyValueConfigTypes;
 
 template <> struct KeyValueConfigTypes<char> {
-  using classifierType = org::simple::charClass::Ascii;
-  using inputStreamType = charEncode::ValidatedUtf8Stream;
+  using classifierType = org::simple::util::text::Ascii;
+  using inputStreamType = util::text::ValidatedUtf8Stream;
   using renderStreamType = util::EchoStream<char>;
   const classifierType classifier =
-      org::simple::charClass::Classifiers::instance<classifierType>();
+      org::simple::util::text::Classifiers::instance<classifierType>();
 };
 
-template <> struct KeyValueConfigTypes<charEncode::Utf8Encoding::codePoint> {
-  using classifierType = org::simple::charClass::Unicode;
-  using inputStreamType = charEncode::Utf8CharToUnicodeStream;
-  using renderStreamType = charEncode::UnicodeToUtf8CharStream;
+template <> struct KeyValueConfigTypes<org::simple::util::text::Utf8Encoding::codePoint> {
+  using classifierType = org::simple::util::text::Unicode;
+  using inputStreamType = org::simple::util::text::Utf8CharToUnicodeStream;
+  using renderStreamType = org::simple::util::text::UnicodeToUtf8CharStream;
   const classifierType classifier =
-      org::simple::charClass::Classifiers::instance<classifierType>();
+      org::simple::util::text::Classifiers::instance<classifierType>();
 };
 
 template <typename T>
@@ -193,14 +193,14 @@ class KeyValueConfig : public KeyValueConfigClassifiers<CP> {
   using KeyValueConfigTypes<CP>::classifier;
   using KeyValueConfigTypes<CP>::isKeyCharacter;
 
-  util::ReplayStream<char> inputStream;
-  util::PosixNewlineStream<char> posixNewlineStream;
-  util::LineContinuationStream<char> lineContinuationStream;
-  util::CommentStream<char> commentStream;
+  org::simple::util::ReplayStream<char> inputStream;
+  org::simple::util::text::PosixNewlineStream<char> posixNewlineStream;
+  org::simple::util::text::LineContinuationStream<char> lineContinuationStream;
+  org::simple::util::text::CommentStream<char> commentStream;
   inputStreamType inputConversion;
   State state;
 
-  util::InQuoteStream<CP> inQuoteStream;
+  org::simple::util::text::InQuoteStream<CP> inQuoteStream;
   typename KeyValueConfigClassifiers<CP>::UntilEndOfUnquotedKeyStream
       untilEndOfUnquotedKeyStream;
   typename KeyValueConfigClassifiers<CP>::UntilEndOfLineStream
@@ -334,6 +334,6 @@ public:
   }
 };
 
-} // namespace org::simple::config
+} // namespace org::simple::util::config
 
 #endif // ORG_SIMPLE_CONFIG_H

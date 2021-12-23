@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_QUOTESTATE_H
 #define ORG_SIMPLE_QUOTESTATE_H
 /*
- * org-simple/util/QuoteState.h
+ * org-simple/util/text/QuoteState.h
  *
  * Added by michel on 2021-12-22
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -20,9 +20,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <org-simple/util/TextFilters.h>
+#include <org-simple/util/text/TextFilters.h>
 
-namespace org::simple::util {
+namespace org::simple::util::text {
 
 template <typename C> class QuoteState {
   bool escaped = false;
@@ -30,14 +30,14 @@ template <typename C> class QuoteState {
   C closeQuote = 0;
 
 public:
-  typename charClass::QuoteMatcher<C>::function matcher;
+  typename QuoteMatcher<C>::function matcher;
 
-  QuoteState(typename charClass::QuoteMatcher<C>::function function)
-      : matcher(function ? function : charClass::QuoteMatcher<C>::none) {}
+  QuoteState(typename QuoteMatcher<C>::function function)
+      : matcher(function ? function : QuoteMatcher<C>::none) {}
 
   QuoteState(const char *symmetricQuoteChars)
-      : matcher(charClass::QuoteMatchers::getDefaultMatcherFor<C>(
-            symmetricQuoteChars, charClass::QuoteMatcher<C>::none)) {}
+      : matcher(QuoteMatchers::getDefaultMatcherFor<C>(
+            symmetricQuoteChars, QuoteMatcher<C>::none)) {}
 
   void reset() { *this = {matcher}; }
 
@@ -70,7 +70,7 @@ template <typename T>
 class QuotedStateStream : public QuoteState<T>, public util::InputStream<T> {
 
 public:
-  using matcherFunction = typename charClass::QuoteMatcher<T>::function;
+  using matcherFunction = typename QuoteMatcher<T>::function;
 
   template <typename Q>
   QuotedStateStream(util::InputStream<T> &stream, Q functionOrQuotes)
@@ -108,6 +108,6 @@ public:
   }
 };
 
-} // namespace org::simple::util
+} // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_QUOTESTATE_H

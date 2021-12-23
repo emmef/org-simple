@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_UTF8STREAM_H
 #define ORG_SIMPLE_UTF8STREAM_H
 /*
- * org-simple/util/Utf8Stream.h
+ * org-simple/util/text/Utf8Stream.h
  *
  * Added by michel on 2021-12-20
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -20,11 +20,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <org-simple/util/CharEncode.h>
-#include <org-simple/util/Characters.h>
+#include <org-simple/util/text/CharEncode.h>
+#include <org-simple/util/text/Characters.h>
 #include <org-simple/util/InputStream.h>
 
-namespace org::simple::charEncode {
+namespace org::simple::util::text {
 template <typename T> class AsciiNewLineStream : public util::InputStream<T> {
   util::InputStream<T> &input;
 
@@ -34,7 +34,7 @@ public:
   bool get(T &result) override {
     T c;
     if (input.get(c)) {
-      if (c != '\r' && charClass::Unicode::isLineBreak(c)) {
+      if (c != '\r' && Unicode::isLineBreak(c)) {
         result = '\n';
       } else {
         result = c;
@@ -183,6 +183,6 @@ public:
 typedef Utf8ToUnicodeStream<char> Utf8CharToUnicodeStream;
 typedef UnicodeToUtf8Stream<char> UnicodeToUtf8CharStream;
 
-} // namespace org::simple::charEncode
+} // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_UTF8STREAM_H

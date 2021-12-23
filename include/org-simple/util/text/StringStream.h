@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_STRINGSTREAM_H
 #define ORG_SIMPLE_STRINGSTREAM_H
 /*
- * org-simple/util/StringStream.h
+ * org-simple/util/text/StringStream.h
  *
  * Added by michel on 2021-12-20
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <string>
 
-namespace org::simple::util {
+namespace org::simple::util::text {
 
 template <typename T>
 class CStringInputStream : public org::simple::util::InputStream<T> {
@@ -130,6 +130,6 @@ public:
   bool isFull() const { return maxLength == output.length(); }
 };
 
-} // namespace org::simple::util
+} // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_STRINGSTREAM_H

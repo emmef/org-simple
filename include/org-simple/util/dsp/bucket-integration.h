@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_BUCKET_INTEGRATION_H
 #define ORG_SIMPLE_BUCKET_INTEGRATION_H
 /*
- * org-simple/dsp/bucket-integration.h
+ * org-simple/util/dsp/bucket-integration.h
  *
  * Added by michel on 2021-12-19
  * Copyright (C) 2015-2021 Michel Fleur.

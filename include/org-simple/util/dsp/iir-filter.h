@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_IIR_FILTER_H
 #define ORG_SIMPLE_IIR_FILTER_H
 /*
- * org-simple/dsp/iir-filter.h
+ * org-simple/util/dsp/iir-filter.h
  *
  * Added by michel on 2021-03-21
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -27,7 +27,7 @@
 
 namespace org::simple::util::dsp {
 
-using namespace org::simple::denormal;
+using namespace org::simple::core;
 
 /**
  * Filters a single sample using the feed forward coefficients \c ff_coeffs,

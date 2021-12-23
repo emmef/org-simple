@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_SIGNALMANAGER_H
 #define ORG_SIMPLE_SIGNALMANAGER_H
 /*
- * org-simple/SignalManager.h
+ * org-simple/util/SignalManager.h
  *
  * Added by michel on 2021-07-12
  * Copyright (C) 2015-2021 Michel Fleur.

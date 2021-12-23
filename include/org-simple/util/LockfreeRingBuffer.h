@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_LOCKFREERINGBUFFER_H
 #define ORG_SIMPLE_LOCKFREERINGBUFFER_H
 /*
- * org-simple/LockfreeRingBuffer.h
+ * org-simple/util/LockfreeRingBuffer.h
  *
  * Added by michel on 2020-10-21
  * Copyright (C) 2015-2020 Michel Fleur.

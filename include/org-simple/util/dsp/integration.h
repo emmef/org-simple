@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_INTEGRATION_H
 #define ORG_SIMPLE_INTEGRATION_H
 /*
- * org-simple/dsp/integration.h
+ * org-simple/util/dsp/integration.h
  *
  * Added by michel on 2021-04-12
  * Copyright (C) 2015-2021 Michel Fleur.

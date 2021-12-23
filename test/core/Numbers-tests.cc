@@ -5,7 +5,7 @@
 #include "boost-unit-tests.h"
 #include <org-simple/core/number_traits.h>
 
-using namespace org::simple::traits;
+using namespace org::simple::core;
 
 BOOST_AUTO_TEST_SUITE(org_simple_core_Numbers)
 

@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_CHARENCODE_H
 #define ORG_SIMPLE_CHARENCODE_H
 /*
- * org-simple/CharEncode.h
+ * org-simple/util/text/CharEncode.h
  *
  * Added by michel on 2021-12-07
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -25,7 +25,7 @@
 #include <limits>
 #include <type_traits>
 
-namespace org::simple::charEncode {
+namespace org::simple::util::text {
 
 enum class DecodingReaderState { OK, READING, INVALID };
 
@@ -427,6 +427,6 @@ typedef Utf8Encoding::Reader Utf8Reader;
 typedef LeadingMarker<1, char8_t, char8_t> AsciiEncoding;
 typedef AsciiEncoding::Reader AsciiReader;
 
-} // namespace org::simple::charEncode
+} // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_CHARENCODE_H

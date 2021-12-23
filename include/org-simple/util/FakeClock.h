@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_FAKECLOCK_H
 #define ORG_SIMPLE_FAKECLOCK_H
 /*
- * org-simple/FakeClock.h
+ * org-simple/util/FakeClock.h
  *
  * Added by michel on 2020-09-25
  * Copyright (C) 2015-2020 Michel Fleur.

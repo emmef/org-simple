@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_LINECONTINUATION_H
 #define ORG_SIMPLE_LINECONTINUATION_H
 /*
- * org-simple/util/LineContinuation.h
+ * org-simple/util/text/LineContinuation.h
  *
  * Added by michel on 2021-12-22
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -20,9 +20,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <org-simple/util/TextFilters.h>
+#include <org-simple/util/text/TextFilters.h>
 
-namespace org::simple::util {
+namespace org::simple::util::text {
 
 template <typename C>
 class LineContinuationFilter : public InputFilterWithBuffer<C> {
@@ -78,6 +78,6 @@ public:
 };
 
 
-} // namespace org::simple::util
+} // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_LINECONTINUATION_H

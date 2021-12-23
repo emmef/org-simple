@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_SIGNAL_H
 #define ORG_SIMPLE_SIGNAL_H
 /*
- * org-simple/Signals.h
+ * org-simple/util/Signal.h
  *
  * Added by michel on 2021-07-11
  * Copyright (C) 2015-2021 Michel Fleur.

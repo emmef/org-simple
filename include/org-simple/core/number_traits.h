@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_NUMBER_TRAITS_H
 #define ORG_SIMPLE_NUMBER_TRAITS_H
 /*
- * org-simple/core/complex_traits.h
+ * org-simple/core/number_traits.h
  *
  * Added by michel on 2021-03-05
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -23,7 +23,7 @@
 
 #include <complex>
 
-namespace org::simple::traits {
+namespace org::simple::core {
 
 template <class T> struct is_complex {
   static constexpr bool value = false;
@@ -40,6 +40,6 @@ template <typename T> static constexpr bool is_complex_v = is_complex<T>::value;
 template <typename T>
 static constexpr bool is_number = std::is_arithmetic_v<T> || is_complex_v<T>;
 
-} // namespace org::simple::traits
+} // namespace org::simple::core
 
 #endif // ORG_SIMPLE_NUMBER_TRAITS_H

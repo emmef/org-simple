@@ -3,11 +3,11 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/StringStream.h>
-#include <org-simple/util/Utf8Stream.h>
+#include <org-simple/util/text/StringStream.h>
+#include <org-simple/util/text/Utf8Stream.h>
 #include <org-simple/core/Bits.h>
 
-using Utf8 = org::simple::charEncode::Utf8Encoding;
+using Utf8 = org::simple::util::text::Utf8Encoding;
 
 namespace {
 class TeeTest : public org::simple::util::InputStream<char> {
@@ -42,16 +42,16 @@ BOOST_AUTO_TEST_CASE(testPureAsciiYieldsSameResult) {
   }
   charArray[i] = 0;
   std::string string = charArray;
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(string.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(string, collector.getString());
 }
 
 BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
   char charArray[5];
-  org::simple::util::CStringInputStream<char> sstream(charArray);
+  org::simple::util::text::CStringInputStream<char> sstream(charArray);
   int attempt = 0;
   for (Utf8::codePoint cp = 1; cp <= Utf8::maximumCodePoint; cp++) {
     char *afterEncodedPosition = Utf8::unsafeEncode(cp, charArray);
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
     int length = afterEncodedPosition - charArray;
     sstream.rewind();
     bool failed = false;
-    org::simple::charEncode::ValidatedUtf8Stream stream(sstream);
+    org::simple::util::text::ValidatedUtf8Stream stream(sstream);
     for (int i = 0; i < length; i++) {
       char x;
       if (!stream.get(x) || x != charArray[i]) {
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
       }
       out << "\n\tstream =";
       sstream.rewind();
-      org::simple::charEncode::ValidatedUtf8Stream stream(sstream);
+      org::simple::util::text::ValidatedUtf8Stream stream(sstream);
       for (int i = 0; i < length; i++) {
         out << " ";
         char c;
@@ -113,8 +113,8 @@ BOOST_AUTO_TEST_CASE(tesUnicodeToUtf8ToUnicode) {
     }
   } generator;
 
-  org::simple::charEncode::UnicodeToUtf8CharStream charStream(generator);
-  org::simple::charEncode::Utf8CharToUnicodeStream uniStream(charStream);
+  org::simple::util::text::UnicodeToUtf8CharStream charStream(generator);
+  org::simple::util::text::Utf8CharToUnicodeStream uniStream(charStream);
 
   Utf8::codePoint expected;
   const Utf8::codePoint end = Utf8::maximumCodePoint;
@@ -129,9 +129,9 @@ BOOST_AUTO_TEST_CASE(tesUnicodeToUtf8ToUnicode) {
 BOOST_AUTO_TEST_CASE(testInvalidStartByteOmitted) {
   std::string string = "01234\xff 56";
   std::string expected = "01234 56";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -139,9 +139,9 @@ BOOST_AUTO_TEST_CASE(testInvalidStartByteOmitted) {
 BOOST_AUTO_TEST_CASE(testValidIncluded) {
   std::string string = "01234\xc6\xb3 56";
   std::string expected = string;
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -149,9 +149,9 @@ BOOST_AUTO_TEST_CASE(testValidIncluded) {
 BOOST_AUTO_TEST_CASE(testValidUncompletedOmitted_l2) {
   std::string string = "01234\xc6";
   std::string expected = "01234";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -159,9 +159,9 @@ BOOST_AUTO_TEST_CASE(testValidUncompletedOmitted_l2) {
 BOOST_AUTO_TEST_CASE(testValidUncompletedOmitted_l3) {
   std::string string = "01234\xe6\xb3";
   std::string expected = "01234";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -169,9 +169,9 @@ BOOST_AUTO_TEST_CASE(testValidUncompletedOmitted_l3) {
 BOOST_AUTO_TEST_CASE(testValidUncompletedOmitted_l4) {
   std::string string = "01234\xf6\xb3\xb3";
   std::string expected = "01234";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -179,9 +179,9 @@ BOOST_AUTO_TEST_CASE(testValidUncompletedOmitted_l4) {
 BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_NoMarker_l2) {
   std::string string = "01234\xc3\x03 56";
   std::string expected = "01234 56";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -189,9 +189,9 @@ BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_NoMarker_l2) {
 BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_HighMarker_l2) {
   std::string string = "01234\xc3\xc3 56";
   std::string expected = "01234 56";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -199,9 +199,9 @@ BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_HighMarker_l2) {
 BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_NoMarker_l3) {
   std::string string = "01234\xe3\xb3\x03 56";
   std::string expected = "01234 56";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -209,9 +209,9 @@ BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_NoMarker_l3) {
 BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_HighMarker_l3) {
   std::string string = "01234\xe3\xb3\xc3 56";
   std::string expected = "01234 56";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -219,9 +219,9 @@ BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_HighMarker_l3) {
 BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_NoMarker_l4) {
   std::string string = "01234\xf3\xb3\xb3\x03 56";
   std::string expected = "01234 56";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -229,9 +229,9 @@ BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_NoMarker_l4) {
 BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_HighMarker_l4) {
   std::string string = "01234\xf3\xb3\xb3\xc3 56";
   std::string expected = "01234 56";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }
@@ -239,9 +239,9 @@ BOOST_AUTO_TEST_CASE(testInvalidContinuationByteOmitted_HighMarker_l4) {
 BOOST_AUTO_TEST_CASE(testTooHighCodePointOmitted) {
   std::string string = "01234\xf7\xbf\xbf\xbf 56";
   std::string expected = "01234 56";
-  org::simple::util::StringInputStream<char> input(string);
-  org::simple::charEncode::ValidatedUtf8Stream stream(input);
-  org::simple::util::InputCollector<char> collector(string.length());
+  org::simple::util::text::StringInputStream<char> input(string);
+  org::simple::util::text::ValidatedUtf8Stream stream(input);
+  org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
 }

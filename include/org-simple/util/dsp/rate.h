@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_RATE_H
 #define ORG_SIMPLE_RATE_H
 /*
- * org-simple/dsp/rate.h
+ * org-simple/util/dsp/rate.h
  *
  * Added by michel on 2021-04-10
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -105,11 +105,11 @@ public:
   }
 
   template <typename F>
-  requires(org::simple::traits::is_complex_v<F>) F relative(F frequency)
+  requires(org::simple::core::is_complex_v<F>) F relative(F frequency)
   const { return frequency / rate_; }
 
   template <typename F>
-  requires(!org::simple::traits::is_complex_v<F>) double relative(
+  requires(!org::simple::core::is_complex_v<F>) double relative(
       F frequency) const {
     return (double)frequency / rate_;
   }

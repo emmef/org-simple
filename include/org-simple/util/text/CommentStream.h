@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_COMMENTSTREAM_H
 #define ORG_SIMPLE_COMMENTSTREAM_H
 /*
- * org-simple/util/CommentStream.h
+ * org-simple/util/text/CommentStream.h
  *
  * Added by michel on 2021-12-22
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -20,11 +20,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <org-simple/util/QuoteState.h>
+#include <org-simple/util/text/QuoteState.h>
+#include <org-simple/util/InputStream.h>
+#include <exception>
 
-namespace org::simple::util {
+namespace org::simple::util::text {
 template <typename T>
-class CommentStream : public QuoteState<T>, public InputStream<T> {
+class CommentStream : public QuoteState<T>, public util::InputStream<T> {
   class Replay {
     int position = -1;
     int replayPos = 0;
@@ -277,6 +279,6 @@ public:
   }
 };
 
-} // namespace org::simple::util
+} // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_COMMENTSTREAM_H

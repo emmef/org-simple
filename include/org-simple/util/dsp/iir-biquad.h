@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_IIR_BIQUAD_H
 #define ORG_SIMPLE_IIR_BIQUAD_H
 /*
- * org-simple/dsp/iir-biquad.h
+ * org-simple/util/dsp/iir-biquad.h
  *
  * Added by michel on 2021-07-30
  * Copyright (C) 2015-2021 Michel Fleur.

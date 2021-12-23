@@ -3,8 +3,8 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/StringStream.h>
-#include <org-simple/util/CommentStream.h>
+#include <org-simple/util/text/StringStream.h>
+#include <org-simple/util/text/CommentStream.h>
 
 namespace {
 static constexpr const char *singleLineComment = "//";
@@ -12,9 +12,9 @@ static constexpr const char *blockComment = "/*";
 static constexpr const char *symmetricQuotes = "\"'";
 
 class CommentStream {
-  org::simple::util::StringInputStream<char> input;
-  org::simple::util::InputCollector<char> collector;
-  org::simple::util::CommentStream<char> stream;
+  org::simple::util::text::StringInputStream<char> input;
+  org::simple::util::text::InputCollector<char> collector;
+  org::simple::util::text::CommentStream<char> stream;
   size_t l;
 
 public:

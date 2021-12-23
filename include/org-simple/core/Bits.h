@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_BITS_H
 #define ORG_SIMPLE_BITS_H
 /*
- * org-simple/core/bits.h
+ * org-simple/core/Bits.h
  *
  * Added by michel on 2020-09-21
  * Copyright (C) 2015-2020 Michel Fleur.

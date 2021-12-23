@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_CONFIGREADERS_H
 #define ORG_SIMPLE_CONFIGREADERS_H
 /*
- * org-simple/config/Reader.h
+ * org-simple/util/config/ConfigReaders.h
  *
  * Added by michel on 2021-12-23
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -21,14 +21,14 @@
  * limitations under the License.
  */
 
-#include <org-simple/config/ConfigException.h>
+#include <org-simple/util/config/ConfigException.h>
 #include <org-simple/util/InputStream.h>
 
 namespace org::simple::util::config {
 
 enum class ReaderResult { Ok, TooLong, NotFound };
 
-template <typename T> class KeyReader : public ConfigReader<T> {
+template <typename T> class KeyReader {
 public:
   /**
    * Read a key name from the input stream.

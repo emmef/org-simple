@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_IIR_BUTTERWORTH_H
 #define ORG_SIMPLE_IIR_BUTTERWORTH_H
 /*
- * org-simple/dsp/iir-butterworth.h
+ * org-simple/util/dsp/iir-butterworth.h
  *
  * Added by michel on 2021-04-27
  * Copyright (C) 2015-2021 Michel Fleur.

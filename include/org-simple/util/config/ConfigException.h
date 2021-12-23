@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_CONFIGEXCEPTION_H
 #define ORG_SIMPLE_CONFIGEXCEPTION_H
 /*
- * org-simple/config/ConfigException.h
+ * org-simple/util/config/ConfigException.h
  *
  * Added by michel on 2021-12-23
  * Copyright (C) 2015-2021 Michel Fleur.

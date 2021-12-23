@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_ARRAY_H
 #define ORG_SIMPLE_ARRAY_H
 /*
- * org-simple/util/BaseArray.h
+ * org-simple/util/Array.h
  *
  * Added by michel on 2020-10-22
  * Copyright (C) 2015-2020 Michel Fleur.

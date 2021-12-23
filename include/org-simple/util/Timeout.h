@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_TIMEOUT_H
 #define ORG_SIMPLE_TIMEOUT_H
 /*
- * org-simple/Timeout.h
+ * org-simple/util/Timeout.h
  *
  * Added by michel on 2020-09-23
  * Copyright (C) 2015-2020 Michel Fleur.
