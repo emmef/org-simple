@@ -27,7 +27,7 @@
 #include <org-simple/util/text/CommentStream.h>
 #include <org-simple/util/InputStream.h>
 #include <org-simple/util/text/LineContinuation.h>
-#include <org-simple/util/text/PosixNewLine.h>
+#include <org-simple/util/text/UnixNewLine.h>
 #include <org-simple/util/text/Utf8Stream.h>
 #include <sstream>
 #include <string>
@@ -194,7 +194,7 @@ class KeyValueConfig : public KeyValueConfigClassifiers<CP> {
   using KeyValueConfigTypes<CP>::isKeyCharacter;
 
   org::simple::util::ReplayStream<char> inputStream;
-  org::simple::util::text::PosixNewlineStream<char> posixNewlineStream;
+  org::simple::util::text::UnixNewLineStream<char> posixNewlineStream;
   org::simple::util::text::LineContinuationStream<char> lineContinuationStream;
   org::simple::util::text::CommentStream<char> commentStream;
   inputStreamType inputConversion;

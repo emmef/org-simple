@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_POSIXNEWLINE_H
-#define ORG_SIMPLE_POSIXNEWLINE_H
+#ifndef ORG_SIMPLE_UNIXNEWLINE_H
+#define ORG_SIMPLE_UNIXNEWLINE_H
 /*
  * org-simple/util/text/PosixNewLine.h
  *
@@ -25,7 +25,7 @@
 
 namespace org::simple::util::text {
 
-template <typename C> class ToPosixNewlineFilter {
+template <typename C> class UnixNewLineFilter {
   bool lastCR = false;
 
 public:
@@ -50,7 +50,7 @@ public:
     }
   }
 
-  typedef AbstractInputFilter<ToPosixNewlineFilter, C> Interface;
+  typedef AbstractInputFilter<UnixNewLineFilter, C> Interface;
 };
 
 template <typename C> class TextFilePositionData {
@@ -72,18 +72,18 @@ template <typename C> class TextFilePositionData {
 template <typename C>
 using NewlinePositionProbe = AbstractInputProbe<C, TextFilePositionData<C>>;
 
-template <typename C> class PosixNewlineStream : public util::InputStream<C> {
+template <typename C> class UnixNewLineStream : public util::InputStream<C> {
   util::InputStream<C> &input;
-  ToPosixNewlineFilter<C> filter;
+  UnixNewLineFilter<C> filter;
 
 public:
-  explicit PosixNewlineStream(util::InputStream<C> &stream) : input(stream) {}
+  explicit UnixNewLineStream(util::InputStream<C> &stream) : input(stream) {}
 
-  const ToPosixNewlineFilter<C> &state() { return filter; }
+  const UnixNewLineFilter<C> &state() { return filter; }
   bool get(C &result) final { return applyFilter(result, filter, input); }
   void reset() { filter.reset(); }
 };
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_POSIXNEWLINE_H
+#endif // ORG_SIMPLE_UNIXNEWLINE_H
