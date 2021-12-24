@@ -25,7 +25,7 @@
 namespace org::simple::util::text {
 
 template <typename C>
-class LineContinuationFilter : public InputFilterWithBuffer<C> {
+class LineContinuationFilter  {
   enum class State { Normal, Marked, ReturnNext };
   State state = State::Normal;
   C next = 0;
@@ -33,9 +33,11 @@ class LineContinuationFilter : public InputFilterWithBuffer<C> {
 public:
   void reset() { *this = {}; }
 
-  bool available() final { return state == State::ReturnNext; }
+  typedef AbstractInputFilterWithBuffer<LineContinuationFilter, C> Interface;
 
-  TextFilterResult filter(C &c) final {
+  bool directAvailable() const { return state == State::ReturnNext; }
+
+  TextFilterResult directFilter(C &c) {
     if (state == State::ReturnNext) {
       state = State::Normal;
       c = next;
@@ -73,7 +75,7 @@ public:
   explicit LineContinuationStream(util::InputStream<C> &stream)
       : input(stream) {}
 
-  bool get(C &result) override { return filter.get(result, input); }
+  bool get(C &result) final { return applyFilter(result, filter, input); }
   void reset() { filter.reset(); }
 };
 

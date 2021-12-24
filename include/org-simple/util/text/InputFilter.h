@@ -56,81 +56,233 @@ public:
    */
   virtual TextFilterResult filter(C &result) = 0;
 
-  /**
-   * Implements a filtered form of {@code input.get(result)}, that can both add
-   * end omit characters. This function can be used to translate this filter
-   * right-away into a filtered stream with the same characteristics.
-   * @param result The result character.
-   * @param input The input stream.
-   * @return Whether result contains the valid next character.
-   */
-  virtual bool get(C &result, InputStream<C> &input);
   virtual ~InputFilter() = default;
 };
 
 template <typename C> class InputFilterWithBuffer : public InputFilter<C> {
 
 public:
-  virtual bool available() = 0;
+  virtual bool available() const = 0;
 
   /**
-   * Implements a filtered form of {@code input.get(result)}, that can both add
-   * end omit characters. This function can be used to translate this filter
-   * right-away into a filtered stream with the same characteristics.
+   * Provides an implementation Implements a filtered form of {@code
+   * input.get(result)}, that can omit and add characters. This function can be
+   * used to translate the filter right-away into a filtered stream with the
+   * same characteristics.
    * @param result The result character.
    * @param input The input stream.
    * @return Whether result contains the valid next character.
    */
-  bool get(C &result, InputStream<C> &input) override;
-  virtual ~InputFilterWithBuffer() = default;
+  //  bool apply(C &result, InputStream<C> &input) override;
 };
 
-template <class X, typename C>
-concept ConceptIsInputFilter = std::is_base_of_v<InputFilter<C>, X> ||
-    std::is_same_v<TextFilterResult, decltype(X().filter(std::declval<C &>()))>;
+template <typename C> class InputProbe {
+public:
+  virtual void probe(const C &) = 0;
+  virtual ~InputProbe() = default;
+};
 
-template <class X, typename C>
-concept ConceptIsInputFilterWithBuffer = ConceptIsInputFilter<X, C> &&
-    (std::is_base_of_v<InputFilterWithBuffer<C>, X> ||
-     std::is_same_v<bool, decltype(std::add_const_t<X>().available())>);
+template <class F, typename C> struct FilterConcept {
 
-template <typename F, class C>
-requires(ConceptIsInputFilter<F, C>) static inline bool getFiltered(
-    C &result, F &filter,
-    InputStream<C> &input) requires(ConceptIsInputFilter<F, C>) {
-  do {
-    if constexpr (ConceptIsInputFilterWithBuffer<F, C>) {
-      if (!filter.available()) {
+  class TestHasFilterFunction {
+    template <class X>
+    requires(std::is_same_v<
+             TextFilterResult,
+             decltype(X().filter(
+                 std::declval<C &>()))>) static constexpr bool subst(X *) {
+      return true;
+    }
+    template <class X> static constexpr bool subst(...) { return false; }
+
+    static constexpr bool test() {
+      if constexpr (std::is_base_of_v<InputFilter<C>, F>) {
+        return true;
+      } else {
+        return subst<F>(static_cast<F *>(nullptr));
+      }
+    }
+
+  public:
+    static constexpr bool has = test();
+  };
+
+  class TestHasAvailableFunction {
+    template <class X>
+    requires(std::is_same_v<
+             bool,
+             decltype(std::add_const_t<X>()
+                          .available())>) static constexpr bool subst(X *) {
+      return true;
+    }
+    template <class X> static constexpr bool subst(...) { return false; }
+
+    static constexpr bool test() {
+      if constexpr (std::is_base_of_v<InputFilterWithBuffer<C>, F>) {
+        return true;
+      } else {
+        return subst<F>(static_cast<F *>(nullptr));
+      }
+    }
+
+  public:
+    static constexpr bool has = test();
+  };
+
+  static constexpr bool validAsInputFilter = TestHasFilterFunction::has;
+
+  static constexpr bool validAsInputFilterWithBuffer =
+      TestHasFilterFunction::has && TestHasAvailableFunction::has;
+
+  static constexpr bool validAsInputFilterOnly =
+      TestHasFilterFunction::has && !TestHasAvailableFunction::has;
+
+  static constexpr bool implementsInputFilterOnly() {
+    return std::is_base_of_v<InputFilter<C>, F> &&
+           !std::is_base_of_v<InputFilterWithBuffer<C>, F>;
+  }
+
+  class TestHasDirectFilterFunction {
+    template <class X>
+    requires(std::is_same_v<
+             TextFilterResult,
+             decltype(X().directFilter(
+                 std::declval<C &>()))>) static constexpr bool subst(X *) {
+      return true;
+    }
+    template <class X> static constexpr bool subst(...) { return false; }
+
+  public:
+    static constexpr bool has = subst<F>(static_cast<F *>(nullptr));
+  };
+
+  class TestHasDirectAvailableFunction {
+    template <class X>
+    requires(
+        std::is_same_v<
+            bool,
+            decltype(std::add_const_t<X>()
+                         .directAvailable())>) static constexpr bool subst(const X
+                                                                               *) {
+      return true;
+    }
+    template <class X> static constexpr bool subst(...) { return false; }
+
+  public:
+    static constexpr bool has = subst<F>(static_cast<F *>(nullptr));
+  };
+
+  static constexpr bool validAsDirectInputFilter =
+      TestHasDirectFilterFunction::has;
+
+  static constexpr bool validAsDirectInputFilterWithBuffer =
+      TestHasDirectFilterFunction::has && TestHasDirectAvailableFunction::has;
+
+  static constexpr bool validAsDirectInputFilterOnly =
+      TestHasDirectFilterFunction::has && !TestHasDirectAvailableFunction::has;
+
+  static constexpr bool validToApplyAsFilter =
+      validAsInputFilter || validAsInputFilterWithBuffer ||
+      validAsDirectInputFilter || validAsDirectInputFilterWithBuffer;
+};
+
+template <class F, typename C>
+requires(FilterConcept<F, C>::
+             validToApplyAsFilter) static inline bool applyFilter(C &result,
+                                                                  F &filter,
+                                                                  InputStream<C>
+                                                                      &input) {
+  if constexpr (FilterConcept<F, C>::validAsDirectInputFilter) {
+    do {
+      if constexpr (FilterConcept<F, C>::validAsDirectInputFilterWithBuffer) {
+        if (!filter.directAvailable()) {
+          if (!input.get(result)) {
+            return false;
+          }
+        }
+      } else {
         if (!input.get(result)) {
           return false;
         }
       }
-    } else {
-      if (!input.get(result)) {
+      switch (filter.directFilter(result)) {
+      case TextFilterResult::Ok:
+        return true;
+      case TextFilterResult::GetNext:
+        break;
+      default:
         return false;
       }
-    }
-
-    switch (filter.filter(result)) {
-    case TextFilterResult::Ok:
-      return true;
-    case TextFilterResult::GetNext:
-      break;
-    default:
-      return false;
-    }
-  } while (true);
+    } while (true);
+  }
+  else if constexpr (FilterConcept<F, C>::validAsInputFilter) {
+    do {
+      if constexpr (FilterConcept<F, C>::validAsInputFilterWithBuffer) {
+        if (!filter.available()) {
+          if (!input.get(result)) {
+            return false;
+          }
+        }
+      } else {
+        if (!input.get(result)) {
+          return false;
+        }
+      }
+      switch (filter.filter(result)) {
+      case TextFilterResult::Ok:
+        return true;
+      case TextFilterResult::GetNext:
+        break;
+      default:
+        return false;
+      }
+    } while (true);
+  }
 }
 
-template <typename C>
-bool InputFilter<C>::get(C &result, InputStream<C> &input) {
-  return getFiltered<InputFilter<C>, C>(result, *this, input);
-}
+template <class D, typename C>
+class AbstractInputFilter : public InputFilter<C>, public D {
+  static_assert(!std::is_base_of_v<InputFilter<C>, D> &&
+                FilterConcept<D, C>::TestHasFilterFunction::has);
 
-template <typename C>
-bool InputFilterWithBuffer<C>::get(C &result, InputStream<C> &input) {
-  return getFiltered<InputFilterWithBuffer<C>, C>(result, *this, input);
-}
+public:
+  virtual TextFilterResult filter(C &result) final {
+    return static_cast<D *>(this)->directFilter(result);
+  }
+};
+
+template <class D, typename C>
+class AbstractInputFilterWithBuffer : public virtual InputFilterWithBuffer<C>,
+                                      public D {
+  static_assert(!std::is_base_of_v<InputFilter<C>, D> &&
+                !std::is_base_of_v<InputFilterWithBuffer<C>, D> &&
+                FilterConcept<D, C>::TestHasDirectFilterFunction::has &&
+                FilterConcept<D, C>::TestHasDirectAvailableFunction::has);
+
+public:
+  virtual bool available() const final {
+    return static_cast<const D *>(this)->directAvailable();
+  }
+  virtual TextFilterResult filter(C &result) final {
+    return static_cast<D *>(this)->directFilter(result);
+  }
+};
+
+template <typename C, class D> class AbstractInputProbe : public InputProbe<C> {
+  static_assert(
+      std::is_same_v<void, decltype(D().probe(std::declval<const C &>()))>);
+
+  D data;
+
+public:
+  void doProbe(const C &c) { data.probe(c); }
+
+  void probe(const C &c) final { return doProbe(c); }
+
+  const D &getData() const { return data; }
+  const D &operator->() const { return getData(); }
+
+  void reset() { data = D{}; }
+};
 
 } // namespace org::simple::util::text
 

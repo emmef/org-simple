@@ -25,45 +25,52 @@
 
 namespace org::simple::util::text {
 
-template <typename C>
-class ToPosixNewlineFilter : public InputFilter<C> {
-  std::size_t line = 0;
-  std::size_t position = 0;
-  std::size_t column = 0;
+template <typename C> class ToPosixNewlineFilter {
   bool lastCR = false;
 
 public:
-  std::size_t getLine() const { return line; }
-  std::size_t getPosition() const { return position; }
-  std::size_t getColumn() const { return column; }
-
   void reset() { *this = {}; }
 
-  TextFilterResult filter(C &result) final {
-    position++;
+  TextFilterResult directFilter(C &result) {
     if (result == '\n') {
       if (lastCR) {
         lastCR = false;
         return TextFilterResult::GetNext;
       } else {
-        line++;
-        column = 0;
         result = '\n';
         return TextFilterResult::Ok;
       }
     } else if (result == '\r') {
-      line++;
-      column = 0;
       lastCR = true;
       result = '\n';
       return TextFilterResult::Ok;
     } else {
       lastCR = false;
-      column++;
       return TextFilterResult::Ok;
     }
   }
+
+  typedef AbstractInputFilter<ToPosixNewlineFilter, C> Interface;
 };
+
+template <typename C> class TextFilePositionData {
+  std::size_t line = 0;
+  std::size_t position = 0;
+  std::size_t column = 0;
+
+  void probe(const C &c) {
+    position++;
+    if (c == '\n') {
+      line++;
+      column = 0;
+    } else {
+      column++;
+    }
+  }
+};
+
+template <typename C>
+using NewlinePositionProbe = AbstractInputProbe<C, TextFilePositionData<C>>;
 
 template <typename C> class PosixNewlineStream : public util::InputStream<C> {
   util::InputStream<C> &input;
@@ -73,10 +80,9 @@ public:
   explicit PosixNewlineStream(util::InputStream<C> &stream) : input(stream) {}
 
   const ToPosixNewlineFilter<C> &state() { return filter; }
-  bool get(C &result) final { return filter.get(result, input); }
+  bool get(C &result) final { return applyFilter(result, filter, input); }
   void reset() { filter.reset(); }
 };
-
 
 } // namespace org::simple::util::text
 
