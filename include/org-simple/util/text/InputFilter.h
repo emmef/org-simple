@@ -31,7 +31,7 @@ namespace org::simple::util::text {
  * Describes state of the filtering, that tells the caller of a filter what to
  * do.
  */
-enum class TextFilterResult {
+enum class InputFilterResult {
   /**
    * The filtered result can be treated as valid and, say, returned.
    */
@@ -40,7 +40,12 @@ enum class TextFilterResult {
    * There is no output, so another input must be fetched and filtering must be
    * applied again.
    */
-  GetNext
+  GetNext,
+  /**
+   * Stop reading from the input stream. This can be used to create input
+   * streams that only read another stream partially.
+   */
+  Stop
 };
 
 template <typename C> class InputFilter {
@@ -54,7 +59,7 @@ public:
    * @param input The input stream that can be used to read ahead.
    * @return What the caller of the filter should do next.
    */
-  virtual TextFilterResult filter(C &result) = 0;
+  virtual InputFilterResult filter(C &result) = 0;
 
   virtual ~InputFilter() = default;
 };
@@ -87,7 +92,7 @@ template <class F, typename C> struct FilterConcept {
   class TestHasFilterFunction {
     template <class X>
     requires(std::is_same_v<
-             TextFilterResult,
+             InputFilterResult,
              decltype(X().filter(
                  std::declval<C &>()))>) static constexpr bool subst(X *) {
       return true;
@@ -144,7 +149,7 @@ template <class F, typename C> struct FilterConcept {
   class TestHasDirectFilterFunction {
     template <class X>
     requires(std::is_same_v<
-             TextFilterResult,
+             InputFilterResult,
              decltype(X().directFilter(
                  std::declval<C &>()))>) static constexpr bool subst(X *) {
       return true;
@@ -205,16 +210,15 @@ requires(FilterConcept<F, C>::
         }
       }
       switch (filter.directFilter(result)) {
-      case TextFilterResult::Ok:
+      case InputFilterResult::Ok:
         return true;
-      case TextFilterResult::GetNext:
+      case InputFilterResult::GetNext:
         break;
       default:
         return false;
       }
     } while (true);
-  }
-  else if constexpr (FilterConcept<F, C>::validAsInputFilter) {
+  } else if constexpr (FilterConcept<F, C>::validAsInputFilter) {
     do {
       if constexpr (FilterConcept<F, C>::validAsInputFilterWithBuffer) {
         if (!filter.available()) {
@@ -228,9 +232,9 @@ requires(FilterConcept<F, C>::
         }
       }
       switch (filter.filter(result)) {
-      case TextFilterResult::Ok:
+      case InputFilterResult::Ok:
         return true;
-      case TextFilterResult::GetNext:
+      case InputFilterResult::GetNext:
         break;
       default:
         return false;
@@ -245,13 +249,13 @@ class AbstractInputFilter : public InputFilter<C>, public D {
                 FilterConcept<D, C>::TestHasFilterFunction::has);
 
 public:
-  virtual TextFilterResult filter(C &result) final {
+  virtual InputFilterResult filter(C &result) final {
     return static_cast<D *>(this)->directFilter(result);
   }
 };
 
 template <class D, typename C>
-class AbstractInputFilterWithBuffer : public virtual InputFilterWithBuffer<C>,
+class AbstractInputFilterWithBuffer : public InputFilterWithBuffer<C>,
                                       public D {
   static_assert(!std::is_base_of_v<InputFilter<C>, D> &&
                 !std::is_base_of_v<InputFilterWithBuffer<C>, D> &&
@@ -262,9 +266,35 @@ public:
   virtual bool available() const final {
     return static_cast<const D *>(this)->directAvailable();
   }
-  virtual TextFilterResult filter(C &result) final {
+  virtual InputFilterResult filter(C &result) final {
     return static_cast<D *>(this)->directFilter(result);
   }
+};
+
+template <class F, typename C, bool resetInputOnStop>
+class AbstractFilteredInputStream : public InputStream<C> {
+  static_assert(FilterConcept<F, C>::validToApplyAsFilter);
+
+  InputStream<C> *input = nullptr;
+  F &filter;
+
+public:
+  AbstractFilteredInputStream(F &inputFilter, InputStream<C> *stream)
+      : filter(inputFilter), input(stream) {}
+
+  bool get(C &result) final {
+    if (input) {
+      if (applyFilter(result, filter, *input)) {
+        return true;
+      }
+      if constexpr (resetInputOnStop) {
+        input = nullptr;
+      }
+    }
+    return false;
+  }
+
+  void setStream(InputStream<C> *newStream) { input = newStream; }
 };
 
 template <typename C, class D> class AbstractInputProbe : public InputProbe<C> {

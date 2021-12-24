@@ -36,8 +36,9 @@ public:
       : matcher(function ? function : QuoteMatcher<C>::none) {}
 
   QuoteState(const char *symmetricQuoteChars)
-      : matcher(QuoteMatchers::getDefaultMatcherFor<C>(
-            symmetricQuoteChars, QuoteMatcher<C>::none)) {}
+      : matcher(QuoteMatchers::getDefaultMatcherFor<C>(symmetricQuoteChars,
+                                                       QuoteMatcher<C>::none)) {
+  }
 
   void reset() { *this = {matcher}; }
 
@@ -88,25 +89,23 @@ private:
   util::InputStream<T> &input;
 };
 
-template <typename T> class InQuoteStream : public util::InputStream<T> {
-  const QuoteState<T> &state;
-  util::InputStream<T> *input;
+template <typename C> class EndOfQuotedTerminationFilter {
+  const QuoteState<C> &state;
 
 public:
-  InQuoteStream(const QuoteState<T> &quoteState, util::InputStream<T> &source)
-      : state(quoteState) {}
-
-  bool get(T &result) final {
-    if (input != nullptr && input->get(result) && state.inQuote()) {
-      return true;
-    }
-    input = nullptr;
+  InputFilterResult directFilter(C &) {
+    return state.inQuote() ? InputFilterResult::Ok : InputFilterResult::Stop;
   }
 
-  void set(util::InputStream<T> *source) {
-    input = source;
-  }
+  EndOfQuotedTerminationFilter(const QuoteState<C> &qouteState) : state(qouteState) {}
+
+  typedef AbstractInputFilter<EndOfQuotedTerminationFilter, C> Interface;
 };
+
+template <typename C, bool resetInputOnStop = true>
+using NonGraphTerminatedInputStream =
+    AbstractFilteredInputStream<EndOfQuotedTerminationFilter<C>, C,
+                                resetInputOnStop>;
 
 } // namespace org::simple::util::text
 

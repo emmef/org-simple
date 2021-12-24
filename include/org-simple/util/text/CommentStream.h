@@ -26,7 +26,7 @@
 
 namespace org::simple::util::text {
 template <typename T>
-class CommentStream : public QuoteState<T>, public util::InputStream<T> {
+class CommentStream : public util::InputStream<T> {
   class Replay {
     int position = -1;
     int replayPos = 0;
@@ -107,10 +107,13 @@ class CommentStream : public QuoteState<T>, public util::InputStream<T> {
     bool popNestingLevelGetDone() { return level > 0 && --level == 0; }
   } nesting;
 
+  QuoteState<T> quoteState;
   const T *const lineComment;
   const T *const blockComment;
   const int commentEnd;
   InputStream<T> &input;
+
+
 
   static int getCommentEnd(const T *comment) {
     int commentEnd;
@@ -251,7 +254,7 @@ public:
   template <typename Q>
   CommentStream(InputStream<T> &stream, const T *lineCommentString,
                 const T *blockCommentString, unsigned nestingLevels, Q quotes)
-      : QuoteState<T>(quotes), nesting(nestingLevels),
+      : nesting(nestingLevels), quoteState(quotes),
         lineComment(lineCommentString),
         blockComment(validCommentString(blockCommentString, lineComment)),
         commentEnd(getCommentEnd(blockComment)), input(stream) {}
@@ -266,8 +269,8 @@ public:
     if (!input.get(result)) {
       return false;
     }
-    QuoteState<T>::probe(result);
-    if (QuoteState<T>::isEscaped() || QuoteState<T>::inQuote()) {
+    quoteState.probe(result);
+    if (quoteState.isEscaped() || quoteState.inQuote()) {
       return true;
     }
     switch (matchCommentStart(result)) {
@@ -277,6 +280,12 @@ public:
       return true;
     }
   }
+
+  void reset() {
+    quoteState.reset();
+  }
+
+  const QuoteState<T> &state() const { return quoteState; }
 };
 
 } // namespace org::simple::util::text

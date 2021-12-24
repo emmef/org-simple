@@ -31,22 +31,22 @@ template <typename C> class ToPosixNewlineFilter {
 public:
   void reset() { *this = {}; }
 
-  TextFilterResult directFilter(C &result) {
+  InputFilterResult directFilter(C &result) {
     if (result == '\n') {
       if (lastCR) {
         lastCR = false;
-        return TextFilterResult::GetNext;
+        return InputFilterResult::GetNext;
       } else {
         result = '\n';
-        return TextFilterResult::Ok;
+        return InputFilterResult::Ok;
       }
     } else if (result == '\r') {
       lastCR = true;
       result = '\n';
-      return TextFilterResult::Ok;
+      return InputFilterResult::Ok;
     } else {
       lastCR = false;
-      return TextFilterResult::Ok;
+      return InputFilterResult::Ok;
     }
   }
 

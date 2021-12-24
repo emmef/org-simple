@@ -37,32 +37,32 @@ public:
 
   bool directAvailable() const { return state == State::ReturnNext; }
 
-  TextFilterResult directFilter(C &c) {
+  InputFilterResult directFilter(C &c) {
     if (state == State::ReturnNext) {
       state = State::Normal;
       c = next;
-      return TextFilterResult::Ok;
+      return InputFilterResult::Ok;
     }
     if (state == State::Normal) {
       if (c == '\\') {
         state = State::Marked;
-        return TextFilterResult::GetNext;
+        return InputFilterResult::GetNext;
       } else {
-        return TextFilterResult::Ok;
+        return InputFilterResult::Ok;
       }
     }
     if (state == State::Marked) {
       if (c == '\n') {
         state = State::Normal;
-        return TextFilterResult::GetNext;
+        return InputFilterResult::GetNext;
       } else {
         next = c;
         state = State::ReturnNext;
         c = '\\';
-        return TextFilterResult::Ok;
+        return InputFilterResult::Ok;
       }
     }
-    return TextFilterResult::Ok;
+    return InputFilterResult::Ok;
   }
 };
 

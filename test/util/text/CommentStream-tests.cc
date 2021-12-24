@@ -39,10 +39,10 @@ public:
     l = collector.consume(stream);
   }
 
-  bool inQuote() const { return stream.inQuote(); }
-  char getOpenQuote() const { return stream.getOpenQuote(); }
-  char getCloseQuote() const { return stream.getCloseQuote(); }
-  bool isEscaped() const { return stream.isEscaped(); }
+  bool inQuote() const { return stream.state().inQuote(); }
+  char getOpenQuote() const { return stream.state().getOpenQuote(); }
+  char getCloseQuote() const { return stream.state().getCloseQuote(); }
+  bool isEscaped() const { return stream.state().isEscaped(); }
   unsigned getLevel() const { return stream.getLevel(); }
   bool inComment() const { return stream.inComment(); }
 };

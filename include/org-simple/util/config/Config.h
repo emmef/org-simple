@@ -200,7 +200,7 @@ class KeyValueConfig : public KeyValueConfigClassifiers<CP> {
   inputStreamType inputConversion;
   State state;
 
-  org::simple::util::text::InQuoteStream<CP> inQuoteStream;
+  org::simple::util::text::EndOfQuotedTerminationFilter<CP> inQuoteStream;
   typename KeyValueConfigClassifiers<CP>::UntilEndOfUnquotedKeyStream
       untilEndOfUnquotedKeyStream;
   typename KeyValueConfigClassifiers<CP>::UntilEndOfLineStream
