@@ -26,21 +26,21 @@
 
 namespace org::simple::util::text {
 
-template <typename C, class D> class NonGraphTerminatedFilter {
+template <typename C, class D> class NonGraphTerminatedFilter : public InputFilter<C> {
   static_assert(std::is_same_v<Ascii, D> || std::is_same_v<Unicode, D>);
   const D &classifier = Classifiers::instance<D>();
 
 public:
-  InputFilterResult filter(C &c) {
+  InputFilterResult filter(C &c) final {
     return classifier.isGraph(c) ? InputFilterResult::Ok
                                  : InputFilterResult::Stop;
   }
 };
 
-template <typename C> class NewLineTerminatedFilter {
+template <typename C> class NewLineTerminatedFilter : public InputFilter<C> {
 
 public:
-  InputFilterResult filter(C &c) {
+  InputFilterResult filter(C &c) final {
     return c != '\n' ? InputFilterResult::Ok : InputFilterResult::Stop;
   }
 };

@@ -89,11 +89,11 @@ private:
   util::InputStream<T> &input;
 };
 
-template <typename C> class EndOfQuotedTerminationFilter {
+template <typename C> class EndOfQuotedTerminationFilter : public InputFilter<C> {
   const QuoteState<C> &state;
 
 public:
-  InputFilterResult filter(C &) {
+  InputFilterResult filter(C &) final {
     return state.inQuote() ? InputFilterResult::Ok : InputFilterResult::Stop;
   }
 

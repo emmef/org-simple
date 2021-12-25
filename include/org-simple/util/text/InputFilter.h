@@ -143,7 +143,7 @@ requires(canApplyInputFilterOnStream<F, S, C>) static bool applyInputFilter(
   } while (true);
 }
 
-template<class F, class S, typename C> class FilteredInputStream {
+template<class F, class S, typename C> class FilteredInputStream : public InputStream<C> {
   static_assert(canApplyInputFilterOnStream<F, S, C>);
 
   F &f;
@@ -151,7 +151,7 @@ template<class F, class S, typename C> class FilteredInputStream {
 public:
   FilteredInputStream(F &filter, S &stream) : f(filter), s(stream) {}
 
-  bool get(C &c) {
+  bool get(C &c) final {
     return applyInputFilter(f, s, c);
   }
 };
@@ -160,8 +160,8 @@ template <class F, class S, typename C, bool resetInputOnStop>
 class FilteredVariableInputStream : public InputStream<C> {
   static_assert(canApplyInputFilterOnStream<F, S, C>);
 
-  InputStream<C> *input = nullptr;
   F &filter;
+  InputStream<C> *input = nullptr;
 
 public:
   FilteredVariableInputStream(F &inputFilter, InputStream<C> *stream)

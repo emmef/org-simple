@@ -25,13 +25,13 @@
 
 namespace org::simple::util::text {
 
-template <typename C> class UnixNewLineFilter {
+template <typename C> class UnixNewLineFilter : public InputFilter<C> {
   bool lastCR = false;
 
 public:
   void reset() { *this = {}; }
 
-  InputFilterResult filter(C &result) {
+  InputFilterResult filter(C &result) final {
     if (result == '\n') {
       if (lastCR) {
         lastCR = false;

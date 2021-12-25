@@ -100,14 +100,11 @@ template <typename CP> class KeyValueConfig {
   NonGraphFilter nonGraphTerminatedFilter;
   NewLineFilter newLineTerminatedFilter;
 
-  template <class S>
-  requires(hasInputStreamSignature<S, CP>)
-  void handleKey(State &state, S &stream,
+  void handleKey(State &state, InputStream<CP> &stream,
                  KeyReader<CP> &keyReader, bool ignoreErrors,
                  const positions *pos, const CP &lastReadValue) {
     try {
-      auto x = wrapAsInputStream<S, CP>(stream);
-      keyReader.read(x);
+      keyReader.read(stream);
     } catch (const ParseError &e) {
       if (ignoreErrors) {
         state = State::SkipToEndOfLine;

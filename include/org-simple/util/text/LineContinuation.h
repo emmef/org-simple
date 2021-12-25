@@ -25,7 +25,7 @@
 namespace org::simple::util::text {
 
 template <typename C>
-class LineContinuationFilter  {
+class LineContinuationFilter : public InputFilter<C> {
   enum class State { Normal, Marked, ReturnNext };
   State state = State::Normal;
   C next = 0;
@@ -41,7 +41,7 @@ public:
     return false;
   }
 
-  InputFilterResult filter(C &c) {
+  InputFilterResult filter(C &c) final {
     if (state == State::ReturnNext) {
       state = State::Normal;
       return InputFilterResult::Ok;
