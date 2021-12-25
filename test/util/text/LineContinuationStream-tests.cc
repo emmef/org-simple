@@ -26,7 +26,6 @@ BOOST_AUTO_TEST_CASE(testInputWithFaultyContinuationIsSame) {
   org::simple::util::text::InputCollector<char> collector(string.length());
   BOOST_CHECK_EQUAL(expected.length(), collector.consume(stream));
   BOOST_CHECK_EQUAL(expected, collector.getString());
-  org::simple::util::text::LineContinuationFilter<char>::Interface x;
 }
 
 BOOST_AUTO_TEST_CASE(testInputWithCorrectContinuation) {

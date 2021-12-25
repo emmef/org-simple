@@ -75,7 +75,7 @@ public:
    * @param input The input stream to read from.
    * @throws ConfigException
    */
-  virtual void read(util::InputStream<T> &input, const T *keyName) = 0;
+  virtual ReaderResult read(util::InputStream<T> &input, const T *keyName) = 0;
 
   virtual ~ValueReader() = default;
 };

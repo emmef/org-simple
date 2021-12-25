@@ -23,163 +23,53 @@
 
 #include <cstddef>
 #include <exception>
-#include <org-simple/util/text/Characters.h>
+#include <org-simple/util/config/ConfigReaders.h>
 #include <org-simple/util/text/CommentStream.h>
-#include <org-simple/util/InputStream.h>
-#include <org-simple/util/text/LineContinuation.h>
-#include <org-simple/util/text/UnixNewLine.h>
-#include <org-simple/util/text/Utf8Stream.h>
+#include <org-simple/util/text/InputStreams.h>
+#include <org-simple/util/text/TextFilePosition.h>
 #include <sstream>
 #include <string>
 
 namespace org::simple::util::config {
 
 class ParseError : public std::exception {
-  unsigned ln;
-  unsigned col;
-  std::stringstream message;
+  std::size_t ln;
+  std::size_t col;
+  std::string message;
 
 public:
-  explicit ParseError(const char *s, unsigned line, unsigned column)
+  ParseError(const char *s, unsigned line, unsigned column)
       : std::exception(), ln(line), col(column) {
-    message << "[l" << line << ":" << col << "]: " << s;
+    std::stringstream stream(s);
+    stream << "@" << ln << ":" << col << ": " << s;
+    message = stream.str();
   }
 
-  explicit ParseError(const char *s) : std::exception(), ln(0), col(0) {
-    message << s;
-  }
+  explicit ParseError(const char *s)
+      : std::exception(), ln(0), col(0), message(s) {}
 
-  template <typename T> ParseError &operator<<(const T &v) { message << v; }
+  const char *what() const noexcept override { return message.c_str(); }
 
-  const char *what() const noexcept override { return message.str().c_str(); }
-};
-
-template <typename T> class AbstractReader {
-public:
-  /**
-   * Read a key name from the input stream.
-   * @param input The input stream to read from.
-   * @throws ParserError When key could not be read successfully.
-   */
-  virtual void read(util::InputStream<T> &input) = 0;
-
-  virtual ~AbstractReader() = default;
-};
-
-template <typename T> class AbstractKeyReader : public AbstractReader<T> {
-public:
-  /**
-   * Returns the key name if that was successfully read, or throws a
-   * std::runtime_error() is it was not.
-   * @return The key name.
-   */
-  virtual const T *getKey() const = 0;
+  std::size_t getLine() const { return ln; }
+  std::size_t getColumn() const { return col; }
 };
 
 template <typename T> struct KeyValueConfigTypes;
 
 template <> struct KeyValueConfigTypes<char> {
   using classifierType = org::simple::util::text::Ascii;
-  using inputStreamType = util::text::ValidatedUtf8Stream;
-  using renderStreamType = util::EchoStream<char>;
   const classifierType classifier =
       org::simple::util::text::Classifiers::instance<classifierType>();
 };
 
-template <> struct KeyValueConfigTypes<org::simple::util::text::Utf8Encoding::codePoint> {
+template <>
+struct KeyValueConfigTypes<org::simple::util::text::Utf8Encoding::codePoint> {
   using classifierType = org::simple::util::text::Unicode;
-  using inputStreamType = org::simple::util::text::Utf8CharToUnicodeStream;
-  using renderStreamType = org::simple::util::text::UnicodeToUtf8CharStream;
   const classifierType classifier =
       org::simple::util::text::Classifiers::instance<classifierType>();
 };
 
-template <typename T>
-struct KeyValueConfigClassifiers : public KeyValueConfigTypes<T> {
-  using KeyValueConfigTypes<T>::classifier;
-
-  template <typename codePoint>
-  bool isKeyCharacter(codePoint c, codePoint assignment) const {
-    return c != assignment && classifier.isGraph(c);
-  }
-  template <typename codePoint> bool isKeyCharacter(codePoint c) const {
-    return isKeyCharacter(c, '=');
-  }
-  template <typename codePoint> bool isValueCharacter(codePoint c) const {
-    return (!classifier.isControl(c) || classifier.isBlank(c));
-  }
-  template <typename codePoint>
-  bool isValueCharacter(codePoint c, codePoint commentStart) const {
-    return c != commentStart && isValueCharacter(c);
-  }
-
-  class UntilEndOfUnquotedKeyStream : public util::InputStream<T> {
-    util::InputStream<T> *input;
-    KeyValueConfigClassifiers &owner;
-    T lastRead;
-    T replayed;
-
-  public:
-    UntilEndOfUnquotedKeyStream(KeyValueConfigClassifiers &owner_)
-        : owner(owner_){};
-
-    bool get(T &result) {
-      if (input != nullptr) {
-        if (replayed) {
-          lastRead = replayed;
-          replayed = 0;
-        } else if (!input->get(lastRead)) {
-          return false;
-        }
-        if (!owner.classifier.isWhiteSpace(lastRead)) {
-          result = lastRead;
-          return true;
-        }
-        input = nullptr;
-      }
-      return false;
-    }
-
-    T getLastRead() const { return lastRead; }
-
-    void set(util::InputStream<T> *source, T initialChar) {
-      input = source;
-      replayed = initialChar;
-    }
-  };
-
-  class UntilEndOfLineStream : public util::InputStream<T> {
-    util::InputStream<T> *input;
-    T replayed;
-
-  public:
-    UntilEndOfLineStream() {}
-
-    bool get(T &result) {
-      if (input != nullptr) {
-        if (replayed) {
-          result = replayed;
-          replayed = 0;
-        } else if (!input->get(result)) {
-          return false;
-        }
-        if (result != '\n') {
-          return true;
-        }
-        input = nullptr;
-      }
-      return false;
-    }
-
-    void set(util::InputStream<T> *source, T initialChar) {
-      input = source;
-      replayed = initialChar;
-    }
-  };
-};
-
-template <typename CP>
-class KeyValueConfig : public KeyValueConfigClassifiers<CP> {
+template <typename CP> class KeyValueConfig {
   enum class State {
     LineStart,
     QuotedKey,
@@ -188,104 +78,101 @@ class KeyValueConfig : public KeyValueConfigClassifiers<CP> {
     SkipToAssignment,
     SkipToValue
   };
-  using inputStreamType = typename KeyValueConfigTypes<CP>::inputStreamType;
-  using KeyValueConfigTypes<CP>::renderStreamType;
-  using KeyValueConfigTypes<CP>::classifier;
-  using KeyValueConfigTypes<CP>::isKeyCharacter;
+  KeyValueConfigTypes<char> configTypes;
+  using positions = const org::simple::util::text::TextFilePositionData<CP>;
+  typedef typename KeyValueConfigTypes<CP>::classifierType classifierType;
+  // Filters to indicate specific areas of a key value pair
+  using EndOfQuoteFilter = util::text::EndOfQuotedTerminationFilter<CP>;
+  using NonGraphFilter =
+      util::text::NonGraphTerminatedFilter<CP, classifierType>;
+  using NewLineFilter = util::text::NewLineTerminatedFilter<CP>;
+  using EchoStream = util::text::EchoRememberLastInputStream<CP>;
+  // Streams that terminate when specific areas (see filters) are ended
+  using InquoteStream =
+      util::text::FilteredInputStream<EndOfQuoteFilter, EchoStream, CP>;
+  using GraphOnlyStream =
+      util::text::FilteredVariableInputStream<NonGraphFilter, EchoStream, CP,
+                                              false>;
+  using BeforeNewLineStream =
+      util::text::FilteredVariableInputStream<NewLineFilter, EchoStream, CP,
+                                              false>;
 
-  org::simple::util::ReplayStream<char> inputStream;
-  org::simple::util::text::UnixNewLineStream<char> posixNewlineStream;
-  org::simple::util::text::LineContinuationStream<char> lineContinuationStream;
-  org::simple::util::text::CommentStream<char> commentStream;
-  inputStreamType inputConversion;
-  State state;
+  NonGraphFilter nonGraphTerminatedFilter;
+  NewLineFilter newLineTerminatedFilter;
 
-  org::simple::util::text::EndOfQuotedTerminationFilter<CP> inQuoteStream;
-  typename KeyValueConfigClassifiers<CP>::UntilEndOfUnquotedKeyStream
-      untilEndOfUnquotedKeyStream;
-  typename KeyValueConfigClassifiers<CP>::UntilEndOfLineStream
-      untilEndOfLineStream;
-
-  void handleKey(util::InputStream<CP> &stream,
-                 AbstractKeyReader<CP> &keyReader, bool ignoreErrors) {
+  template <class S>
+  requires(hasInputStreamSignature<S, CP>)
+  void handleKey(State &state, S &stream,
+                 KeyReader<CP> &keyReader, bool ignoreErrors,
+                 const positions *pos, const CP &lastReadValue) {
     try {
-      keyReader.read(stream, keyReader);
+      auto x = wrapAsInputStream<S, CP>(stream);
+      keyReader.read(x);
     } catch (const ParseError &e) {
       if (ignoreErrors) {
         state = State::SkipToEndOfLine;
         return;
       }
-      throw createError(e.what());
+      throw createError(e.what(), pos);
     }
     if (!keyReader.getKey()) {
       if (ignoreErrors) {
         state = State::SkipToEndOfLine;
         return;
       }
-      throw createError("Error reading key value");
+      throw createError("Error reading key value", pos);
     }
 
-    state = state == State::UnQuotedKey &&
-                    untilEndOfUnquotedKeyStream.getLastRead() == '='
-                ? state == State::SkipToValue
+    state = state == State::UnQuotedKey && lastReadValue == '='
+                ? State::SkipToValue
                 : State::SkipToAssignment;
   }
 
-  void handleValue(util::InputStream<CP> &stream,
-                   AbstractReader<CP> &valueReader, bool ignoreErrors) {
+  void handleValue(State &state, util::InputStream<CP> &stream,
+                   ValueReader<CP> &valueReader, const CP *keyName,
+                   bool ignoreErrors, const positions *pos) {
     try {
-      valueReader.read(stream);
+      valueReader.read(stream, keyName);
     } catch (const ParseError &e) {
       if (ignoreErrors) {
         state = State::SkipToEndOfLine;
         return;
       }
-      throw createError(e.what());
+      throw createError(e.what(), pos);
     }
   }
 
-  void init(util::InputStream<char> *stream = nullptr) {
-    inputStream.assignedStream(stream);
-    posixNewlineStream.reset();
-    lineContinuationStream.reset();
-    commentStream.reset();
-    inputConversion.reset();
-    state = State::LineStart;
-  }
-
-  ParseError createError(const char *msg) {
-    return ParseError(msg, posixNewlineStream.state().getLine() + 1,
-                      posixNewlineStream.state().getColumn() + 1);
+  ParseError createError(const char *msg, const positions *pos) {
+    return ParseError(msg, pos ? pos->getLine() + 1 : 0, pos ? pos->getColumn() + 1 : 0);
   }
 
 public:
-  template <typename V>
-  KeyValueConfig(const char *lineCommentString, const char *blockCommentString,
-                 unsigned nestingLevels, V quoteMatchers)
-      : posixNewlineStream(inputStream),
-        lineContinuationStream(posixNewlineStream),
-        commentStream(lineContinuationStream, lineCommentString,
-                      blockCommentString, nestingLevels, quoteMatchers),
-        inputConversion(commentStream), untilEndOfUnquotedKeyStream(*this) {}
+  void parse(util::text::CommentStream<CP> &commentStream, const positions *pos,
+             bool ignoreErrors, KeyReader<CP> &keyReader,
+             ValueReader<CP> &valueReader) {
 
-  void reset() { init(nullptr); }
+    State state = State::LineStart;
+    EndOfQuoteFilter endOfQuoteFilter(commentStream.state());
+    EchoStream echoStream(commentStream);
+    InquoteStream inQuoteStream(endOfQuoteFilter, echoStream);
+    GraphOnlyStream nonGraphTerminatedStream(nonGraphTerminatedFilter,
+                                             &echoStream);
+    BeforeNewLineStream newLineTerminatedStream(newLineTerminatedFilter,
+                                                &echoStream);
 
-  void parse(util::InputStream<char> &input, bool ignoreErrors,
-             AbstractKeyReader<CP> &keyReader,
-             AbstractReader<CP> &valueReader) {
-    init(&input);
     CP c;
-    while (input.get(c)) {
+    while (echoStream.get(c)) {
       switch (state) {
 
       case State::LineStart:
-        if (classifier.isWhiteSpace(c) || classifier.isNewLine(c)) {
+        if (configTypes.classifier.isWhiteSpace(c) ||
+            (c == '\n')) {
           continue;
         }
-        if (commentStream.inQuote()) {
+        if (commentStream.state().inQuote()) {
           state = State::QuotedKey;
           continue;
-        } else if (KeyValueConfigClassifiers<CP>::isKeyCharacter(c, '=')) {
+        } else if (c != '=' && configTypes.classifier.isGraph(c)) {
           state = State::UnQuotedKey;
           continue;
         }
@@ -293,43 +180,39 @@ public:
           state = State::SkipToEndOfLine;
           break;
         }
-        throw createError("Unexpected start of key-value pair");
+        throw createError("Unexpected start of key-value pair", pos);
       case State::SkipToEndOfLine:
         if (c == '\n') {
           state = State::LineStart;
         }
         break;
       case State::QuotedKey:
-        inQuoteStream.set(&input);
-        handleKey(inQuoteStream, keyReader, ignoreErrors);
+        handleKey(state, inQuoteStream, keyReader, ignoreErrors, pos,
+                  echoStream.lastValue());
         break;
       case State::UnQuotedKey:
-        untilEndOfUnquotedKeyStream.set(&input, c);
-        handleKey(untilEndOfUnquotedKeyStream.keyReader, ignoreErrors);
+        handleKey(state, nonGraphTerminatedStream, keyReader, ignoreErrors, pos,
+                  echoStream.lastValue());
         break;
       case State::SkipToAssignment:
         if (c == '=') {
           state = State::SkipToValue;
-        }
-        else if (classifier.isWhiteSpace(c)) {
+        } else if (configTypes.classifier.isWhiteSpace(c)) {
           break;
-        }
-        else if (c == '\n') {
+        } else if (c == '\n') {
           state = State::LineStart;
         }
         break;
       case State::SkipToValue:
-        if (!classifier.isWhiteSpace(c)) {
-          untilEndOfLineStream.set(&input, c);
-          handleValue(untilEndOfLineStream, valueReader, ignoreErrors);
+        if (!configTypes.classifier.isWhiteSpace(c)) {
+          handleValue(state, newLineTerminatedStream, valueReader,
+                      keyReader.getKey(), ignoreErrors, pos);
         }
         break;
       }
     };
     if (state != State::LineStart) {
-      ParseError error = createError("Unexpected end of file");
-      error << ": Unexpected state " << state;
-      throw error;
+      throw createError("Unexpected end of input.", pos);
     }
   }
 };

@@ -28,36 +28,41 @@ namespace org::simple::util::text {
 
 template <typename C, class D> class NonGraphTerminatedFilter {
   static_assert(std::is_same_v<Ascii, D> || std::is_same_v<Unicode, D>);
-  static constexpr D &classifier = Classifiers::instance<D>();
+  const D &classifier = Classifiers::instance<D>();
 
 public:
-  InputFilterResult directFilter(C &c) {
+  InputFilterResult filter(C &c) {
     return classifier.isGraph(c) ? InputFilterResult::Ok
                                  : InputFilterResult::Stop;
   }
-
-  typedef AbstractInputFilter<NonGraphTerminatedFilter, C> Interface;
 };
-
-template <typename C, class D, bool resetInputOnStop>
-using NonGraphTerminatedInputStream =
-    AbstractFilteredInputStream<NonGraphTerminatedFilter<C, D>, C,
-                                resetInputOnStop>;
 
 template <typename C> class NewLineTerminatedFilter {
 
 public:
-  InputFilterResult directFilter(C &c) {
+  InputFilterResult filter(C &c) {
     return c != '\n' ? InputFilterResult::Ok : InputFilterResult::Stop;
   }
-
-  typedef AbstractInputFilter<NewLineTerminatedFilter, C> Interface;
 };
 
-template <typename C, bool resetInputOnStop>
-using NewLineTerminatedInputStream =
-    AbstractFilteredInputStream<NewLineTerminatedFilter<C>, C,
-                                resetInputOnStop>;
+template <typename C> class EchoRememberLastInputStream : public InputStream<C> {
+  InputStream<C> & input;
+  C v = 0;
+public:
+
+  EchoRememberLastInputStream(InputStream<C> & stream) : input(stream) {}
+
+  bool get(C &result) final {
+    if (input.get(result)) {
+      v = result;
+      return true;
+    }
+    return false;
+  }
+
+  C &lastValue() { return v; }
+  const C &lastValue() const { return v; }
+};
 
 } // namespace org::simple::util::text
 

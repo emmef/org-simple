@@ -22,16 +22,66 @@
  */
 
 #include <limits>
+#include <type_traits>
 
 namespace org::simple::util {
 
-enum class StreamState { OK, END };
+template <typename C> class InputStream {
 
-template <typename T> class InputStream {
 public:
-  virtual bool get(T &) = 0;
+  virtual bool get(C &) = 0;
   virtual ~InputStream() = default;
+
+  struct Traits {
+    template <class X>
+    requires(std::is_same_v<
+             bool,
+             decltype(std::declval<X>().get(
+                 std::declval<C &>()))>) static constexpr bool substGet(X *) {
+      return true;
+    }
+    template <class X> static constexpr bool substGet(...) { return false; }
+
+    template <class X> static constexpr bool isA() {
+      return substGet<X>(static_cast<X *>(nullptr));
+    }
+  };
+
+  template <class D> class Wrapped : public InputStream<C> {
+    static_assert(Traits::template isA<D>());
+    D *wrapped;
+
+  public:
+    Wrapped(D &stream) : wrapped(&stream) {}
+    Wrapped(const Wrapped &) = default;
+    Wrapped(Wrapped &&) = default;
+
+    bool get(C &c) final { return wrapped->get(c); }
+  };
+
+  template <class D> class Interfaced : public virtual InputStream, public D {
+    static_assert(Traits::template isA<D>() &&
+                  !std::is_base_of_v<InputStream, D>);
+
+  public:
+    bool get(C &c) final { return D::get(c); }
+  };
 };
+
+template <class S, typename C>
+static constexpr bool
+    hasInputStreamSignature = InputStream<C>::Traits::template isA<S>();
+
+template <class S, typename C>
+requires(!std::is_base_of_v<InputStream<C>, S> && hasInputStreamSignature<S, C>)
+    typename InputStream<C>::template Wrapped<S> wrapAsInputStream(S &wrapped) {
+  return typename InputStream<C>::template Wrapped<S>(wrapped);
+}
+template <class S, typename C>
+requires(std::is_base_of_v<InputStream<C>, S>)
+    S &wrapAsInputStream(S &wrapped) {
+  return wrapped;
+}
 
 template <typename T> class EmptyInputStream : public InputStream<T> {
 public:

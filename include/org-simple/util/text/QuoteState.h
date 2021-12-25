@@ -93,19 +93,13 @@ template <typename C> class EndOfQuotedTerminationFilter {
   const QuoteState<C> &state;
 
 public:
-  InputFilterResult directFilter(C &) {
+  InputFilterResult filter(C &) {
     return state.inQuote() ? InputFilterResult::Ok : InputFilterResult::Stop;
   }
 
   EndOfQuotedTerminationFilter(const QuoteState<C> &qouteState) : state(qouteState) {}
 
-  typedef AbstractInputFilter<EndOfQuotedTerminationFilter, C> Interface;
 };
-
-template <typename C, bool resetInputOnStop = true>
-using NonGraphTerminatedInputStream =
-    AbstractFilteredInputStream<EndOfQuotedTerminationFilter<C>, C,
-                                resetInputOnStop>;
 
 } // namespace org::simple::util::text
 

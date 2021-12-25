@@ -33,14 +33,17 @@ class LineContinuationFilter  {
 public:
   void reset() { *this = {}; }
 
-  typedef AbstractInputFilterWithBuffer<LineContinuationFilter, C> Interface;
+  bool get(C &c) {
+    if (state == State::ReturnNext) {
+      c = next;
+      return true;
+    }
+    return false;
+  }
 
-  bool directAvailable() const { return state == State::ReturnNext; }
-
-  InputFilterResult directFilter(C &c) {
+  InputFilterResult filter(C &c) {
     if (state == State::ReturnNext) {
       state = State::Normal;
-      c = next;
       return InputFilterResult::Ok;
     }
     if (state == State::Normal) {
@@ -75,7 +78,7 @@ public:
   explicit LineContinuationStream(util::InputStream<C> &stream)
       : input(stream) {}
 
-  bool get(C &result) final { return applyFilter(result, filter, input); }
+  bool get(C &result) final { return applyInputFilter(filter, input, result); }
   void reset() { filter.reset(); }
 };
 

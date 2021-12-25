@@ -27,7 +27,7 @@
 namespace org::simple::util::config {
 
 class ConfigException : public std::exception {
-  std::stringstream message;
+  std::string message;
 
 public:
   explicit ConfigException(const char *s) : std::exception(), message(s) {}
@@ -35,11 +35,8 @@ public:
   explicit ConfigException(const std::string &s)
       : std::exception(), message(s) {}
 
-  const char *what() const noexcept override { return message.str().c_str(); }
+  const char *what() const noexcept override { return message.c_str(); }
 
-  template <typename T> ConfigException &operator<<(const T &v) {
-    message << v;
-  }
 };
 
 } // namespace org::simple::util::config

@@ -31,7 +31,7 @@ template <typename C> class UnixNewLineFilter {
 public:
   void reset() { *this = {}; }
 
-  InputFilterResult directFilter(C &result) {
+  InputFilterResult filter(C &result) {
     if (result == '\n') {
       if (lastCR) {
         lastCR = false;
@@ -50,27 +50,7 @@ public:
     }
   }
 
-  typedef AbstractInputFilter<UnixNewLineFilter, C> Interface;
 };
-
-template <typename C> class TextFilePositionData {
-  std::size_t line = 0;
-  std::size_t position = 0;
-  std::size_t column = 0;
-
-  void probe(const C &c) {
-    position++;
-    if (c == '\n') {
-      line++;
-      column = 0;
-    } else {
-      column++;
-    }
-  }
-};
-
-template <typename C>
-using NewlinePositionProbe = AbstractInputProbe<C, TextFilePositionData<C>>;
 
 template <typename C> class UnixNewLineStream : public util::InputStream<C> {
   util::InputStream<C> &input;
@@ -80,7 +60,7 @@ public:
   explicit UnixNewLineStream(util::InputStream<C> &stream) : input(stream) {}
 
   const UnixNewLineFilter<C> &state() { return filter; }
-  bool get(C &result) final { return applyFilter(result, filter, input); }
+  bool get(C &result) final { return applyInputFilter(filter, input, result); }
   void reset() { filter.reset(); }
 };
 

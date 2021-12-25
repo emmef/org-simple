@@ -20,13 +20,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <org-simple/util/text/QuoteState.h>
-#include <org-simple/util/InputStream.h>
 #include <exception>
+#include <org-simple/util/InputStream.h>
+#include <org-simple/util/text/QuoteState.h>
 
 namespace org::simple::util::text {
+
+template <typename T> struct CommentStreamConfig {
+  QuoteState<T> quoteState;
+  const T *const lineComment;
+  const T *const blockComment;
+  const int blockCommentEnd;
+
+  template <typename Q>
+  CommentStreamConfig(const T *lineCommentString, const T *blockCommentString,
+                      Q quotes)
+      : quoteState(quotes), lineComment(lineCommentString),
+        blockComment(blockCommentString),
+        blockCommentEnd(getCommentEnd(blockCommentString)) {}
+
+  static int getCommentEnd(const T *comment) {
+    int commentEnd;
+    for (commentEnd = 0; comment[commentEnd] != '\0'; commentEnd++)
+      ;
+    return commentEnd - 1;
+  }
+};
+
 template <typename T>
-class CommentStream : public util::InputStream<T> {
+class CommentStream : public util::InputStream<T>,
+                      private CommentStreamConfig<T> {
+
+  using CommentStreamConfig<T>::quoteState;
+  using CommentStreamConfig<T>::blockComment;
+  using CommentStreamConfig<T>::lineComment;
+  using CommentStreamConfig<T>::blockCommentEnd;
+
   class Replay {
     int position = -1;
     int replayPos = 0;
@@ -44,7 +73,6 @@ class CommentStream : public util::InputStream<T> {
         nonComment = firstNonCommentCharacter;
       }
     }
-
 
   public:
     bool next(T &result) {
@@ -107,20 +135,7 @@ class CommentStream : public util::InputStream<T> {
     bool popNestingLevelGetDone() { return level > 0 && --level == 0; }
   } nesting;
 
-  QuoteState<T> quoteState;
-  const T *const lineComment;
-  const T *const blockComment;
-  const int commentEnd;
   InputStream<T> &input;
-
-
-
-  static int getCommentEnd(const T *comment) {
-    int commentEnd;
-    for (commentEnd = 0; comment[commentEnd] != '\0'; commentEnd++)
-      ;
-    return commentEnd - 1;
-  }
 
   static const T *validCommentString(const T *value, const T *lineComment) {
     if (value != nullptr && lineComment != nullptr) {
@@ -154,7 +169,7 @@ class CommentStream : public util::InputStream<T> {
 
   bool readUntilEndOfBlock(T &result) {
     nesting.startBlockComment();
-    int commentPos = commentEnd;
+    int commentPos = blockCommentEnd;
     bool holdLast = false;
     T c;
     while (holdLast || input.get(c)) {
@@ -170,7 +185,7 @@ class CommentStream : public util::InputStream<T> {
             result = c;
             return true;
           }
-          commentPos = commentEnd;
+          commentPos = blockCommentEnd;
           holdLast = true;
         }
       } else if (nesting.nestingAllowed()) {
@@ -183,7 +198,7 @@ class CommentStream : public util::InputStream<T> {
         }
         if (pos > 0 && blockComment[pos] == '\0') {
           nesting.pushNestingLevel();
-          commentPos = commentEnd;
+          commentPos = blockCommentEnd;
         }
       }
     }
@@ -191,7 +206,7 @@ class CommentStream : public util::InputStream<T> {
   }
 
   enum class MatchResult { Ok, EndOfInput };
-  
+
   MatchResult matchCommentStart(T &result) {
     T c = result;
     const T *comment = nullptr;
@@ -217,8 +232,7 @@ class CommentStream : public util::InputStream<T> {
           if (matchBlock) {
             if ((matchBlock = blockComment[pos] && blockComment[pos] == c)) {
               if (blockComment[pos + 1] == '\0') {
-                return readUntilEndOfBlock(result)
-                           ? MatchResult::Ok
+                return readUntilEndOfBlock(result) ? MatchResult::Ok
                                                    : MatchResult::EndOfInput;
               }
             }
@@ -251,13 +265,15 @@ class CommentStream : public util::InputStream<T> {
   }
 
 public:
+  CommentStream(InputStream<T> &stream, const CommentStreamConfig<T> &config, unsigned nestingLevels)
+      : CommentStreamConfig<T>(config),
+        nesting(nestingLevels), input(stream) {}
+
   template <typename Q>
   CommentStream(InputStream<T> &stream, const T *lineCommentString,
                 const T *blockCommentString, unsigned nestingLevels, Q quotes)
-      : nesting(nestingLevels), quoteState(quotes),
-        lineComment(lineCommentString),
-        blockComment(validCommentString(blockCommentString, lineComment)),
-        commentEnd(getCommentEnd(blockComment)), input(stream) {}
+      : CommentStreamConfig<T>(lineCommentString, blockCommentString, quotes),
+        nesting(nestingLevels), input(stream) {}
 
   unsigned getLevel() const { return nesting.getLevel(); }
   bool inComment() const { return getLevel() != 0; }
@@ -281,9 +297,7 @@ public:
     }
   }
 
-  void reset() {
-    quoteState.reset();
-  }
+  void reset() { quoteState.reset(); }
 
   const QuoteState<T> &state() const { return quoteState; }
 };
