@@ -26,31 +26,70 @@
 
 namespace org::simple::util::text {
 
-template <typename C, class D> class NonGraphTerminatedFilter : public StreamFilter<C> {
+template <typename C, class D>
+class GraphBasedStreamProbe : public StreamProbe<C> {
   static_assert(std::is_same_v<Ascii, D> || std::is_same_v<Unicode, D>);
   const D &classifier = Classifiers::instance<D>();
+  bool graph;
 
 public:
-  InputFilterResult filter(C &c) final {
-    return classifier.isGraph(c) ? InputFilterResult::Ok
-                                 : InputFilterResult::Stop;
+  void probe(const C &c) final { graph = classifier.isGraph(c); }
+
+  bool isGraph() const { return graph; }
+
+  static bool isGraphPredicateFunction(const GraphBasedStreamProbe &subject) {
+    return subject.isGraph();
+  }
+  static bool noGraphPredicateFunction(const GraphBasedStreamProbe &subject) {
+    return !subject.isGraph();
   }
 };
 
-template <typename C> class NewLineTerminatedFilter : public StreamFilter<C> {
+template <class S, class D, bool resetStreamOnStop, typename C>
+using GraphBasedStreamWithPredicate =
+    PredicateVariableInputStream<GraphBasedStreamProbe<C, D>, S,
+                                 resetStreamOnStop, C>;
+
+template <class S, class D, bool resetStreamOnStop, typename C>
+using GraphBasedStreamWithProbedPredicate =
+    ProbeVariableInputStream<GraphBasedStreamProbe<C, D>, S, resetStreamOnStop,
+                             C>;
+
+template <typename C> class NewLineBasedStreamProbe : public StreamProbe<C> {
+  bool nl;
 
 public:
-  InputFilterResult filter(C &c) final {
-    return c != '\n' ? InputFilterResult::Ok : InputFilterResult::Stop;
+  void probe(const C &c) final { nl = c == '\n'; }
+
+  bool isNewLine() const { return nl; }
+
+  static bool
+  isNewLinePredicateFunction(const NewLineBasedStreamProbe &subject) {
+    return subject.isNewLine();
+  }
+  static bool
+  noNewLinePredicateFunction(const NewLineBasedStreamProbe &subject) {
+    return !subject.isNewLine();
   }
 };
 
-template <typename C> class EchoRememberLastInputStream : public InputStream<C> {
-  InputStream<C> & input;
+template <class S, bool resetStreamOnStop, typename C>
+using NewLineBasedStreamWithPredicate =
+    PredicateVariableInputStream<NewLineBasedStreamProbe<C>, S,
+                                 resetStreamOnStop, C>;
+
+template <class S, bool resetStreamOnStop, typename C>
+using NewLineBasedStreamWithProbedPredicate =
+    ProbeVariableInputStream<NewLineBasedStreamProbe<C>, S, resetStreamOnStop,
+                             C>;
+
+template <typename C>
+class EchoRememberLastInputStream : public InputStream<C> {
+  InputStream<C> &input;
   C v = 0;
-public:
 
-  EchoRememberLastInputStream(InputStream<C> & stream) : input(stream) {}
+public:
+  EchoRememberLastInputStream(InputStream<C> &stream) : input(stream) {}
 
   bool get(C &result) final {
     if (input.get(result)) {

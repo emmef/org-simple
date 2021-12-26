@@ -26,6 +26,7 @@
 #include <org-simple/util/config/ConfigReaders.h>
 #include <org-simple/util/text/CommentStream.h>
 #include <org-simple/util/text/InputStreams.h>
+#include <org-simple/util/text/StreamPredicate.h>
 #include <org-simple/util/text/TextFilePosition.h>
 #include <sstream>
 #include <string>
@@ -81,24 +82,18 @@ template <typename CP> class KeyValueConfig {
   KeyValueConfigTypes<char> configTypes;
   using positions = const org::simple::util::text::TextFilePositionData<CP>;
   typedef typename KeyValueConfigTypes<CP>::classifierType classifierType;
+
   // Filters to indicate specific areas of a key value pair
-  using EndOfQuoteFilter = util::text::EndOfQuotedTerminationFilter<CP>;
-  using NonGraphFilter =
-      util::text::NonGraphTerminatedFilter<CP, classifierType>;
-  using NewLineFilter = util::text::NewLineTerminatedFilter<CP>;
   using EchoStream = util::text::EchoRememberLastInputStream<CP>;
   // Streams that terminate when specific areas (see filters) are ended
-  using InquoteStream =
-      util::text::FilteredInputStream<EndOfQuoteFilter, EchoStream, CP>;
-  using GraphOnlyStream =
-      util::text::FilteredVariableInputStream<NonGraphFilter, EchoStream, CP,
-                                              false>;
+  using EndOfQuoteStream =
+      util::text::QuotedBasedStreamWithPredicate<EchoStream, false, CP>;
+  using GraphOnlyStream = util::text::GraphBasedStreamWithProbedPredicate<
+      EchoStream, classifierType, false, CP>;
   using BeforeNewLineStream =
-      util::text::FilteredVariableInputStream<NewLineFilter, EchoStream, CP,
-                                              false>;
-
-  NonGraphFilter nonGraphTerminatedFilter;
-  NewLineFilter newLineTerminatedFilter;
+      util::text::NewLineBasedStreamWithProbedPredicate<EchoStream, false, CP>;
+  text::GraphBasedStreamProbe<CP, classifierType> graphProbe;
+  text::NewLineBasedStreamProbe<CP> newLineProbe;
 
   void handleKey(State &state, text::InputStream<CP> &stream,
                  KeyReader<CP> &keyReader, bool ignoreErrors,
@@ -140,7 +135,8 @@ template <typename CP> class KeyValueConfig {
   }
 
   ParseError createError(const char *msg, const positions *pos) {
-    return ParseError(msg, pos ? pos->getLine() + 1 : 0, pos ? pos->getColumn() + 1 : 0);
+    return ParseError(msg, pos ? pos->getLine() + 1 : 0,
+                      pos ? pos->getColumn() + 1 : 0);
   }
 
 public:
@@ -149,21 +145,24 @@ public:
              ValueReader<CP> &valueReader) {
 
     State state = State::LineStart;
-    EndOfQuoteFilter endOfQuoteFilter(commentStream.state());
     EchoStream echoStream(commentStream);
-    InquoteStream inQuoteStream(endOfQuoteFilter, echoStream);
-    GraphOnlyStream nonGraphTerminatedStream(nonGraphTerminatedFilter,
-                                             &echoStream);
-    BeforeNewLineStream newLineTerminatedStream(newLineTerminatedFilter,
-                                                &echoStream);
+    EndOfQuoteStream inQuoteStream(commentStream.state(), &echoStream,
+                                   text::QuoteState<CP>::insideFunction);
+    GraphOnlyStream nonGraphTerminatedStream(
+        graphProbe, &echoStream,
+        text::GraphBasedStreamProbe<CP,
+                                    classifierType>::isGraphPredicateFunction);
+
+    BeforeNewLineStream newLineTerminatedStream(
+        newLineProbe, &echoStream,
+        text::NewLineBasedStreamProbe<CP>::noNewLinePredicateFunction);
 
     CP c;
     while (echoStream.get(c)) {
       switch (state) {
 
       case State::LineStart:
-        if (configTypes.classifier.isWhiteSpace(c) ||
-            (c == '\n')) {
+        if (configTypes.classifier.isWhiteSpace(c) || (c == '\n')) {
           continue;
         }
         if (commentStream.state().inQuote()) {

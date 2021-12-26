@@ -20,7 +20,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <org-simple/util/text/StreamFilter.h>
+#include <org-simple/util/text/StreamPredicate.h>
 
 namespace org::simple::util::text {
 
@@ -47,7 +49,7 @@ public:
   bool isEscaped() const { return escaped; }
   bool inQuote() const { return openQuote != 0; }
 
-  void probe(C c) {
+  void probe(const C &c) {
     if (openQuote != 0) {
       if (escaped) {
         escaped = false;
@@ -65,6 +67,11 @@ public:
       escaped = true;
     }
   }
+
+  static bool insideFunction(const QuoteState &state) { return state.inQuote(); }
+  static bool outsideFunction(const QuoteState &state) { return !state.inQuote(); }
+
+  template <class P> using StreamPredicateFunction = bool (*)(const P &);
 };
 
 template <typename T>
@@ -89,17 +96,9 @@ private:
   InputStream<T> &input;
 };
 
-template <typename C> class EndOfQuotedTerminationFilter : public StreamFilter<C> {
-  const QuoteState<C> &state;
-
-public:
-  InputFilterResult filter(C &) final {
-    return state.inQuote() ? InputFilterResult::Ok : InputFilterResult::Stop;
-  }
-
-  EndOfQuotedTerminationFilter(const QuoteState<C> &qouteState) : state(qouteState) {}
-
-};
+template <class S, bool resetStreamOnStop, typename C>
+using QuotedBasedStreamWithPredicate =
+    PredicateVariableInputStream<QuoteState<C>, S, resetStreamOnStop, C>;
 
 } // namespace org::simple::util::text
 
