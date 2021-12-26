@@ -22,8 +22,8 @@
  */
 
 #include <cstdint>
-#include <org-simple/util/text/InputStream.h>
 #include <org-simple/util/text/Characters.h>
+#include <org-simple/util/text/InputStream.h>
 
 namespace org::simple::util::text {
 
@@ -77,6 +77,8 @@ public:
     template <class X> static constexpr bool isA() {
       return substFilter<X>(static_cast<X *>(nullptr));
     }
+
+    static_assert(Traits::template isA<StreamFilter<C>>());
   };
 
   template <class D> class Wrapped : public StreamFilter<C> {
@@ -107,7 +109,8 @@ static constexpr bool
 template <class F, typename C>
 requires(!std::is_base_of_v<StreamFilter<C>, F> &&
          hasStreamFilterSignature<F, C>)
-    typename StreamFilter<C>::template Wrapped<F> wrapAsInputFilter(F &wrapped) {
+    typename StreamFilter<C>::template Wrapped<F> wrapAsInputFilter(
+        F &wrapped) {
   return typename StreamFilter<C>::template Wrapped<F>(wrapped);
 }
 
@@ -144,28 +147,29 @@ requires(canApplyFilterOnStream<F, S, C>) static bool applyInputFilter(
   } while (true);
 }
 
-template<class F, class S, typename C> class FilteredInputStream : public InputStream<C> {
+template <class F, class S, typename C>
+class FilteredInputStream : public InputStream<C> {
   static_assert(canApplyFilterOnStream<F, S, C>);
 
   F &f;
   S &s;
+
 public:
   FilteredInputStream(F &filter, S &stream) : f(filter), s(stream) {}
 
-  bool get(C &c) final {
-    return applyInputFilter(f, s, c);
-  }
+  bool get(C &c) final { return applyInputFilter(f, s, c); }
 };
 
-template <class F, class S, typename C, bool resetInputOnStop>
+template <class F, class S, bool resetInputOnStop,
+          typename C>
 class FilteredVariableInputStream : public InputStream<C> {
   static_assert(canApplyFilterOnStream<F, S, C>);
 
   F &filter;
-  InputStream<C> *input = nullptr;
+  S *input = nullptr;
 
 public:
-  FilteredVariableInputStream(F &inputFilter, InputStream<C> *stream)
+  FilteredVariableInputStream(F &inputFilter, S *stream)
       : filter(inputFilter), input(stream) {}
 
   bool get(C &result) final {
@@ -180,9 +184,7 @@ public:
     return false;
   }
 
-  void setStream(InputStream<C> *stream) {
-    input = stream;
-  }
+  void setStream(S *stream) { input = stream; }
 };
 
 } // namespace org::simple::util::text
