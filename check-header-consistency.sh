@@ -120,7 +120,7 @@ checkFileNameInHeader() {
   then
     if [ -z "$silentFix" ]
     then
-      echo -e "PROBLEM: \"${headerFullPath}\" should use following file-name:\n\t${headerStatedFileName}" >&2
+      echo -e "PROBLEM: ${headerFullPath}: should use following file-name:\n\t${headerStatedFileName}" >&2
     fi
     if [ -n "$fixErrors" ]
     then
@@ -219,14 +219,13 @@ checkNamespaceInHeader() {
   local lineNamespaceEnd
   local namespaceInFile
 
-  lineNamespaceEnd=
   if readNamespaceStartAndEnd < "$headerFullPath"
   then
     if [ "$namespaceInFile" != "$headerNamespace" ]
     then
       if [ -z "$silentFix" ]
       then
-        echo -e "PROBLEM: Should use $headerNamespace instead of '$lineNamespaceStart' /* declarations */ '$lineNamespaceEnd'"
+        echo -e "PROBLEM: $headerFullPath: Should use $headerNamespace instead of '$lineNamespaceStart' /* declarations */ '$lineNamespaceEnd'"
       fi
       if [ -n "$fixErrors" ]
       then
@@ -234,36 +233,150 @@ checkNamespaceInHeader() {
       fi
     fi
   fi
+}
 
+readGuardInfoFromFile() {
+  local matchCheck
+  matchCheck='^\s*#ifndef\s+([_A-Z0-9]+)\s*$'
 
-#  if grep -E "^namespace\s+[a-z0-9A-Z:]+\s+{" "${headerFullPath}" >/dev/null
-#  then
-#    if ! grep -E "^namespace\s+${nameSpace}\s+\{" "${headerFullPath}" >/dev/null
-#    then
-#      echo -e "File ${headerFullPath} should use following namespace:\nnamespace ${nameSpace} {\n} // namespace ${nameSpace}" >&2
-#    fi
-#  fi
+  local emptyCheck
+  emptyCheck='^\s*(//|)\s*$'
 
+  local matchDefine
+  local matchEnd
+
+  local line
+  while IFS= read -r line
+  do
+    if [ -z "$lineGuardCheck" ]
+    then
+      if [[ $line =~ $matchCheck ]]
+      then
+       guardInFile="${BASH_REMATCH[1]}"
+       lineGuardCheck="$line"
+       matchDefine="^\\s*#define\\s+$guardInFile\\s*\$"
+       matchEnd="^#endif\\s*//\\s*$guardInFile\\s*\$"
+       #echo "Found $lineGuardCheck; added matches '$matchDefine' and '$matchEnd'"
+      else
+        echo "ERROR: $headerFullPath: Must start with guard check '$matchCheck'" >&2
+        return 1
+      fi
+    elif [ -z "$lineGuardDefine" ]
+    then
+      if [[ $line =~ $matchDefine ]]
+      then
+        lineGuardDefine="$line"
+        #echo "Found $lineGuardDefine"
+      else
+        echo "ERROR: $headerFullPath: Guard check must be followed by guard define '$matchDefine'" >&2
+        echo "Guard define should follow directly after guard check"
+        return 1
+      fi
+    elif [ -z "$lineGuardEnd" ]
+    then
+      if [[ $line =~ $matchEnd ]]
+      then
+        lineGuardEnd="$line"
+        #echo "Found $lineGuardEnd"
+      fi
+    elif ! [[ $line =~ $emptyCheck ]]
+    then
+      echo "ERROR: $headerFullPath: Only empty lines allowed after '$lineGuardEnd'" >&2
+      return 1
+    fi
+  done
+  if [ -z "$lineGuardEnd" ]
+  then
+    return 1
+  fi
+  return 0
+}
+
+replaceGuardLines() {
+  local processedFile
+  processedFile="$(dirname "$copiedFile")/.$(basename "$copiedFile")"
+
+  local line
+
+  while IFS= read -r line
+  do
+    if [ "$line" == "$lineGuardCheck" ]
+    then
+      echo "#ifndef $headerGuard" >> "$processedFile"
+    elif [ "$line" == "$lineGuardDefine" ]
+    then
+      echo "#define $headerGuard" >> "$processedFile"
+    elif [ "$line" == "$lineGuardEnd" ]
+    then
+      echo "#endif // $headerGuard" >> "$processedFile"
+    else
+      echo "$line" >> $processedFile
+    fi
+  done
+
+  cp "$processedFile" "$headerFullPath"
+}
+
+fixGuardInHeader() {
+  local copiedFile
+
+  copiedFile=$(createTemporaryFile "/tmp/fix-guard-in-header")
+  echo "Fix $headerFullPath"
+  replaceGuardLines < "$headerFullPath"
+}
+
+checkGuardInHeader() {
+  local guardInFile
+  local lineGuardCheck
+  local lineGuardDefine
+  local lineGuardEnd
+
+  if readGuardInfoFromFile < "$headerFullPath"
+  then
+    if [ "$guardInFile" != "$headerGuard" ]
+    then
+      if [ -z "$silentFix" ]
+      then
+        echo -e "PROBLEM: $headerFullPath: Should use header-guard $headerGuard instead of '$guardInFile'"
+      fi
+      if [ -n "$fixErrors" ]
+      then
+        fixGuardInHeader
+      fi
+    fi
+  fi
+
+  return 1
 }
 
 checkSanity() {
   local headerFullPath
   headerFullPath="$1"
+
   local headerBaseName
   headerBaseName=$(basename "$headerFullPath")
+
   local headerDirectory
   headerDirectory=$(dirname "$headerFullPath")
   # Strip "./include/"
   headerDirectory=${headerDirectory/.\/include\//}
+
   local headerNamespace
   headerNamespace=${headerDirectory//\//::}
   headerNamespace=${headerNamespace//-/::}
+
   local headerStatedFileName
   headerStatedFileName="$headerDirectory/$headerBaseName"
+
+  local headerGuardHalfFabricate
+  headerGuardHalfFabricate="${headerDirectory}__$headerBaseName"
+#  headerGuardHalfFabricate=$(echo "$headerBaseName" | sed -r 's|([a-z0-9])([A-Z])||g')
+
   local headerGuard
-  headerGuard=${headerStatedFileName//\//_}
+  headerGuard=${headerGuardHalfFabricate//\//_}
   headerGuard=${headerGuard//\./_}
   headerGuard=${headerGuard//\-/_}
+  headerGuard=$( echo "$headerGuard" | sed -r 's|([a-z0-9])([A-Z])|\1_\2|g')
   headerGuard=$(echo "$headerGuard" | tr '[:lower:]' '[:upper:]')
 
 # Demonstration on how to read from a function output:
@@ -271,6 +384,7 @@ checkSanity() {
 
   checkNamespaceInHeader
   checkFileNameInHeader
+  checkGuardInHeader
 }
 
 
