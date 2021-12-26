@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL_TEXT__STREAM_FILTER_H
-#define ORG_SIMPLE_UTIL_TEXT__STREAM_FILTER_H
+#ifndef ORG_SIMPLE_UTIL_TEXT_M_STREAM_FILTER_H
+#define ORG_SIMPLE_UTIL_TEXT_M_STREAM_FILTER_H
 /*
  * org-simple/util/text/StreamFilter.h
  *
@@ -189,4 +189,4 @@ public:
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_UTIL_TEXT__STREAM_FILTER_H
+#endif // ORG_SIMPLE_UTIL_TEXT_M_STREAM_FILTER_H

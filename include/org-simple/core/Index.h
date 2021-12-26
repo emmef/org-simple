@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CORE__INDEX_H
-#define ORG_SIMPLE_CORE__INDEX_H
+#ifndef ORG_SIMPLE_CORE_M_INDEX_H
+#define ORG_SIMPLE_CORE_M_INDEX_H
 /*
  * org-simple/core/Index.h
  *
@@ -141,4 +141,4 @@ struct Dereference {
 
 } // namespace org::simple::core
 
-#endif // ORG_SIMPLE_CORE__INDEX_H
+#endif // ORG_SIMPLE_CORE_M_INDEX_H

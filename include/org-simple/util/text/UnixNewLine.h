@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL_TEXT__UNIX_NEW_LINE_H
-#define ORG_SIMPLE_UTIL_TEXT__UNIX_NEW_LINE_H
+#ifndef ORG_SIMPLE_UTIL_TEXT_M_UNIX_NEW_LINE_H
+#define ORG_SIMPLE_UTIL_TEXT_M_UNIX_NEW_LINE_H
 /*
  * org-simple/util/text/UnixNewLine.h
  *
@@ -66,4 +66,4 @@ public:
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_UTIL_TEXT__UNIX_NEW_LINE_H
+#endif // ORG_SIMPLE_UTIL_TEXT_M_UNIX_NEW_LINE_H

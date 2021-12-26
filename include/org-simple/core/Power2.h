@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CORE__POWER2_H
-#define ORG_SIMPLE_CORE__POWER2_H
+#ifndef ORG_SIMPLE_CORE_M_POWER2_H
+#define ORG_SIMPLE_CORE_M_POWER2_H
 /*
  * org-simple/core/Power2.h
  *
@@ -140,4 +140,4 @@ struct Power2 {
 
 } // namespace org::simple::core
 
-#endif // ORG_SIMPLE_CORE__POWER2_H
+#endif // ORG_SIMPLE_CORE_M_POWER2_H

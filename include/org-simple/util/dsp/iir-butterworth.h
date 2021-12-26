@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL_DSP__IIR_BUTTERWORTH_H
-#define ORG_SIMPLE_UTIL_DSP__IIR_BUTTERWORTH_H
+#ifndef ORG_SIMPLE_UTIL_DSP_M_IIR_BUTTERWORTH_H
+#define ORG_SIMPLE_UTIL_DSP_M_IIR_BUTTERWORTH_H
 /*
  * org-simple/util/dsp/iir-butterworth.h
  *
@@ -274,4 +274,4 @@ private:
 
 } // namespace org::simple::util::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP__IIR_BUTTERWORTH_H
+#endif // ORG_SIMPLE_UTIL_DSP_M_IIR_BUTTERWORTH_H

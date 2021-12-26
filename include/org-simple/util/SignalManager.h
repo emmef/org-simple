@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL__SIGNAL_MANAGER_H
-#define ORG_SIMPLE_UTIL__SIGNAL_MANAGER_H
+#ifndef ORG_SIMPLE_UTIL_M_SIGNAL_MANAGER_H
+#define ORG_SIMPLE_UTIL_M_SIGNAL_MANAGER_H
 /*
  * org-simple/util/SignalManager.h
  *
@@ -164,4 +164,4 @@ private:
 typedef AbstractSignalManager<default_signal_value_type> SignalManager;
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_UTIL__SIGNAL_MANAGER_H
+#endif // ORG_SIMPLE_UTIL_M_SIGNAL_MANAGER_H

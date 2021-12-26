@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL_TEXT__QUOTE_STATE_H
-#define ORG_SIMPLE_UTIL_TEXT__QUOTE_STATE_H
+#ifndef ORG_SIMPLE_UTIL_TEXT_M_QUOTE_STATE_H
+#define ORG_SIMPLE_UTIL_TEXT_M_QUOTE_STATE_H
 /*
  * org-simple/util/text/QuoteState.h
  *
@@ -102,4 +102,4 @@ using QuotedBasedStreamWithPredicate =
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_UTIL_TEXT__QUOTE_STATE_H
+#endif // ORG_SIMPLE_UTIL_TEXT_M_QUOTE_STATE_H

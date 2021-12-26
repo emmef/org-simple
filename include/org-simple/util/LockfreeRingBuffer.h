@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL__LOCKFREE_RING_BUFFER_H
-#define ORG_SIMPLE_UTIL__LOCKFREE_RING_BUFFER_H
+#ifndef ORG_SIMPLE_UTIL_M_LOCKFREE_RING_BUFFER_H
+#define ORG_SIMPLE_UTIL_M_LOCKFREE_RING_BUFFER_H
 /*
  * org-simple/util/LockfreeRingBuffer.h
  *
@@ -390,4 +390,4 @@ using RingBufferLockFree = LockFreeRingBuffer::Monotonic<
 
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_UTIL__LOCKFREE_RING_BUFFER_H
+#endif // ORG_SIMPLE_UTIL_M_LOCKFREE_RING_BUFFER_H

@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL_TEXT__INPUT_STREAMS_H
-#define ORG_SIMPLE_UTIL_TEXT__INPUT_STREAMS_H
+#ifndef ORG_SIMPLE_UTIL_TEXT_M_INPUT_STREAMS_H
+#define ORG_SIMPLE_UTIL_TEXT_M_INPUT_STREAMS_H
 /*
  * org-simple/util/text/InputStreams.h
  *
@@ -105,4 +105,4 @@ public:
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_UTIL_TEXT__INPUT_STREAMS_H
+#endif // ORG_SIMPLE_UTIL_TEXT_M_INPUT_STREAMS_H

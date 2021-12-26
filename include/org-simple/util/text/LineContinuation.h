@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL_TEXT__LINE_CONTINUATION_H
-#define ORG_SIMPLE_UTIL_TEXT__LINE_CONTINUATION_H
+#ifndef ORG_SIMPLE_UTIL_TEXT_M_LINE_CONTINUATION_H
+#define ORG_SIMPLE_UTIL_TEXT_M_LINE_CONTINUATION_H
 /*
  * org-simple/util/text/LineContinuation.h
  *
@@ -85,4 +85,4 @@ public:
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_UTIL_TEXT__LINE_CONTINUATION_H
+#endif // ORG_SIMPLE_UTIL_TEXT_M_LINE_CONTINUATION_H

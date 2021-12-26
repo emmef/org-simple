@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CORE__DENORMAL_H
-#define ORG_SIMPLE_CORE__DENORMAL_H
+#ifndef ORG_SIMPLE_CORE_M_DENORMAL_H
+#define ORG_SIMPLE_CORE_M_DENORMAL_H
 /*
  * org-simple/core/denormal.h
  *
@@ -125,4 +125,4 @@ public:
 
 } // namespace org::simple::core
 
-#endif // ORG_SIMPLE_CORE__DENORMAL_H
+#endif // ORG_SIMPLE_CORE_M_DENORMAL_H

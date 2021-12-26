@@ -295,7 +295,14 @@ readGuardInfoFromFile() {
 replaceGuardLines() {
   local processedFile
   processedFile="$(dirname "$copiedFile")/.$(basename "$copiedFile")"
-
+  if [ -f "$processedFile" ]
+  then
+    if ! rm "$processedFile"
+    then
+      echo "ERROR: ${headerFullPath}: Not able to remove temporary file $processedFile"
+      return 1
+    fi
+  fi
   local line
 
   while IFS= read -r line
@@ -369,7 +376,7 @@ checkSanity() {
   headerStatedFileName="$headerDirectory/$headerBaseName"
 
   local headerGuardHalfFabricate
-  headerGuardHalfFabricate="${headerDirectory}__$headerBaseName"
+  headerGuardHalfFabricate="${headerDirectory}_M_$headerBaseName"
 #  headerGuardHalfFabricate=$(echo "$headerBaseName" | sed -r 's|([a-z0-9])([A-Z])||g')
 
   local headerGuard

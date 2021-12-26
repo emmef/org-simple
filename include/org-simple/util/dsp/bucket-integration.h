@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL_DSP__BUCKET_INTEGRATION_H
-#define ORG_SIMPLE_UTIL_DSP__BUCKET_INTEGRATION_H
+#ifndef ORG_SIMPLE_UTIL_DSP_M_BUCKET_INTEGRATION_H
+#define ORG_SIMPLE_UTIL_DSP_M_BUCKET_INTEGRATION_H
 /*
  * org-simple/util/dsp/bucket-integration.h
  *
@@ -106,4 +106,4 @@ std::cout << N << " samples approached by " <<
 
 } // namespace org::simple::util::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP__BUCKET_INTEGRATION_H
+#endif // ORG_SIMPLE_UTIL_DSP_M_BUCKET_INTEGRATION_H

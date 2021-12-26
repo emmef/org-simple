@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL_TEXT__CHARACTERS_H
-#define ORG_SIMPLE_UTIL_TEXT__CHARACTERS_H
+#ifndef ORG_SIMPLE_UTIL_TEXT_M_CHARACTERS_H
+#define ORG_SIMPLE_UTIL_TEXT_M_CHARACTERS_H
 /*
  * org-simple/util/text/Characters.h
  *
@@ -359,4 +359,4 @@ struct QuoteMatchers {
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_UTIL_TEXT__CHARACTERS_H
+#endif // ORG_SIMPLE_UTIL_TEXT_M_CHARACTERS_H

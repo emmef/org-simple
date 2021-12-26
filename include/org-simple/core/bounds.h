@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CORE__BOUNDS_H
-#define ORG_SIMPLE_CORE__BOUNDS_H
+#ifndef ORG_SIMPLE_CORE_M_BOUNDS_H
+#define ORG_SIMPLE_CORE_M_BOUNDS_H
 /*
  * org-simple/core/bounds.h
  *
@@ -85,4 +85,4 @@ template <typename T, typename V>
 
 } // namespace org::simple::core
 
-#endif // ORG_SIMPLE_CORE__BOUNDS_H
+#endif // ORG_SIMPLE_CORE_M_BOUNDS_H

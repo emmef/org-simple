@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL__SIGNAL_H
-#define ORG_SIMPLE_UTIL__SIGNAL_H
+#ifndef ORG_SIMPLE_UTIL_M_SIGNAL_H
+#define ORG_SIMPLE_UTIL_M_SIGNAL_H
 /*
  * org-simple/util/Signal.h
  *
@@ -289,4 +289,4 @@ typedef AbstractSignal<default_signal_value_type> Signal;
 
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_UTIL__SIGNAL_H
+#endif // ORG_SIMPLE_UTIL_M_SIGNAL_H

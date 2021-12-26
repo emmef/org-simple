@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTIL__TIMEOUT_H
-#define ORG_SIMPLE_UTIL__TIMEOUT_H
+#ifndef ORG_SIMPLE_UTIL_M_TIMEOUT_H
+#define ORG_SIMPLE_UTIL_M_TIMEOUT_H
 /*
  * org-simple/util/Timeout.h
  *
@@ -139,4 +139,4 @@ private:
 
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_UTIL__TIMEOUT_H
+#endif // ORG_SIMPLE_UTIL_M_TIMEOUT_H
