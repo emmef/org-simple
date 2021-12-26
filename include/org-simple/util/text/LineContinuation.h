@@ -70,12 +70,12 @@ public:
 };
 
 template <typename C>
-class LineContinuationStream : public util::InputStream<C> {
-  util::InputStream<C> &input;
+class LineContinuationStream : public InputStream<C> {
+  InputStream<C> &input;
   LineContinuationFilter<C> filter;
 
 public:
-  explicit LineContinuationStream(util::InputStream<C> &stream)
+  explicit LineContinuationStream(InputStream<C> &stream)
       : input(stream) {}
 
   bool get(C &result) final { return applyInputFilter(filter, input, result); }

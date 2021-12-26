@@ -100,7 +100,7 @@ template <typename CP> class KeyValueConfig {
   NonGraphFilter nonGraphTerminatedFilter;
   NewLineFilter newLineTerminatedFilter;
 
-  void handleKey(State &state, InputStream<CP> &stream,
+  void handleKey(State &state, text::InputStream<CP> &stream,
                  KeyReader<CP> &keyReader, bool ignoreErrors,
                  const positions *pos, const CP &lastReadValue) {
     try {
@@ -125,7 +125,7 @@ template <typename CP> class KeyValueConfig {
                 : State::SkipToAssignment;
   }
 
-  void handleValue(State &state, util::InputStream<CP> &stream,
+  void handleValue(State &state, text::InputStream<CP> &stream,
                    ValueReader<CP> &valueReader, const CP *keyName,
                    bool ignoreErrors, const positions *pos) {
     try {

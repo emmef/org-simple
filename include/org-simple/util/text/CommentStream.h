@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 #include <exception>
-#include <org-simple/util/InputStream.h>
+#include <org-simple/util/text/InputStream.h>
 #include <org-simple/util/text/QuoteState.h>
 
 namespace org::simple::util::text {
@@ -48,7 +48,7 @@ template <typename T> struct CommentStreamConfig {
 };
 
 template <typename T>
-class CommentStream : public util::InputStream<T>,
+class CommentStream : public InputStream<T>,
                       private CommentStreamConfig<T> {
 
   using CommentStreamConfig<T>::quoteState;

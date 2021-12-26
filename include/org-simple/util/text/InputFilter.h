@@ -22,7 +22,7 @@
  */
 
 #include <cstdint>
-#include <org-simple/util/InputStream.h>
+#include <org-simple/util/text/InputStream.h>
 #include <org-simple/util/text/Characters.h>
 
 namespace org::simple::util::text {

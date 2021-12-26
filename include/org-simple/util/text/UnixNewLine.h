@@ -52,12 +52,12 @@ public:
 
 };
 
-template <typename C> class UnixNewLineStream : public util::InputStream<C> {
-  util::InputStream<C> &input;
+template <typename C> class UnixNewLineStream : public InputStream<C> {
+  InputStream<C> &input;
   UnixNewLineFilter<C> filter;
 
 public:
-  explicit UnixNewLineStream(util::InputStream<C> &stream) : input(stream) {}
+  explicit UnixNewLineStream(InputStream<C> &stream) : input(stream) {}
 
   const UnixNewLineFilter<C> &state() { return filter; }
   bool get(C &result) final { return applyInputFilter(filter, input, result); }

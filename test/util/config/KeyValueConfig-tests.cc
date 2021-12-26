@@ -14,7 +14,7 @@ typedef org::simple::util::config::KeyValueConfig<char> KeyValueConfig;
 typedef org::simple::util::config::ReaderResult ReaderResult;
 typedef org::simple::util::config::KeyReader<char> KeyReader;
 typedef org::simple::util::config::ValueReader<char> ValueReader;
-typedef org::simple::util::InputStream<char> InputStream;
+typedef org::simple::util::text::InputStream<char> InputStream;
 typedef org::simple::util::text::CommentStreamConfig<char> CommentStreamConfig;
 typedef org::simple::util::text::CommentStream<char> CommentStream;
 typedef org::simple::util::text::CStringInputStream<char> StringStream;

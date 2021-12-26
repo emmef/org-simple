@@ -20,14 +20,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <org-simple/util/InputStream.h>
+#include <org-simple/util/text/InputStream.h>
 #include <algorithm>
 #include <string>
 
 namespace org::simple::util::text {
 
 template <typename T>
-class CStringInputStream : public org::simple::util::InputStream<T> {
+class CStringInputStream : public InputStream<T> {
   const T *input;
   int pos;
 
@@ -59,7 +59,7 @@ public:
 };
 
 template <typename T>
-class StringInputStream : public org::simple::util::InputStream<T> {
+class StringInputStream : public InputStream<T> {
   std::basic_string<T> input;
   size_t pos;
 

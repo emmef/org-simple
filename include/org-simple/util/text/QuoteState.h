@@ -68,13 +68,13 @@ public:
 };
 
 template <typename T>
-class QuotedStateStream : public QuoteState<T>, public util::InputStream<T> {
+class QuotedStateStream : public QuoteState<T>, public InputStream<T> {
 
 public:
   using matcherFunction = typename QuoteMatcher<T>::function;
 
   template <typename Q>
-  QuotedStateStream(util::InputStream<T> &stream, Q functionOrQuotes)
+  QuotedStateStream(InputStream<T> &stream, Q functionOrQuotes)
       : QuoteState<T>(functionOrQuotes), input(stream) {}
 
   bool get(T &result) final {
@@ -86,7 +86,7 @@ public:
   }
 
 private:
-  util::InputStream<T> &input;
+  InputStream<T> &input;
 };
 
 template <typename C> class EndOfQuotedTerminationFilter : public InputFilter<C> {

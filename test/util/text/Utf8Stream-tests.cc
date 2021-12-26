@@ -10,13 +10,13 @@
 using Utf8 = org::simple::util::text::Utf8Encoding;
 
 namespace {
-class TeeTest : public org::simple::util::InputStream<char> {
-  org::simple::util::InputStream<char> &input;
+class TeeTest : public org::simple::util::text::InputStream<char> {
+  org::simple::util::text::InputStream<char> &input;
   char lastRead;
   std::string string;
 
 public:
-  TeeTest(org::simple::util::InputStream<char> &stream) : input(stream) {}
+  TeeTest(org::simple::util::text::InputStream<char> &stream) : input(stream) {}
 
   bool get(char &result) override {
     if (input.get(lastRead)) {
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
 }
 
 BOOST_AUTO_TEST_CASE(tesUnicodeToUtf8ToUnicode) {
-  class CodePointGenerator : public org::simple::util::InputStream<Utf8::codePoint > {
+  class CodePointGenerator : public org::simple::util::text::InputStream<Utf8::codePoint > {
     Utf8::codePoint cp = 0;
     const Utf8::codePoint end = Utf8::maximumCodePoint;
 

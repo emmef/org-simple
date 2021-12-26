@@ -22,14 +22,14 @@
  */
 #include <org-simple/util/text/CharEncode.h>
 #include <org-simple/util/text/Characters.h>
-#include <org-simple/util/InputStream.h>
+#include <org-simple/util/text/InputStream.h>
 
 namespace org::simple::util::text {
-template <typename T> class AsciiNewLineStream : public util::InputStream<T> {
-  util::InputStream<T> &input;
+template <typename T> class AsciiNewLineStream : public InputStream<T> {
+  InputStream<T> &input;
 
 public:
-  AsciiNewLineStream(util::InputStream<T> &stream) : input(stream) {}
+  AsciiNewLineStream(InputStream<T> &stream) : input(stream) {}
 
   bool get(T &result) override {
     T c;
@@ -45,17 +45,17 @@ public:
   }
 };
 
-template <> class AsciiNewLineStream<char> : public util::InputStream<char> {
-  util::InputStream<char> &input;
+template <> class AsciiNewLineStream<char> : public InputStream<char> {
+  InputStream<char> &input;
 
 public:
-  AsciiNewLineStream(util::InputStream<char> &stream) : input(stream) {}
+  AsciiNewLineStream(InputStream<char> &stream) : input(stream) {}
 
   bool get(char &result) override { return input.get(result); }
 };
 
-class ValidatedUtf8Stream : public util::InputStream<char> {
-  util::InputStream<char> &input;
+class ValidatedUtf8Stream : public InputStream<char> {
+  InputStream<char> &input;
   char8_t buffer[5];
   signed pos;
 
@@ -86,7 +86,7 @@ class ValidatedUtf8Stream : public util::InputStream<char> {
   }
 
 public:
-  ValidatedUtf8Stream(util::InputStream<char> &stream)
+  ValidatedUtf8Stream(InputStream<char> &stream)
       : input(stream), pos(-1) {}
 
   bool get(char &result) override {
@@ -117,14 +117,14 @@ public:
 };
 
 template <typename C>
-class Utf8ToUnicodeStream : public util::InputStream<Utf8Encoding::codePoint> {
+class Utf8ToUnicodeStream : public InputStream<Utf8Encoding::codePoint> {
   static constexpr bool isSigned = std::is_same_v<char, C>;
   static_assert(isSigned || std::is_same_v<Utf8Encoding::byte, C>);
-  util::InputStream<C> &input;
+  InputStream<C> &input;
   Utf8Encoding::Reader reader;
 
 public:
-  Utf8ToUnicodeStream(util::InputStream<C> &source) : input(source) {}
+  Utf8ToUnicodeStream(InputStream<C> &source) : input(source) {}
 
   bool get(Utf8Encoding::codePoint &result) final {
     C byte;
@@ -144,16 +144,16 @@ public:
 
 
 template <typename C>
-class UnicodeToUtf8Stream : public util::InputStream<C> {
+class UnicodeToUtf8Stream : public InputStream<C> {
   static constexpr bool isSigned = std::is_same_v<char, C>;
   static_assert(isSigned || std::is_same_v<Utf8Encoding::byte, C>);
-  util::InputStream<Utf8Encoding::codePoint> &input;
+  InputStream<Utf8Encoding::codePoint> &input;
   C buffer[5];
   int pos = -1;
   int end = 0;
 
 public:
-  UnicodeToUtf8Stream(util::InputStream<Utf8Encoding::codePoint> &source) : input(source) {}
+  UnicodeToUtf8Stream(InputStream<Utf8Encoding::codePoint> &source) : input(source) {}
 
   bool get(C &result) final {
     if (pos >= 0) {

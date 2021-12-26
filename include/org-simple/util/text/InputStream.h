@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_INPUTSTREAM_H
-#define ORG_SIMPLE_INPUTSTREAM_H
+#ifndef ORG_SIMPLE_UTIL_TEXT_INPUTSTREAM_H
+#define ORG_SIMPLE_UTIL_TEXT_INPUTSTREAM_H
 /*
- * org-simple/util/InputStream.h
+ * org-simple/util/text/InputStream.h
  *
  * Added by michel on 2021-12-15
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -24,7 +24,7 @@
 #include <limits>
 #include <type_traits>
 
-namespace org::simple::util {
+namespace org::simple::util::text {
 
 template <typename C> class InputStream {
 
@@ -158,6 +158,6 @@ public:
   }
 };
 
-} // namespace org::simple::util
+} // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_INPUTSTREAM_H
+#endif // ORG_SIMPLE_UTIL_TEXT_INPUTSTREAM_H

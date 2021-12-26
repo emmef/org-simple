@@ -22,7 +22,7 @@
  */
 
 #include <org-simple/util/config/ConfigException.h>
-#include <org-simple/util/InputStream.h>
+#include <org-simple/util/text/InputStream.h>
 
 namespace org::simple::util::config {
 
@@ -45,7 +45,7 @@ public:
    * @param input The input stream to read from.
    * @throws ConfigException
    */
-  virtual ReaderResult read(util::InputStream<T> &input) = 0;
+  virtual ReaderResult read(text::InputStream<T> &input) = 0;
 
   /**
    * Returns the key name if that was successfully read, or throws a
@@ -75,7 +75,7 @@ public:
    * @param input The input stream to read from.
    * @throws ConfigException
    */
-  virtual ReaderResult read(util::InputStream<T> &input, const T *keyName) = 0;
+  virtual ReaderResult read(text::InputStream<T> &input, const T *keyName) = 0;
 
   virtual ~ValueReader() = default;
 };
