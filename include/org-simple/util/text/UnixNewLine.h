@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_UNIXNEWLINE_H
 #define ORG_SIMPLE_UNIXNEWLINE_H
 /*
- * org-simple/util/text/PosixNewLine.h
+ * org-simple/util/text/UnixNewLine.h
  *
  * Added by michel on 2021-12-22
  * Copyright (C) 2015-2021 Michel Fleur.

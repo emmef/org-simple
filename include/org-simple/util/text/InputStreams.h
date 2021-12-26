@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_INPUTSTREAMS_H
 #define ORG_SIMPLE_INPUTSTREAMS_H
 /*
- * org-simple/util/text/WhitespaceTerminatedStream.h
+ * org-simple/util/text/InputStreams.h
  *
  * Added by michel on 2021-12-24
  * Copyright (C) 2015-2021 Michel Fleur.

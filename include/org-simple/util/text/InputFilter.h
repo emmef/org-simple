@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_INPUTFILTER_H
 #define ORG_SIMPLE_INPUTFILTER_H
 /*
- * org-simple/util/text/TextFilters.h
+ * org-simple/util/text/InputFilter.h
  *
  * Added by michel on 2021-12-21
  * Copyright (C) 2015-2021 Michel Fleur.
