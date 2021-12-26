@@ -47,6 +47,8 @@ public:
     }
   };
 
+  static_assert(Traits::template isA<InputStream<C>>());
+
   template <class D> class Wrapped : public InputStream<C> {
     static_assert(Traits::template isA<D>());
     D *wrapped;
