@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_ALIGN_H
-#define ORG_SIMPLE_ALIGN_H
+#ifndef ORG_SIMPLE_CORE__ALIGN_H
+#define ORG_SIMPLE_CORE__ALIGN_H
 /*
  * org-simple/core/align.h
  *
@@ -220,4 +220,4 @@ public:
 
 } // namespace org::simple::core
 
-#endif // ORG_SIMPLE_ALIGN_H
+#endif // ORG_SIMPLE_CORE__ALIGN_H

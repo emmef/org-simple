@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_IIR_BIQUAD_H
-#define ORG_SIMPLE_IIR_BIQUAD_H
+#ifndef ORG_SIMPLE_UTIL_DSP__IIR_BIQUAD_H
+#define ORG_SIMPLE_UTIL_DSP__IIR_BIQUAD_H
 /*
  * org-simple/util/dsp/iir-biquad.h
  *
@@ -577,4 +577,4 @@ public:
 };
 } // namespace org::simple::util::dsp
 
-#endif // ORG_SIMPLE_IIR_BIQUAD_H
+#endif // ORG_SIMPLE_UTIL_DSP__IIR_BIQUAD_H

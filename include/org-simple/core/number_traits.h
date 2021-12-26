@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_NUMBER_TRAITS_H
-#define ORG_SIMPLE_NUMBER_TRAITS_H
+#ifndef ORG_SIMPLE_CORE__NUMBER_TRAITS_H
+#define ORG_SIMPLE_CORE__NUMBER_TRAITS_H
 /*
  * org-simple/core/number_traits.h
  *
@@ -42,4 +42,4 @@ static constexpr bool is_number = std::is_arithmetic_v<T> || is_complex_v<T>;
 
 } // namespace org::simple::core
 
-#endif // ORG_SIMPLE_NUMBER_TRAITS_H
+#endif // ORG_SIMPLE_CORE__NUMBER_TRAITS_H

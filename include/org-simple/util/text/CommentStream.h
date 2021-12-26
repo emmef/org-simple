@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_COMMENTSTREAM_H
-#define ORG_SIMPLE_COMMENTSTREAM_H
+#ifndef ORG_SIMPLE_UTIL_TEXT__COMMENT_STREAM_H
+#define ORG_SIMPLE_UTIL_TEXT__COMMENT_STREAM_H
 /*
  * org-simple/util/text/CommentStream.h
  *
@@ -304,4 +304,4 @@ public:
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_COMMENTSTREAM_H
+#endif // ORG_SIMPLE_UTIL_TEXT__COMMENT_STREAM_H

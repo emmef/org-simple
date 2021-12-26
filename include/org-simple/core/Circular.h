@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CIRCULAR_H
-#define ORG_SIMPLE_CIRCULAR_H
+#ifndef ORG_SIMPLE_CORE__CIRCULAR_H
+#define ORG_SIMPLE_CORE__CIRCULAR_H
 /*
  * org-simple/core/Circular.h
  *
@@ -374,4 +374,4 @@ typedef CircularBase<size_t> Circular;
 
 } // namespace org::simple::core
 
-#endif // ORG_SIMPLE_CIRCULAR_H
+#endif // ORG_SIMPLE_CORE__CIRCULAR_H

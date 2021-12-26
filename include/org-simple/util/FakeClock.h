@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_FAKECLOCK_H
-#define ORG_SIMPLE_FAKECLOCK_H
+#ifndef ORG_SIMPLE_UTIL__FAKE_CLOCK_H
+#define ORG_SIMPLE_UTIL__FAKE_CLOCK_H
 /*
  * org-simple/util/FakeClock.h
  *
@@ -167,4 +167,4 @@ typedef helper::AbstractFakeClock<true> FakeClockThreadLocal;
 
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_FAKECLOCK_H
+#endif // ORG_SIMPLE_UTIL__FAKE_CLOCK_H

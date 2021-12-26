@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_SAMPLELAYOUT_H
-#define ORG_SIMPLE_SAMPLELAYOUT_H
+#ifndef ORG_SIMPLE_UTIL__SAMPLE_LAYOUT_H
+#define ORG_SIMPLE_UTIL__SAMPLE_LAYOUT_H
 /*
  * org-simple/util/SampleLayout.h
  *
@@ -158,4 +158,4 @@ struct SampleLayout {
 
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_SAMPLELAYOUT_H
+#endif // ORG_SIMPLE_UTIL__SAMPLE_LAYOUT_H

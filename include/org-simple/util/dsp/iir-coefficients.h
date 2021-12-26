@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_IIR_COEFFICIENTS_H
-#define ORG_SIMPLE_IIR_COEFFICIENTS_H
+#ifndef ORG_SIMPLE_UTIL_DSP__IIR_COEFFICIENTS_H
+#define ORG_SIMPLE_UTIL_DSP__IIR_COEFFICIENTS_H
 /*
  * org-simple/util/dsp/iir-coefficients.h
  *
@@ -711,4 +711,4 @@ size_t effectiveIRLength(const CoefficientsFilter<S> &filter, size_t maxLength,
 
 } // namespace org::simple::util::dsp
 
-#endif // ORG_SIMPLE_IIR_COEFFICIENTS_H
+#endif // ORG_SIMPLE_UTIL_DSP__IIR_COEFFICIENTS_H

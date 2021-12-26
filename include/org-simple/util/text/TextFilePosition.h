@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_TEXTFILEPOSITION_H
-#define ORG_SIMPLE_TEXTFILEPOSITION_H
+#ifndef ORG_SIMPLE_UTIL_TEXT__TEXT_FILE_POSITION_H
+#define ORG_SIMPLE_UTIL_TEXT__TEXT_FILE_POSITION_H
 /*
  * org-simple/util/text/TextFilePosition.h
  *
@@ -51,4 +51,4 @@ public:
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_TEXTFILEPOSITION_H
+#endif // ORG_SIMPLE_UTIL_TEXT__TEXT_FILE_POSITION_H

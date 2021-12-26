@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_QUOTESTATE_H
-#define ORG_SIMPLE_QUOTESTATE_H
+#ifndef ORG_SIMPLE_UTIL_TEXT__QUOTE_STATE_H
+#define ORG_SIMPLE_UTIL_TEXT__QUOTE_STATE_H
 /*
  * org-simple/util/text/QuoteState.h
  *
@@ -103,4 +103,4 @@ public:
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_QUOTESTATE_H
+#endif // ORG_SIMPLE_UTIL_TEXT__QUOTE_STATE_H

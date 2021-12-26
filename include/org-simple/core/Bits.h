@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_BITS_H
-#define ORG_SIMPLE_BITS_H
+#ifndef ORG_SIMPLE_CORE__BITS_H
+#define ORG_SIMPLE_CORE__BITS_H
 /*
  * org-simple/core/Bits.h
  *
@@ -380,4 +380,4 @@ static const char *renderBits(number num) requires
 } // namespace bits
 } // namespace org::simple::core
 
-#endif // ORG_SIMPLE_BITS_H
+#endif // ORG_SIMPLE_CORE__BITS_H

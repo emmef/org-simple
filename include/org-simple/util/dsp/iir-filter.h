@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_IIR_FILTER_H
-#define ORG_SIMPLE_IIR_FILTER_H
+#ifndef ORG_SIMPLE_UTIL_DSP__IIR_FILTER_H
+#define ORG_SIMPLE_UTIL_DSP__IIR_FILTER_H
 /*
  * org-simple/util/dsp/iir-filter.h
  *
@@ -406,4 +406,4 @@ void filter_backward_zp(size_t order, size_t count,
 
 } // org::simple::util::dsp
 
-#endif // ORG_SIMPLE_IIR_FILTER_H
+#endif // ORG_SIMPLE_UTIL_DSP__IIR_FILTER_H

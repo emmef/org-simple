@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_REFERENCE_H
-#define ORG_SIMPLE_REFERENCE_H
+#ifndef ORG_SIMPLE_UTIL__REFERENCE_H
+#define ORG_SIMPLE_UTIL__REFERENCE_H
 /*
  * org-simple/util/Reference.h
  *
@@ -163,4 +163,4 @@ public:
 
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_REFERENCE_H
+#endif // ORG_SIMPLE_UTIL__REFERENCE_H

@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CONFIGREADERS_H
-#define ORG_SIMPLE_CONFIGREADERS_H
+#ifndef ORG_SIMPLE_UTIL_CONFIG__CONFIG_READERS_H
+#define ORG_SIMPLE_UTIL_CONFIG__CONFIG_READERS_H
 /*
  * org-simple/util/config/ConfigReaders.h
  *
@@ -82,4 +82,4 @@ public:
 
 } // namespace org::simple::util::config
 
-#endif // ORG_SIMPLE_CONFIGREADERS_H
+#endif // ORG_SIMPLE_UTIL_CONFIG__CONFIG_READERS_H

@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CONFIGEXCEPTION_H
-#define ORG_SIMPLE_CONFIGEXCEPTION_H
+#ifndef ORG_SIMPLE_UTIL_CONFIG__CONFIG_EXCEPTION_H
+#define ORG_SIMPLE_UTIL_CONFIG__CONFIG_EXCEPTION_H
 /*
  * org-simple/util/config/ConfigException.h
  *
@@ -41,4 +41,4 @@ public:
 
 } // namespace org::simple::util::config
 
-#endif // ORG_SIMPLE_CONFIGEXCEPTION_H
+#endif // ORG_SIMPLE_UTIL_CONFIG__CONFIG_EXCEPTION_H

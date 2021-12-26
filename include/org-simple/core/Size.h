@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_SIZE_H
-#define ORG_SIMPLE_SIZE_H
+#ifndef ORG_SIMPLE_CORE__SIZE_H
+#define ORG_SIMPLE_CORE__SIZE_H
 /*
  * org-simple/core/Size.h
  *
@@ -531,4 +531,4 @@ typedef SizeBase<size_t> Size;
 
 } // namespace org::simple::core
 
-#endif // ORG_SIMPLE_SIZE_H
+#endif // ORG_SIMPLE_CORE__SIZE_H

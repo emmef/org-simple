@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_UTF8STREAM_H
-#define ORG_SIMPLE_UTF8STREAM_H
+#ifndef ORG_SIMPLE_UTIL_TEXT__UTF8_STREAM_H
+#define ORG_SIMPLE_UTIL_TEXT__UTF8_STREAM_H
 /*
  * org-simple/util/text/Utf8Stream.h
  *
@@ -185,4 +185,4 @@ typedef UnicodeToUtf8Stream<char> UnicodeToUtf8CharStream;
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_UTF8STREAM_H
+#endif // ORG_SIMPLE_UTIL_TEXT__UTF8_STREAM_H

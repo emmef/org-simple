@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_NUMARRAY_H
-#define ORG_SIMPLE_NUMARRAY_H
+#ifndef ORG_SIMPLE_UTIL__NUM_ARRAY_H
+#define ORG_SIMPLE_UTIL__NUM_ARRAY_H
 /*
  * org-simple/util/NumArray.h
  *
@@ -357,4 +357,4 @@ template <typename T, class S> struct BaseNumArray : public S {
 
 } // namespace org::simple::util
 
-#endif // ORG_SIMPLE_NUMARRAY_H
+#endif // ORG_SIMPLE_UTIL__NUM_ARRAY_H

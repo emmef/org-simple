@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_INTEGRATION_H
-#define ORG_SIMPLE_INTEGRATION_H
+#ifndef ORG_SIMPLE_UTIL_DSP__INTEGRATION_H
+#define ORG_SIMPLE_UTIL_DSP__INTEGRATION_H
 /*
  * org-simple/util/dsp/integration.h
  *
@@ -262,4 +262,4 @@ typedef BaseCoefficients<double> Coefficients;
 
 } // namespace org::simple::util::dsp
 
-#endif // ORG_SIMPLE_INTEGRATION_H
+#endif // ORG_SIMPLE_UTIL_DSP__INTEGRATION_H

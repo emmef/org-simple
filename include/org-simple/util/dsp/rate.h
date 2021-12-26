@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_RATE_H
-#define ORG_SIMPLE_RATE_H
+#ifndef ORG_SIMPLE_UTIL_DSP__RATE_H
+#define ORG_SIMPLE_UTIL_DSP__RATE_H
 /*
  * org-simple/util/dsp/rate.h
  *
@@ -132,4 +132,4 @@ private:
 
 } // namespace org::simple::util::dsp
 
-#endif // ORG_SIMPLE_RATE_H
+#endif // ORG_SIMPLE_UTIL_DSP__RATE_H

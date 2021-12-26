@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CHARENCODE_H
-#define ORG_SIMPLE_CHARENCODE_H
+#ifndef ORG_SIMPLE_UTIL_TEXT__CHAR_ENCODE_H
+#define ORG_SIMPLE_UTIL_TEXT__CHAR_ENCODE_H
 /*
  * org-simple/util/text/CharEncode.h
  *
@@ -429,4 +429,4 @@ typedef AsciiEncoding::Reader AsciiReader;
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_CHARENCODE_H
+#endif // ORG_SIMPLE_UTIL_TEXT__CHAR_ENCODE_H

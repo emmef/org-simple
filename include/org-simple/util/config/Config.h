@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CONFIG_H
-#define ORG_SIMPLE_CONFIG_H
+#ifndef ORG_SIMPLE_UTIL_CONFIG__CONFIG_H
+#define ORG_SIMPLE_UTIL_CONFIG__CONFIG_H
 /*
  * org-simple/util/config/Config.h
  *
@@ -216,4 +216,4 @@ public:
 
 } // namespace org::simple::util::config
 
-#endif // ORG_SIMPLE_CONFIG_H
+#endif // ORG_SIMPLE_UTIL_CONFIG__CONFIG_H

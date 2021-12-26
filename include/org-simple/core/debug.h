@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_CORE_DEBUG_H
-#define ORG_SIMPLE_CORE_DEBUG_H
+#ifndef ORG_SIMPLE_CORE__DEBUG_H
+#define ORG_SIMPLE_CORE__DEBUG_H
 /*
  * org-simple/core/debug.h
  *
@@ -37,4 +37,4 @@
 #define debugLine(S)
 #endif
 
-#endif // ORG_SIMPLE_CORE_DEBUG_H
+#endif // ORG_SIMPLE_CORE__DEBUG_H

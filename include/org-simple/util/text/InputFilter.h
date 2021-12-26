@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_INPUTFILTER_H
-#define ORG_SIMPLE_INPUTFILTER_H
+#ifndef ORG_SIMPLE_UTIL_TEXT__INPUT_FILTER_H
+#define ORG_SIMPLE_UTIL_TEXT__INPUT_FILTER_H
 /*
  * org-simple/util/text/InputFilter.h
  *
@@ -193,4 +193,4 @@ public:
 
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_INPUTFILTER_H
+#endif // ORG_SIMPLE_UTIL_TEXT__INPUT_FILTER_H
