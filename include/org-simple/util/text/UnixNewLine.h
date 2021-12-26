@@ -21,11 +21,11 @@
  * limitations under the License.
  */
 
-#include <org-simple/util/text/InputFilter.h>
+#include <org-simple/util/text/StreamFilter.h>
 
 namespace org::simple::util::text {
 
-template <typename C> class UnixNewLineFilter : public InputFilter<C> {
+template <typename C> class UnixNewLineFilter : public StreamFilter<C> {
   bool lastCR = false;
 
 public:

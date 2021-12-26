@@ -20,7 +20,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <org-simple/util/text/InputFilter.h>
+#include <org-simple/util/text/StreamFilter.h>
 
 namespace org::simple::util::text {
 
@@ -89,7 +89,7 @@ private:
   InputStream<T> &input;
 };
 
-template <typename C> class EndOfQuotedTerminationFilter : public InputFilter<C> {
+template <typename C> class EndOfQuotedTerminationFilter : public StreamFilter<C> {
   const QuoteState<C> &state;
 
 public:

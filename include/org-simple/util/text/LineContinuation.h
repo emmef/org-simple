@@ -20,12 +20,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <org-simple/util/text/InputFilter.h>
+#include <org-simple/util/text/StreamFilter.h>
 
 namespace org::simple::util::text {
 
 template <typename C>
-class LineContinuationFilter : public InputFilter<C> {
+class LineContinuationFilter : public StreamFilter<C> {
   enum class State { Normal, Marked, ReturnNext };
   State state = State::Normal;
   C next = 0;

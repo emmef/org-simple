@@ -22,11 +22,11 @@
  */
 
 #include <org-simple/util/text/Characters.h>
-#include <org-simple/util/text/InputFilter.h>
+#include <org-simple/util/text/StreamFilter.h>
 
 namespace org::simple::util::text {
 
-template <typename C, class D> class NonGraphTerminatedFilter : public InputFilter<C> {
+template <typename C, class D> class NonGraphTerminatedFilter : public StreamFilter<C> {
   static_assert(std::is_same_v<Ascii, D> || std::is_same_v<Unicode, D>);
   const D &classifier = Classifiers::instance<D>();
 
@@ -37,7 +37,7 @@ public:
   }
 };
 
-template <typename C> class NewLineTerminatedFilter : public InputFilter<C> {
+template <typename C> class NewLineTerminatedFilter : public StreamFilter<C> {
 
 public:
   InputFilterResult filter(C &c) final {

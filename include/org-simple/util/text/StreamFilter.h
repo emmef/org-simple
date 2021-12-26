@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_TEXT__INPUT_FILTER_H
-#define ORG_SIMPLE_UTIL_TEXT__INPUT_FILTER_H
+#ifndef ORG_SIMPLE_UTIL_TEXT__STREAM_FILTER_H
+#define ORG_SIMPLE_UTIL_TEXT__STREAM_FILTER_H
 /*
- * org-simple/util/text/InputFilter.h
+ * org-simple/util/text/StreamFilter.h
  *
  * Added by michel on 2021-12-21
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -48,7 +48,7 @@ enum class InputFilterResult {
   Stop
 };
 
-template <typename C> class InputFilter {
+template <typename C> class StreamFilter {
 public:
   /**
    * Apply the filter, where the input and the output reside in {@code result}.
@@ -61,7 +61,7 @@ public:
    */
   virtual InputFilterResult filter(C &result) = 0;
 
-  virtual ~InputFilter() = default;
+  virtual ~StreamFilter() = default;
 
   struct Traits {
     template <class X>
@@ -79,7 +79,7 @@ public:
     }
   };
 
-  template <class D> class Wrapped : public InputFilter<C> {
+  template <class D> class Wrapped : public StreamFilter<C> {
     static_assert(Traits::template isA<D>());
     D *wrapped;
 
@@ -91,9 +91,9 @@ public:
     bool get(C &c) final { return wrapped->get(c); }
   };
 
-  template <class D> class Interfaced : public virtual InputFilter, public D {
+  template <class D> class Interfaced : public virtual StreamFilter, public D {
     static_assert(Traits::template isA<D>() &&
-                  !std::is_base_of_v<InputFilter, D>);
+                  !std::is_base_of_v<StreamFilter, D>);
 
   public:
     bool get(C &c) final { return D::filter(c); }
@@ -102,20 +102,21 @@ public:
 
 template <class F, typename C>
 static constexpr bool
-    hasInputFilterSignature = InputFilter<C>::Traits::template isA<F>();
+    hasStreamFilterSignature = StreamFilter<C>::Traits::template isA<F>();
 
 template <class F, typename C>
-requires(!std::is_base_of_v<InputFilter<C>, F> && hasInputFilterSignature<F, C>)
-    typename InputFilter<C>::template Wrapped<F> wrapAsInputFilter(F &wrapped) {
-  return typename InputFilter<C>::template Wrapped<F>(wrapped);
+requires(!std::is_base_of_v<StreamFilter<C>, F> &&
+         hasStreamFilterSignature<F, C>)
+    typename StreamFilter<C>::template Wrapped<F> wrapAsInputFilter(F &wrapped) {
+  return typename StreamFilter<C>::template Wrapped<F>(wrapped);
 }
 
 template <class F, class S, typename C>
-static constexpr bool canApplyInputFilterOnStream =
-    hasInputFilterSignature<F, C> &&hasInputStreamSignature<S, C>;
+static constexpr bool canApplyFilterOnStream =
+    hasStreamFilterSignature<F, C> &&hasInputStreamSignature<S, C>;
 
 template <class F, class S, typename C>
-requires(canApplyInputFilterOnStream<F, S, C>) static bool applyInputFilter(
+requires(canApplyFilterOnStream<F, S, C>) static bool applyInputFilter(
     F &filter, S &input, C &result) {
   do {
     /*
@@ -144,7 +145,7 @@ requires(canApplyInputFilterOnStream<F, S, C>) static bool applyInputFilter(
 }
 
 template<class F, class S, typename C> class FilteredInputStream : public InputStream<C> {
-  static_assert(canApplyInputFilterOnStream<F, S, C>);
+  static_assert(canApplyFilterOnStream<F, S, C>);
 
   F &f;
   S &s;
@@ -158,7 +159,7 @@ public:
 
 template <class F, class S, typename C, bool resetInputOnStop>
 class FilteredVariableInputStream : public InputStream<C> {
-  static_assert(canApplyInputFilterOnStream<F, S, C>);
+  static_assert(canApplyFilterOnStream<F, S, C>);
 
   F &filter;
   InputStream<C> *input = nullptr;
@@ -184,13 +185,6 @@ public:
   }
 };
 
-
-template <typename C> class InputProbe {
-public:
-  virtual void probe(const C &) = 0;
-  virtual ~InputProbe() = default;
-};
-
 } // namespace org::simple::util::text
 
-#endif // ORG_SIMPLE_UTIL_TEXT__INPUT_FILTER_H
+#endif // ORG_SIMPLE_UTIL_TEXT__STREAM_FILTER_H
