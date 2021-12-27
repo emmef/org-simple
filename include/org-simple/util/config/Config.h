@@ -78,12 +78,19 @@ template <typename CP> class KeyValueConfig {
     SkipToAssignment,
     SkipToValue
   };
+  static bool noAssignmentPredicate(const CP &c) { return c != '='; }
+  static bool isAssignmentPredicate(const CP &c) { return c == '='; }
+
   KeyValueConfigTypes<char> configTypes;
   using positions = const org::simple::util::text::TextFilePositionData<CP>;
   typedef typename KeyValueConfigTypes<CP>::classifierType classifierType;
-  using GraphPredicate = util::text::GraphPredicate<CP, classifierType>;
-  const GraphPredicate &graphPredicate = GraphPredicate ::instance();
-  using NewLinePredicate = util::text::NewLinePredicate<CP, false>;
+  typedef decltype(util::Predicates::of(
+      util::text::GraphPredicate<CP, classifierType>::function,
+      noAssignmentPredicate)) UnquotedKeyPredicate;
+  UnquotedKeyPredicate unquotedKeyPredicate = util::Predicates::of(
+      util::text::GraphPredicate<CP, classifierType>::function,
+      noAssignmentPredicate);
+  using NewLinePredicate = util::text::NewLinePredicate<CP, true>;
   const NewLinePredicate &newLinePredicate = NewLinePredicate ::instance();
   using QuoteBasedPredicate = util::text::QuoteStatePredicate<CP, true>;
   using EchoStream = util::text::EchoRepeatOneStream<CP>;
@@ -91,7 +98,7 @@ template <typename CP> class KeyValueConfig {
       util::text::PredicateVariableInputStream<CP, QuoteBasedPredicate, false,
                                                EchoStream>;
   using GraphOnlyStream =
-      util::text::PredicateVariableInputStream<CP, GraphPredicate, false,
+      util::text::PredicateVariableInputStream<CP, UnquotedKeyPredicate , false,
                                                EchoStream>;
   using BeforeNewLineStream =
       util::text::PredicateVariableInputStream<CP, NewLinePredicate, false,
@@ -126,7 +133,28 @@ template <typename CP> class KeyValueConfig {
                    ValueReader<CP> &valueReader, const CP *keyName,
                    bool ignoreErrors, const positions *pos) {
     try {
-      valueReader.read(stream, keyName);
+      switch (valueReader.read(stream, keyName)) {
+      case ReaderResult::Ok:
+        state = State::LineStart;
+        break;
+      case ReaderResult::NotFound:
+        if (!ignoreErrors) {
+          std:: string message = "Unknown key: ";
+          message += keyName;
+          throw createError(message.c_str(), pos);
+        }
+        state = State::LineStart;
+        break;
+      case ReaderResult::TooLong:
+        if (!ignoreErrors) {
+          std:: string message = "Value length exceeded for key ";
+          message += keyName;
+          throw createError(message.c_str(), pos);
+        }
+        state = State::LineStart;
+        break;
+
+      }
     } catch (const ParseError &e) {
       if (ignoreErrors) {
         state = State::SkipToEndOfLine;
@@ -150,7 +178,7 @@ public:
     EchoStream echoStream(commentStream);
     QuoteBasedPredicate quoteBasedPredicate(commentStream.state());
     EndOfQuoteStream inQuoteStream(&echoStream, quoteBasedPredicate);
-    GraphOnlyStream nonGraphTerminatedStream(&echoStream, graphPredicate);
+    GraphOnlyStream nonGraphTerminatedStream(&echoStream, unquotedKeyPredicate);
     BeforeNewLineStream newLineTerminatedStream(&echoStream, newLinePredicate);
 
     CP c;
@@ -193,6 +221,7 @@ public:
         break;
       case State::SkipToValue:
         if (!configTypes.classifier.isWhiteSpace(c)) {
+          echoStream.repeat();
           handleValue(state, newLineTerminatedStream, valueReader,
                       keyReader.getKey(), ignoreErrors, pos);
         }

@@ -76,7 +76,7 @@ class PrintingReader {
       while (input.get(c)) {
         value += c;
       }
-      std::cout << "\tValue=" << keyName << std::endl;
+      std::cout << "\tValue=" << value << std::endl;
       results.push_back({keyName, value});
       key.reset();
       return org::simple::util::config::ReaderResult::Ok;
