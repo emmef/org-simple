@@ -404,6 +404,6 @@ void filter_backward_zp(size_t order, size_t count,
   }
 }
 
-} // org::simple::util::dsp
+} // namespace org::simple::util::dsp
 
 #endif // ORG_SIMPLE_UTIL_DSP_M_IIR_FILTER_H

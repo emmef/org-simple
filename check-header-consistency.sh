@@ -1,13 +1,11 @@
 #!/bin/bash
 
-
 synopsis() {
-  echo -e "USAGE:\n\t$0 [--silent] [--fix-errors]"
+  echo -e "USAGE:\n\t$0 [--silent|-S] [--fix-errors|-F] [--verbose|-V] [--dry-run|-D]"
 }
 
 errorExit() {
-  if [ -n "$1" ]
-  then
+  if [ -n "$1" ]; then
     echo "$*" >&2
   fi
   exit 1
@@ -15,8 +13,7 @@ errorExit() {
 
 errorExitSynopsis() {
   synopsis
-  if [ -n "$1" ]
-  then
+  if [ -n "$1" ]; then
     echo "$*" >&2
   fi
   exit 1
@@ -25,8 +22,7 @@ errorExitSynopsis() {
 moveToScriptDirectory() {
   local myDir
   myDir=$(dirname $0)
-  if  ! cd "$myDir"
-  then
+  if ! cd "$myDir"; then
     errorExit "Could not change directory to \"$myDir\""
   fi
 }
@@ -34,22 +30,31 @@ moveToScriptDirectory() {
 # Global variables that alter behaviour of this script
 fixErrors=
 silentFix=
+debugLevel=
+dryRun=
+backupRoot="/tmp/header-fixes"
 
 parseArguments() {
   local arg
-  while [ -n "$1" ]
-  do
+  while [ -n "$1" ]; do
     arg="$1"
     shift
     case "$arg" in
-      --silent|-S)
-        silentFix="true"
-        ;;
-      --fix-errors|-F)
-        fixErrors="true"
-        ;;
-      *)
-       errorExitSynopsis "Unrecognised argument: " "$arg"
+    --silent | -S)
+      silentFix="true"
+      ;;
+    --fix-errors | -F)
+      fixErrors="true"
+      ;;
+    --verbose | -C)
+      debugLevel="1"
+      ;;
+    --dry-run | -D)
+      dryRun="1"
+      ;;
+    *)
+      errorExitSynopsis "Unrecognised argument: " "$arg"
+      ;;
     esac
   done
 }
@@ -57,346 +62,315 @@ parseArguments() {
 parseArguments $*
 moveToScriptDirectory
 
-createTemporaryFile() {
-  local tempDirectory
-  tempDirectory="$1/$headerDirectory"
-  local copyFullPath
-  copyFullPath="$tempDirectory/$headerBaseName"
+isDebugEnabled() {
+  if [ -z "$debugLevel" ]; then
+    return 1
+  fi
+}
 
-  if [ ! -d "${tempDirectory}" ]
-  then
-    if ! mkdir -p "${tempDirectory}"
-    then
-      echo "Cannot create temporary directory: ${tempDirectory}" >&2
+debugOutput() {
+  local line
+  local matchNumber='^[0-9]+$'
+  if [[ $lineCount =~ $matchNumber ]]; then
+    line="$headerFullPath:$lineCount:   DEBUG: $*"
+  else
+    line="$headerFullPath:   DEBUG: $*"
+  fi
+
+  if isDebugEnabled; then
+    echo "$line"
+  elif [ -z "$debugBuffer" ]; then
+    debugBuffer="$line"
+  else
+    debugBuffer="$debugBuffer\n$line"
+  fi
+}
+
+# Generates the values for the stated filename, the header-guard definition, and the namespace that
+# should be used in the header.
+generateFullPathBasedValues() {
+  local headerDirectory
+  headerDirectory=$(dirname "$headerFullPath")
+  headerDirectory=${headerDirectory/.\/include\//}
+
+  local headerBackupDirectory
+  headerBackupDirectory="$backupRoot/$headerDirectory"
+
+  local headerBaseName
+  headerBaseName=$(basename "$headerFullPath")
+  headerStatedFileName="$headerDirectory/$headerBaseName"
+  headerBackupFile="$headerBackupDirectory/$headerBaseName"
+  headerTempFile="$headerBackupDirectory/.$headerBaseName"
+
+  headerNamespace=${headerDirectory//\//::}
+  headerNamespace=${headerNamespace//-/::}
+
+  local headerGuardHalfFabricate
+  headerGuardHalfFabricate="${headerDirectory}_M_$headerBaseName"
+
+  headerGuard=${headerGuardHalfFabricate//\//_}
+  headerGuard=${headerGuard//\./_}
+  headerGuard=${headerGuard//\-/_}
+  headerGuard=$(echo "$headerGuard" | sed -r 's|([a-z0-9])([A-Z])|\1_\2|g')
+  headerGuard=$(echo "$headerGuard" | tr '[:lower:]' '[:upper:]')
+}
+
+# Scans the header file for structure and presence of certain elements.
+# The, rather strict, expectation of the structure is as follows:
+#
+# 1:   #ifndef HEADER_GUARD
+# 2:   #define HEADER_GUARD
+# 3:   /*
+# 4:    * stated-file-name.h
+#      ...
+# 5:   namespace name::space::name {
+#      ...
+# 6:   } // namespace name::space::name
+#      ... (no or only empty lines)
+# 7:   #endif // HEADER_GUARD
+#      ... (no or only empty lines)
+scanFileBasedValues() {
+
+  local fileCommentStart=
+  local matchFileGuardCheck='^\s*#ifndef\s+([_A-Z0-9]+)\s*$'
+  local matchFileGuardDefinition
+  local matchFileGuardEnd
+  local matchFileCommentStart='^/\*\s*$'
+  local matchFileStatedFile='^\s+\*\s*([-_A-Za-z0-9/]+\.h)\s*$'
+  local matchFileNamespaceEnter='^\s*namespace\s+([a-z0-9A-Z:]+)\s+\{\s*$'
+  local matchFileNamespaceLeave='}\s+//\s+namespace\s+[a-z0-9A-Z:]+\s*$'
+  local matchEmptyLine='^\s*(//|)\s*$'
+
+  local debugBuffer=
+  local line
+  local lineCount="1"
+
+  while IFS= read -r line; do
+    if [ -z "$fileLineGuardCheck" ]; then
+      if [[ $line =~ $matchFileGuardCheck ]]; then
+        fileValueGuard="${BASH_REMATCH[1]}"
+        fileLineGuardCheck="$line"
+        matchFileGuardDefinition="^\\s*#define\\s+$fileValueGuard\\s*\$"
+        matchFileGuardEnd="^#endif\\s*//\\s*$fileValueGuard\\s*\$"
+        debugOutput "Found guard '$fileValueGuard' check in line: $fileLineGuardCheck"
+      elif ! [[ $line =~ matchEmptyLine ]]; then
+        echo "$headerFullPath: WARNING: Non-empty lines before header-guard check -- bailing out" >&2
+        echo "$headerFullPath:$lineCount: $line" >&2
+        return 1
+      fi
+    elif [ -z "$fileLineGuardDefinition" ]; then
+      if [[ $line =~ $matchFileGuardDefinition ]]; then
+        fileLineGuardDefinition="$line"
+        debugOutput "Found guard '$fileValueGuard' definition in line: $fileLineGuardDefinition"
+      elif ! [[ $line =~ matchEmptyLine ]]; then
+        echo "$headerFullPath: WARNING: Non-empty lines between header-guard check and definition -- bailing out" >&2
+        echo "$headerFullPath:$lineCount: $line" >&2
+        return 1
+      fi
+    elif [ -z "$fileCommentStart" ]; then
+      if [[ $line =~ $matchFileCommentStart ]]; then
+        fileCommentStart="$line"
+        debugOutput "Found file-comment start in line: $fileCommentStart"
+      elif ! [[ $line =~ matchEmptyLine ]]; then
+        echo "$headerFullPath: WARNING: Non-empty lines between header-guard and top-level comment -- bailing out" >&2
+        echo "$headerFullPath:$lineCount: $line" >&2
+        return 1
+      fi
+    elif [ -z "$fileLineStatedFile" ]; then
+      if [[ $line =~ $matchFileStatedFile ]]; then
+        fileValueStatedFile="${BASH_REMATCH[1]}"
+        fileLineStatedFile="$line"
+        debugOutput "Found stated-file '$fileValueStatedFile' in line: $fileLineStatedFile"
+      else
+        echo "$headerFullPath: WARNING: Expecting stated file-name on first line of comment -- bailing out" >&2
+        echo "$headerFullPath:$lineCount: $line" >&2
+        return 1
+      fi
+    elif [ -z "$fileLineNamespaceEnter" ]; then
+      if [[ $line =~ $matchFileNamespaceEnter ]]; then
+        fileValueNamespace="${BASH_REMATCH[1]}"
+        fileLineNamespaceEnter="$line"
+        matchFileNamespaceLeave="}\\s*//\\s*namespace\\s+${fileValueNamespace}\\s*\$"
+        debugOutput "Found namespace '$fileValueNamespace', entered in line: $fileLineNamespaceEnter"
+      elif [[ $line =~ $matchFileGuardEnd ]]; then
+        fileLineGuardEnd="$line"
+        debugOutput "Found guard '$fileValueGuard' end in line: $fileLineGuardEnd"
+        debugOutput "Skipping detection of namespace now."
+        fileLineNamespaceEnter="\n"
+        fileLineNamespaceLeave="\n"
+      fi
+    elif [ -z "$fileLineNamespaceLeave" ]; then
+      if [[ $line =~ $matchFileNamespaceLeave ]]; then
+        fileLineNamespaceLeave="$line"
+        debugOutput "Found namespace '$fileValueNamespace', left in line: $fileLineNamespaceLeave"
+      fi
+    elif [ -z "$fileLineGuardEnd" ]; then
+      if [[ $line =~ $matchFileNamespaceLeave ]]; then
+        fileLineNamespaceLeave="$line"
+        debugOutput "Found namespace '$fileValueNamespace', left (again) in line: $fileLineNamespaceLeave"
+      elif [[ $line =~ $matchFileGuardEnd ]]; then
+        fileLineGuardEnd="$line"
+        debugOutput "Found guard '$fileValueGuard' end in line: $fileLineGuardEnd"
+      fi
+    elif ! [[ $line =~ matchEmptyLine ]]; then
+      echo "$headerFullPath: WARNING: Non-empty lines after header-guard end -- bailing out" >&2
+      echo "$headerFullPath:$lineCount: $line" >&2
+      return 1
+    fi
+    lineCount=$(($lineCount + 1))
+  done
+
+  if [ -z "$fileLineGuardEnd" ]; then
+    echo "$headerFullPath: WARNING: not able to find all elements needed for check and refactoring -- bailing out" >&2
+    if ! isDebugEnabled; then
+      echo -e "$debugBuffer" >&2
+    fi
+    return 1
+  fi
+}
+
+setupBackupAndIntermediateFiles() {
+  local tempDirectory
+  tempDirectory=$(dirname "$headerBackupFile")
+
+  if [ ! -d "${tempDirectory}" ]; then
+    if ! mkdir -p "${tempDirectory}"; then
+      echo "$headerFullPath: ERROR: Could not create directory for backup and intermediate results: ${tempDirectory}" >&2
       exit 1
     fi
   fi
-  if ! cp "$headerFullPath" "$copyFullPath"
-  then
-    echo "Cannot make copy ${tempDirectory}/${fileName}" >&2
+  if ! cp "$headerFullPath" "$headerBackupFile"; then
+    echo "$headerFullPath: ERROR: Could not make backup copy: $headerBackupFile" >&2
     exit 1
   fi
-  echo "$copyFullPath"
-}
-
-replaceFileNameLine() {
-  local processedFile
-  processedFile="$(dirname "$copiedFile")/.$(basename "$copiedFile")"
-  echo "Using $processedFile"
-
-  if [ -f "$processedFile" ]
-  then
-    rm "$processedFile"
-  fi
-
-  local line
-  while IFS= read -r line
-  do
-    if [ "$fileLineInHeader" == "$line" ]
-    then
-      echo "Replaced '$fileLineInHeader' -> ' * $headerStatedFileName'"
-      echo " * $headerStatedFileName" >> "$processedFile"
-    else
-      echo "$line"  >> "$processedFile"
-    fi
-  done
-
-  cp "$processedFile" "$headerFullPath"
-}
-
-fixFileNameInHeader() {
-  local copiedFile
-
-  copiedFile=$(createTemporaryFile "/tmp/fix-filename-in-header")
-  replaceFileNameLine < "$headerFullPath"
-}
-
-checkFileNameInHeader() {
-  local fileLineInHeader
-
-  IFS= read -r fileLineInHeader < <(grep -E -A1 "^/\\*s*\$" "$headerFullPath" | grep -Ei "^\s+\*\s+[-_A-Z0-9/]+\.h\s*" "$headerFullPath")
-
-  if ! echo "$fileLineInHeader" | grep -E "^\s+\\*\s+$headerStatedFileName\s*\$" >/dev/null
-  then
-    if [ -z "$silentFix" ]
-    then
-      echo -e "PROBLEM: ${headerFullPath}: should use following file-name:\n\t${headerStatedFileName}" >&2
-    fi
-    if [ -n "$fixErrors" ]
-    then
-      fixFileNameInHeader
+  if [ -f "$headerTempFile" ]; then
+    if ! rm "$headerTempFile"; then
+      echo "$headerFullPath: ERROR: Could not remove stale intermediate file: $headerTempFile" >&2
+      exit 1
     fi
   fi
 }
 
-readNamespaceStartAndEnd() {
-  local line
-  local match
-  local endifMatch
-  local emptyLineMatch
-  local guard
-  local endifLine
-
-  emptyLineMatch='^\s*(//|)\s*$'
-  match='^\s*#ifndef\s+([_A-Z0-9]+)\s*$'
-
-  while IFS= read -r line
-  do
-    if [[ $line =~ $match ]]
-    then
-      if [ -z "$guard" ]
-      then
-        guard="${BASH_REMATCH[1]}"
-        match='^\s*namespace\s+([a-z0-9A-Z:]+)\s+\{\s*$'
-        endifMatch="^#endif\\s+//\\s+$guard\\s*\$"
-#        echo -e "FOUND $guard IN $line\n\tNow matching: $match"
-      elif [ -z "$lineNamespaceStart" ]
-      then
-        lineNamespaceStart="$line"
-        namespaceInFile="${BASH_REMATCH[1]}"
-        match='}\s+//\s+namespace\s+[a-z0-9A-Z:]+\s*$'
-#        echo -e "FOUND $namespaceInFile IN $line\n\tNow matching: $match"
-      else
-#        echo "FOUND namespace-end IN $line"
-        lineNamespaceEnd="$line"
-      fi
-    elif [ -n "$lineNamespaceEnd" ]
-    then
-      if [[ $line =~ $endifMatch ]]
-      then
-#        echo "FOUND $endifMatch IN $line"
-        endifLine="$line"
-        return 0
-      fi
-    fi
-  done
-  if [ -n "$lineNamespaceEnd" ] && [ -n "$endifLine" ]
-  then
-    return 0
-  fi
-
-  return 1
-}
-
-replaceNameSpaceLines() {
-  local processedFile
-  processedFile="$(dirname "$copiedFile")/.$(basename "$copiedFile")"
-
-  if [ -f "$processedFile" ]
-  then
-    rm "$processedFile"
-  fi
-
-  local line
-  while IFS= read -r line
-  do
-    if [ "$lineNamespaceStart" == "$line" ]
-    then
-#      echo "Replaced '$line' -> 'namespace $headerNamespace {'"
-      echo "namespace $headerNamespace {" >> "$processedFile"
-    elif [ "$lineNamespaceEnd" == "$line" ]
-    then
-#      echo "Replaced '$line' -> '| // namespace $headerNamespace"
-      echo "} // namespace $headerNamespace" >> "$processedFile"
-    else
-      echo "$line" >> "$processedFile"
-    fi
-  done
-
-  cp "$processedFile" "$headerFullPath"
-}
-
-fixNamespaceInHeader() {
-  local copiedFile
-
-  copiedFile=$(createTemporaryFile "/tmp/fix-namespace-in-header")
-  echo "Fix $headerFullPath"
-  replaceNameSpaceLines < "$headerFullPath"
-}
-
-checkNamespaceInHeader() {
-  local lineNamespaceStart
-  local lineNamespaceEnd
-  local namespaceInFile
-
-  if readNamespaceStartAndEnd < "$headerFullPath"
-  then
-    if [ "$namespaceInFile" != "$headerNamespace" ]
-    then
-      if [ -z "$silentFix" ]
-      then
-        echo -e "PROBLEM: $headerFullPath: Should use $headerNamespace instead of '$lineNamespaceStart' /* declarations */ '$lineNamespaceEnd'"
-      fi
-      if [ -n "$fixErrors" ]
-      then
-        fixNamespaceInHeader
-      fi
-    fi
-  fi
-}
-
-readGuardInfoFromFile() {
-  local matchCheck
-  matchCheck='^\s*#ifndef\s+([_A-Z0-9]+)\s*$'
-
-  local emptyCheck
-  emptyCheck='^\s*(//|)\s*$'
-
-  local matchDefine
-  local matchEnd
-
-  local line
-  while IFS= read -r line
-  do
-    if [ -z "$lineGuardCheck" ]
-    then
-      if [[ $line =~ $matchCheck ]]
-      then
-       guardInFile="${BASH_REMATCH[1]}"
-       lineGuardCheck="$line"
-       matchDefine="^\\s*#define\\s+$guardInFile\\s*\$"
-       matchEnd="^#endif\\s*//\\s*$guardInFile\\s*\$"
-       #echo "Found $lineGuardCheck; added matches '$matchDefine' and '$matchEnd'"
-      else
-        echo "ERROR: $headerFullPath: Must start with guard check '$matchCheck'" >&2
-        return 1
-      fi
-    elif [ -z "$lineGuardDefine" ]
-    then
-      if [[ $line =~ $matchDefine ]]
-      then
-        lineGuardDefine="$line"
-        #echo "Found $lineGuardDefine"
-      else
-        echo "ERROR: $headerFullPath: Guard check must be followed by guard define '$matchDefine'" >&2
-        echo "Guard define should follow directly after guard check"
-        return 1
-      fi
-    elif [ -z "$lineGuardEnd" ]
-    then
-      if [[ $line =~ $matchEnd ]]
-      then
-        lineGuardEnd="$line"
-        #echo "Found $lineGuardEnd"
-      fi
-    elif ! [[ $line =~ $emptyCheck ]]
-    then
-      echo "ERROR: $headerFullPath: Only empty lines allowed after '$lineGuardEnd'" >&2
-      return 1
-    fi
-  done
-  if [ -z "$lineGuardEnd" ]
-  then
+fixProblems() {
+  if ! setupBackupAndIntermediateFiles ; then
     return 1
   fi
-  return 0
-}
 
-replaceGuardLines() {
-  local processedFile
-  processedFile="$(dirname "$copiedFile")/.$(basename "$copiedFile")"
-  if [ -f "$processedFile" ]
-  then
-    if ! rm "$processedFile"
-    then
-      echo "ERROR: ${headerFullPath}: Not able to remove temporary file $processedFile"
-      return 1
-    fi
-  fi
+
   local line
+  while IFS= read -r line; do
 
-  while IFS= read -r line
-  do
-    if [ "$line" == "$lineGuardCheck" ]
-    then
-      echo "#ifndef $headerGuard" >> "$processedFile"
-    elif [ "$line" == "$lineGuardDefine" ]
-    then
-      echo "#define $headerGuard" >> "$processedFile"
-    elif [ "$line" == "$lineGuardEnd" ]
-    then
-      echo "#endif // $headerGuard" >> "$processedFile"
+    if [ "$line" == "$fileLineGuardCheck" ]; then
+      echo "#ifndef $headerGuard" >> "$headerTempFile"
+    elif [ "$line" == "$fileLineGuardDefinition" ]; then
+      echo "#define $headerGuard" >> "$headerTempFile"
+    elif [ "$line" == "$fileLineStatedFile" ]; then
+      echo " * $headerStatedFileName" >> "$headerTempFile"
+    elif [ "$line" == "$fileLineNamespaceEnter" ]; then
+      echo "namespace $headerNamespace {" >> "$headerTempFile"
+    elif [ "$line" == "$fileLineNamespaceLeave" ]; then
+      echo "} // namespace $headerNamespace" >> "$headerTempFile"
+    elif [ "$line" == "$fileLineGuardEnd" ]; then
+      echo "#endif // $headerGuard" >> "$headerTempFile"
     else
-      echo "$line" >> $processedFile
+      echo "$line" >> "$headerTempFile"
     fi
   done
 
-  cp "$processedFile" "$headerFullPath"
-}
-
-fixGuardInHeader() {
-  local copiedFile
-
-  copiedFile=$(createTemporaryFile "/tmp/fix-guard-in-header")
-  echo "Fix $headerFullPath"
-  replaceGuardLines < "$headerFullPath"
-}
-
-checkGuardInHeader() {
-  local guardInFile
-  local lineGuardCheck
-  local lineGuardDefine
-  local lineGuardEnd
-
-  if readGuardInfoFromFile < "$headerFullPath"
-  then
-    if [ "$guardInFile" != "$headerGuard" ]
-    then
-      if [ -z "$silentFix" ]
-      then
-        echo -e "PROBLEM: $headerFullPath: Should use header-guard $headerGuard instead of '$guardInFile'"
-      fi
-      if [ -n "$fixErrors" ]
-      then
-        fixGuardInHeader
-      fi
-    fi
-  fi
-
-  return 1
 }
 
 checkSanity() {
   local headerFullPath
   headerFullPath="$1"
-
-  local headerBaseName
-  headerBaseName=$(basename "$headerFullPath")
-
-  local headerDirectory
-  headerDirectory=$(dirname "$headerFullPath")
-  # Strip "./include/"
-  headerDirectory=${headerDirectory/.\/include\//}
+  local debugBuffer=
 
   local headerNamespace
-  headerNamespace=${headerDirectory//\//::}
-  headerNamespace=${headerNamespace//-/::}
-
   local headerStatedFileName
-  headerStatedFileName="$headerDirectory/$headerBaseName"
-
-  local headerGuardHalfFabricate
-  headerGuardHalfFabricate="${headerDirectory}_M_$headerBaseName"
-#  headerGuardHalfFabricate=$(echo "$headerBaseName" | sed -r 's|([a-z0-9])([A-Z])||g')
-
   local headerGuard
-  headerGuard=${headerGuardHalfFabricate//\//_}
-  headerGuard=${headerGuard//\./_}
-  headerGuard=${headerGuard//\-/_}
-  headerGuard=$( echo "$headerGuard" | sed -r 's|([a-z0-9])([A-Z])|\1_\2|g')
-  headerGuard=$(echo "$headerGuard" | tr '[:lower:]' '[:upper:]')
+  local headerBackupFile
+  local headerTempFile
 
-# Demonstration on how to read from a function output:
-#  read -r headerFullPath headerBaseName headerDirectory headerNamespace headerStatedFileName headerGuard < <(generateHeaderInfo "$1")
+  generateFullPathBasedValues
 
-  checkNamespaceInHeader
-  checkFileNameInHeader
-  checkGuardInHeader
+  if [ -n "$debugLevel" ]; then
+    debugOutput "VALUES deduced from full header path"
+    debugOutput "  headerNamespace      = $headerNamespace"
+    debugOutput "  headerStatedFileName = $headerStatedFileName"
+    debugOutput "  headerGuard          = $headerGuard"
+    debugOutput "  headerBackupFile     = $headerBackupFile"
+    debugOutput "  headerTempFile       = $headerTempFile"
+  fi
+  local fileLineGuardCheck=
+  local fileLineGuardDefinition=
+  local fileLineGuardEnd=
+  local fileValueGuard=
+  local fileLineStatedFile=
+  local fileValueStatedFile=
+  local fileLineNamespaceEnter=
+  local fileLineNamespaceLeave=
+  local fileValueNamespace=
+
+  if scanFileBasedValues <"$headerFullPath"; then
+    if [ -n "$debugLevel" ]; then
+      debugOutput "VALUES read from actual header file"
+      debugOutput "  fileLineGuardCheck = $fileLineGuardCheck"
+      debugOutput "  fileLineGuardDefinition = $fileLineGuardDefinition"
+      debugOutput "  fileLineGuardEnd = $fileLineGuardEnd"
+      debugOutput "  fileValueGuard = $fileValueGuard"
+      debugOutput "  fileLineStatedFile = $fileLineStatedFile"
+      debugOutput "  fileValueStatedFile = $fileValueStatedFile"
+      debugOutput "  fileLineNamespaceEnter = $fileLineNamespaceEnter"
+      debugOutput "  fileLineNamespaceLeave = $fileLineNamespaceLeave"
+      debugOutput "  fileValueNamespace = $fileValueNamespace"
+    fi
+    local foundProblems=
+
+    if [ "$headerGuard" != "$fileValueGuard" ]; then
+      foundProblems="${foundProblems}G"
+      if [ -z "$silentFix" ]; then
+        echo "$headerFullPath: PROBLEM: Should use header-guard '$headerGuard' instead of '$fileValueGuard'"
+      fi
+    else
+      fileLineGuardCheck="\n"
+      fileLineGuardDefinition="\n"
+      fileLineGuardEnd="\n"
+    fi
+
+    if [ "$headerStatedFileName" != "$fileValueStatedFile" ]; then
+      foundProblems="${foundProblems}F"
+      if [ -z "$silentFix" ]; then
+        echo "$headerFullPath: PROBLEM: Should state name as '$headerStatedFileName' instead of '$fileValueStatedFile'"
+      fi
+    else
+      fileLineStatedFile="\n"
+    fi
+
+    if [ -n "$fileValueNamespace" ] && [ "$headerNamespace" != "$fileValueNamespace" ]; then
+      foundProblems="${foundProblems}N"
+      if [ -z "$silentFix" ]; then
+        echo "$headerFullPath: PROBLEM: Should define namespace as '$headerNamespace' instead of '$fileValueNamespace'"
+      fi
+    else
+      fileLineNamespaceEnter="\n"
+      fileLineNamespaceLeave="\n"
+    fi
+
+    if [ -n "$foundProblems" ] && [ -n "$fixErrors" ]; then
+      debugOutput "Fixing..."
+
+      if fixProblems <"$headerFullPath"; then
+        if [ -n "$dryRun" ]; then
+          echo "$headerFullPath: would copy back processed from $headerTempFile"
+        else
+          cp "$headerTempFile" "$headerFullPath"
+        fi
+      fi
+    fi
+
+  fi
+  # Demonstration on how to read from a function output:
+  #  read -r headerFullPath headerBaseName headerDirectory headerNamespace headerStatedFileName headerGuard < <(generateHeaderInfo "$1")
 }
 
-
-
-
 #for name in `find .| grep -Ei './include/.*\.h' | sort` ; do  generateHeaderInfo "$name" ; done
- for name in `find .| grep -Ei './include/.*\.h' | sort` ; do  checkSanity "$name" ; done
-
+for name in $(find . | grep -Ei './include/.*\.h' | sort); do checkSanity "$name"; done
