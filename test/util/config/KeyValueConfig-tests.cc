@@ -56,7 +56,7 @@ class PrintingReader {
       while (input.get(c)) {
         key += c;
       }
-      std::cout << "Key=" << key << std::endl;
+//      std::cout << "Key=" << key << std::endl;
       return org::simple::util::config::ReaderResult::Ok;
     }
 
@@ -68,7 +68,7 @@ class PrintingReader {
   class Value : public ValueReader {
     Key &key;
     std::string value;
-    std::vector<KeyValuePair> results;
+    std::vector<KeyValuePair> &results;
 
   public:
     ReaderResult read(InputStream &input, const char *keyName) final {
@@ -76,7 +76,7 @@ class PrintingReader {
       while (input.get(c)) {
         value += c;
       }
-      std::cout << "\tValue=" << value << std::endl;
+//      std::cout << "\tValue=" << value << std::endl;
       results.push_back({keyName, value});
       key.reset();
       return org::simple::util::config::ReaderResult::Ok;
@@ -113,7 +113,38 @@ BOOST_AUTO_TEST_CASE(testParseEmpty) {
 BOOST_AUTO_TEST_CASE(testParseOneLine) {
   PrintingReader reader("key=value");
   auto results = reader.parse();
-  BOOST_CHECK_EQUAL(0, results.size());
+  BOOST_CHECK_EQUAL(1, results.size());
+  BOOST_CHECK_EQUAL("key", results.at(0).key);
+  BOOST_CHECK_EQUAL("value", results.at(0).value);
+}
+
+BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKey) {
+  PrintingReader reader("\"key\"=value");
+  auto results = reader.parse();
+  BOOST_CHECK_EQUAL(1, results.size());
+  BOOST_CHECK_EQUAL("key", results.at(0).key);
+  BOOST_CHECK_EQUAL("value", results.at(0).value);
+}
+
+BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValue) {
+  PrintingReader reader("\"key\"=\"value\"");
+  auto results = reader.parse();
+  BOOST_CHECK_EQUAL(1, results.size());
+  BOOST_CHECK_EQUAL("key", results.at(0).key);
+  BOOST_CHECK_EQUAL("value", results.at(0).value);
+}
+
+BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValueWithQuoteLater) {
+  PrintingReader reader("\"key\"=val\"lala");
+  auto results = reader.parse();
+  BOOST_CHECK_EQUAL(1, results.size());
+  BOOST_CHECK_EQUAL("key", results.at(0).key);
+  BOOST_CHECK_EQUAL("val\"lala", results.at(0).value);
+}
+
+BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValueUnclosed) {
+  PrintingReader reader("\"key\"=\"value");
+  BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

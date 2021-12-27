@@ -76,7 +76,8 @@ template <typename CP> class KeyValueConfig {
     UnQuotedKey,
     SkipToEndOfLine,
     SkipToAssignment,
-    SkipToValue
+    SkipToValue,
+    ReadingValue
   };
   static bool noAssignmentPredicate(const CP &c) { return c != '='; }
   static bool isAssignmentPredicate(const CP &c) { return c == '='; }
@@ -98,7 +99,7 @@ template <typename CP> class KeyValueConfig {
       util::text::PredicateVariableInputStream<CP, QuoteBasedPredicate, false,
                                                EchoStream>;
   using GraphOnlyStream =
-      util::text::PredicateVariableInputStream<CP, UnquotedKeyPredicate , false,
+      util::text::PredicateVariableInputStream<CP, UnquotedKeyPredicate, false,
                                                EchoStream>;
   using BeforeNewLineStream =
       util::text::PredicateVariableInputStream<CP, NewLinePredicate, false,
@@ -139,7 +140,7 @@ template <typename CP> class KeyValueConfig {
         break;
       case ReaderResult::NotFound:
         if (!ignoreErrors) {
-          std:: string message = "Unknown key: ";
+          std::string message = "Unknown key: ";
           message += keyName;
           throw createError(message.c_str(), pos);
         }
@@ -147,13 +148,12 @@ template <typename CP> class KeyValueConfig {
         break;
       case ReaderResult::TooLong:
         if (!ignoreErrors) {
-          std:: string message = "Value length exceeded for key ";
+          std::string message = "Value length exceeded for key ";
           message += keyName;
           throw createError(message.c_str(), pos);
         }
         state = State::LineStart;
         break;
-
       }
     } catch (const ParseError &e) {
       if (ignoreErrors) {
@@ -220,7 +220,13 @@ public:
         }
         break;
       case State::SkipToValue:
-        if (!configTypes.classifier.isWhiteSpace(c)) {
+        if (commentStream.state().inQuote()) {
+          handleValue(state, inQuoteStream, valueReader, keyReader.getKey(),
+                      ignoreErrors, pos);
+          if (commentStream.state().inQuote()) {
+            state = State::ReadingValue;
+          }
+        } else if (!configTypes.classifier.isWhiteSpace(c)) {
           echoStream.repeat();
           handleValue(state, newLineTerminatedStream, valueReader,
                       keyReader.getKey(), ignoreErrors, pos);
