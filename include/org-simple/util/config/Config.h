@@ -77,7 +77,7 @@ template <typename CP> class KeyValueConfig {
     SkipToEndOfLine,
     SkipToAssignment,
     SkipToValue,
-    ReadingValue
+    EndOfKeyValuePair
   };
   static bool noAssignmentPredicate(const CP &c) { return c != '='; }
   static bool isAssignmentPredicate(const CP &c) { return c == '='; }
@@ -107,7 +107,7 @@ template <typename CP> class KeyValueConfig {
 
   void handleKey(State &state, text::InputStream<CP> &stream,
                  KeyReader<CP> &keyReader, bool ignoreErrors,
-                 const positions *pos, const CP &lastReadValue) {
+                 const positions *pos, const CP &lastReadValue, const util::text::QuoteState<CP> &quoteState) {
     try {
       keyReader.read(stream);
     } catch (const ParseError &e) {
@@ -124,10 +124,16 @@ template <typename CP> class KeyValueConfig {
       }
       throw createError("Error reading key value", pos);
     }
-
-    state = state == State::UnQuotedKey && lastReadValue == '='
-                ? State::SkipToValue
-                : State::SkipToAssignment;
+    if (state == State::UnQuotedKey) {
+      if (quoteState.inQuote()) {
+        throw createError("Unfinished quote inside key-name", pos);
+      }
+      if (lastReadValue == '=') {
+        state = State::SkipToValue;
+        return;
+      }
+    }
+    state = State::SkipToAssignment;
   }
 
   void handleValue(State &state, text::InputStream<CP> &stream,
@@ -136,7 +142,7 @@ template <typename CP> class KeyValueConfig {
     try {
       switch (valueReader.read(stream, keyName)) {
       case ReaderResult::Ok:
-        state = State::LineStart;
+        state = State::EndOfKeyValuePair;
         break;
       case ReaderResult::NotFound:
         if (!ignoreErrors) {
@@ -144,7 +150,7 @@ template <typename CP> class KeyValueConfig {
           message += keyName;
           throw createError(message.c_str(), pos);
         }
-        state = State::LineStart;
+        state = State::EndOfKeyValuePair;
         break;
       case ReaderResult::TooLong:
         if (!ignoreErrors) {
@@ -152,12 +158,12 @@ template <typename CP> class KeyValueConfig {
           message += keyName;
           throw createError(message.c_str(), pos);
         }
-        state = State::LineStart;
+        state = State::EndOfKeyValuePair;
         break;
       }
     } catch (const ParseError &e) {
       if (ignoreErrors) {
-        state = State::SkipToEndOfLine;
+        state = State::EndOfKeyValuePair;
         return;
       }
       throw createError(e.what(), pos);
@@ -191,13 +197,13 @@ public:
         }
         if (commentStream.state().inQuote()) {
           handleKey(state, inQuoteStream, keyReader, ignoreErrors, pos,
-                    echoStream.lastValue());
+                    echoStream.lastValue(), commentStream.state());
           continue;
         } else if (c != '=' && configTypes.classifier.isGraph(c)) {
           state = State::UnQuotedKey;
           echoStream.repeat();
           handleKey(state, nonGraphTerminatedStream, keyReader, ignoreErrors,
-                    pos, echoStream.lastValue());
+                    pos, echoStream.lastValue(), commentStream.state());
           continue;
         }
         if (ignoreErrors) {
@@ -223,22 +229,33 @@ public:
         if (commentStream.state().inQuote()) {
           handleValue(state, inQuoteStream, valueReader, keyReader.getKey(),
                       ignoreErrors, pos);
-          if (commentStream.state().inQuote()) {
-            state = State::ReadingValue;
-          }
         } else if (!configTypes.classifier.isWhiteSpace(c)) {
           echoStream.repeat();
           handleValue(state, newLineTerminatedStream, valueReader,
                       keyReader.getKey(), ignoreErrors, pos);
         }
         break;
+      case State::EndOfKeyValuePair:
+        if (!commentStream.state().inQuote()) {
+          state = State::LineStart;
+          echoStream.repeat();
+          break;
+        }
+        throw createError("Unclosed quote in key-value pair", pos);
       default:
         throw createError("Unexpected state.", pos);
       }
     };
-    if (state != State::LineStart) {
-      throw createError("Unexpected end of input.", pos);
+    if (state == State::LineStart) {
+      return;
     }
+    if (state == State::EndOfKeyValuePair) {
+      if (!commentStream.state().inQuote()) {
+        return;
+      }
+      throw createError("Unclosed quote in key-value pair", pos);
+    }
+    throw createError("Unexpected end of input.", pos);
   }
 };
 

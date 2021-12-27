@@ -72,6 +72,7 @@ class PrintingReader {
 
   public:
     ReaderResult read(InputStream &input, const char *keyName) final {
+      value.clear();
       char c;
       while (input.get(c)) {
         value += c;
@@ -136,15 +137,34 @@ BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValue) {
 
 BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValueWithQuoteLater) {
   PrintingReader reader("\"key\"=val\"lala");
-  auto results = reader.parse();
-  BOOST_CHECK_EQUAL(1, results.size());
-  BOOST_CHECK_EQUAL("key", results.at(0).key);
-  BOOST_CHECK_EQUAL("val\"lala", results.at(0).value);
+  BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
+}
+
+BOOST_AUTO_TEST_CASE(testParseOneLineUnquotedKeyWithQuoteLater) {
+  PrintingReader reader("\"ke\"y\"=value");
+  BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
+}
+
+BOOST_AUTO_TEST_CASE(testParseOneLineNothUnquotedWithQuoteLater) {
+  PrintingReader reader("\"ke\"y\"=val\"ue");
+  BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
 }
 
 BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValueUnclosed) {
   PrintingReader reader("\"key\"=\"value");
   BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
+}
+
+
+BOOST_AUTO_TEST_CASE(testParseTwoLines) {
+  PrintingReader reader("key1=value1\n"
+                        "key2=value2");
+  auto results = reader.parse();
+  BOOST_CHECK_EQUAL(2, results.size());
+  BOOST_CHECK_EQUAL("key1", results.at(0).key);
+  BOOST_CHECK_EQUAL("value1", results.at(0).value);
+  BOOST_CHECK_EQUAL("key2", results.at(1).key);
+  BOOST_CHECK_EQUAL("value2", results.at(1).value);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
