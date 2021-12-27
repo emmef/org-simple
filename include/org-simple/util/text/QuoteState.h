@@ -23,10 +23,11 @@
 
 #include <org-simple/util/text/StreamFilter.h>
 #include <org-simple/util/text/StreamPredicate.h>
+#include <org-simple/util/text/StreamProbe.h>
 
 namespace org::simple::util::text {
 
-template <typename C> class QuoteState {
+template <typename C> class QuoteState : public StreamProbe<C> {
   bool escaped = false;
   C openQuote = 0;
   C closeQuote = 0;
@@ -49,7 +50,7 @@ public:
   bool isEscaped() const { return escaped; }
   bool inQuote() const { return openQuote != 0; }
 
-  void probe(const C &c) {
+  void probe(const C &c) final {
     if (openQuote != 0) {
       if (escaped) {
         escaped = false;
@@ -67,38 +68,32 @@ public:
       escaped = true;
     }
   }
-
-  static bool insideFunction(const QuoteState &state) { return state.inQuote(); }
-  static bool outsideFunction(const QuoteState &state) { return !state.inQuote(); }
-
-  template <class P> using StreamPredicateFunction = bool (*)(const P &);
 };
 
-template <typename T>
-class QuotedStateStream : public QuoteState<T>, public InputStream<T> {
-
+template <typename C, class S = InputStream<C>>
+class QuotedStateStream : public ProbeInputStream<QuoteState<C>, C, S> {
 public:
-  using matcherFunction = typename QuoteMatcher<T>::function;
 
-  template <typename Q>
-  QuotedStateStream(InputStream<T> &stream, Q functionOrQuotes)
-      : QuoteState<T>(functionOrQuotes), input(stream) {}
+  QuotedStateStream(S &input, typename QuoteMatcher<C>::function function) : ProbeInputStream<QuoteState<C>, C, S>(input, function) {}
+  QuotedStateStream(S &input, const char *symmetricQuoteChars) : ProbeInputStream<QuoteState<C>, C, S>(input, symmetricQuoteChars) {}
 
-  bool get(T &result) final {
-    if (!input.get(result)) {
-      return false;
+  using ProbeInputStream<QuoteState<C>, C, S>::isEscaped;
+};
+
+template <typename C, bool inSide> class QuoteStatePredicate : public Predicate<C> {
+  const QuoteState<C> &state;
+public:
+  bool test(const C&) const final {
+    if constexpr (inSide) {
+      return state.inQuote();
     }
-    QuoteState<T>::probe(result);
-    return true;
+    else {
+      return !state.inQuote();
+    }
   }
 
-private:
-  InputStream<T> &input;
+  QuoteStatePredicate(const QuoteState<C> & quoteState) : state(quoteState) {}
 };
-
-template <class S, bool resetStreamOnStop, typename C>
-using QuotedBasedStreamWithPredicate =
-    PredicateVariableInputStream<QuoteState<C>, S, resetStreamOnStop, C>;
 
 } // namespace org::simple::util::text
 

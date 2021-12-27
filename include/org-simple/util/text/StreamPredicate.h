@@ -21,149 +21,101 @@
  * limitations under the License.
  */
 
+#include <org-simple/util/Predicate.h>
 #include <org-simple/util/text/InputStream.h>
 #include <org-simple/util/text/StreamFilter.h>
 
 namespace org::simple::util::text {
 
-template <class P> using StreamPredicateFunction = bool (*)(const P &);
+template <typename C, bool resetIfExhausted, class S = InputStream<C>>
+class PredicateFunctionStream : public InputStream<C> {
+  static_assert(hasInputStreamSignature<S, C>);
+  VariableEchoRepeatOneStream<C, resetIfExhausted, S> stream;
+  PredicateFunction<C> predicate;
 
-template <class P> static bool trueStreamPredicateFunction(const P &) {
-  return true;
-}
-template <class P> static bool falseStreamPredicateFunction(const P &) {
-  return false;
-}
-
-template <typename C> class StreamProbe {
 public:
-  virtual void probe(const C &) = 0;
-  virtual ~StreamProbe() = default;
+  PredicateFunctionStream(S *inputStream, PredicateFunction<C> function)
+      : stream(inputStream),
+        predicate(function ? function : falsePredicateFunction<C>) {}
+  PredicateFunctionStream(PredicateFunction<C> function)
+      : PredicateFunctionStream(nullptr, function) {}
 
-  struct Traits {
-    template <class X>
-    requires(std::is_void_v<decltype(std::declval<X>().probe(
-                 (const C &)std::declval<C &>()))>) //
-        static constexpr bool substProbe(X *) {
-      return true;
-    }
+  bool get(C &result) final { return stream.get(result) && function(result); }
 
-    template <class X> static constexpr bool substProbe(...) { return false; }
-
-    template <class X> static constexpr bool isA() {
-      return substProbe<X>(static_cast<X *>(nullptr));
-    }
-  };
-
-  static_assert(Traits::template isA<StreamProbe<C>>());
+  void assignStream(S *newStream) { stream.assignStream(newStream); }
+  C getMostRecent() const { return stream.getMostRecent(); }
 };
 
-template <class P, typename C>
-static constexpr bool
-    hasStreamProbeSignature = StreamProbe<C>::Traits::template isA<P>();
-
-template <class P, class S, typename C>
-static constexpr bool canApplyPredicateAfterProbe =
-    hasInputStreamSignature<S, C> &&hasStreamProbeSignature<P, C>;
-
-template <class P, class S, typename C>
-requires(canApplyPredicateAfterProbe<P, S, C>)
-    // Prevent unreadable requires formatting
-    static bool applyPredicateAfterProbe(
-        P &predicateSubject, S &input, C &result,
-        StreamPredicateFunction<P> predicateFunction) {
-  if (!input.get(result)) {
-    return false;
-  }
-  predicateSubject.probe(result);
-  if (!predicateFunction(predicateSubject)) {
-    return false;
-  }
-  return true;
-}
-
-template <class P, class S, typename C>
-requires(hasInputStreamSignature<S, C>)
-    // Prevent unreadable requires formatting
-    static bool applyPredicate(const P &predicateSubject, S &input, C &result,
-                               StreamPredicateFunction<P> predicateFunction) {
-  if (!input.get(result)) {
-    return false;
-  }
-  if (!predicateFunction(predicateSubject)) {
-    return false;
-  }
-  return true;
-}
-
-template <class P, class S, bool resetInputOnStop, typename C>
-class PredicateVariableInputStream : public InputStream<C> {
+template <typename C, class P, bool resetIfExhausted, class S = InputStream<C>>
+class PredicateStream : public InputStream<C> {
   static_assert(hasInputStreamSignature<S, C>);
+  static_assert(hasPredicateSignature<P, C>);
 
-  const P &subject;
-  S *input = nullptr;
-  StreamPredicateFunction<P> predicate;
+  VariableEchoRepeatOneStream<C, resetIfExhausted, S> stream;
+  const P &predicate;
 
 public:
-  PredicateVariableInputStream(const P &predicateSubject, S *stream,
-                               StreamPredicateFunction<P> predicateFunction)
-      : subject(predicateSubject), input(stream),
-        predicate(predicateFunction ? predicateFunction
-                                    : falseStreamPredicateFunction<P>) {}
+  PredicateStream(S *inputStream, const P &predicate_)
+      : stream(inputStream), predicate(predicate_) {}
 
   bool get(C &result) final {
-    if (input) {
-      if (applyPredicate(subject, *input, result, predicate)) {
-        return true;
-      }
-      if constexpr (resetInputOnStop) {
-        input = nullptr;
-      }
-    }
-    return false;
+    return stream.get(result) && predicate.test(result);
   }
 
-  void setStream(InputStream<C> *stream) { input = stream; }
+  void assignStream(S *newStream) { stream.assignStream(newStream); }
+  C getMostRecent() const { return stream.getMostRecent(); }
+};
 
-  void setPredicateFunction(StreamPredicateFunction<P> predicateFunction) {
+template <typename C, bool resetInputOnStop, class S = InputStream<C>>
+class PredicateFunctionVariableInputStream
+    : public VariableEchoStream<C, resetInputOnStop, S> {
+  static_assert(hasInputStreamSignature<S, C>);
+
+  PredicateFunction<C> predicate;
+
+public:
+  PredicateFunctionVariableInputStream(S *stream,
+                                       PredicateFunction<C> predicateFunction)
+      : VariableEchoStream<C, resetInputOnStop, S>(stream),
+        predicate(predicateFunction ? predicateFunction
+                                    : falsePredicateFunction<C>) {}
+
+  PredicateFunctionVariableInputStream(PredicateFunction<C> predicateFunction)
+      : VariableEchoStream<C, resetInputOnStop, S>(),
+        predicate(predicateFunction ? predicateFunction
+                                    : falsePredicateFunction<C>) {}
+
+  bool get(C &result) final {
+    return VariableEchoStream<C, resetInputOnStop, S>::get(result) &&
+           predicate(result);
+  }
+
+  void setPredicateFunction(PredicateFunction<C> predicateFunction) {
     predicate =
-        predicateFunction ? predicateFunction : falseStreamPredicateFunction<P>;
+        predicateFunction ? predicateFunction : falsePredicateFunction<C>;
   }
 };
 
-template <class P, class S, bool resetInputOnStop, typename C>
-class ProbeVariableInputStream : public InputStream<C> {
+template <typename C, class P, bool resetInputOnStop, class S = InputStream<C>>
+class PredicateVariableInputStream
+    : public VariableEchoStream<C, resetInputOnStop, S> {
   static_assert(hasInputStreamSignature<S, C>);
-  static_assert(canApplyPredicateAfterProbe<P, S, C>);
 
-  P &subject;
-  S *input = nullptr;
-  StreamPredicateFunction<P> predicate;
+  const Predicate<C> &p;
 
 public:
-  ProbeVariableInputStream(P &predicateSubject, S *stream,
-                           StreamPredicateFunction<P> predicateFunction)
-      : subject(predicateSubject), input(stream),
-        predicate(predicateFunction ? predicateFunction
-                                    : falseStreamPredicateFunction<P>) {}
+  PredicateVariableInputStream(S *stream, const Predicate<C> &predicate)
+      : VariableEchoStream<C, resetInputOnStop, S>(stream), p(predicate) {}
+
+  PredicateVariableInputStream(const Predicate<C> &predicate)
+      : VariableEchoStream<C, resetInputOnStop, S>(), p(predicate) {}
 
   bool get(C &result) final {
-    if (input) {
-      if (applyPredicateAfterProbe(subject, *input, result, predicate)) {
-        return true;
-      }
-      if constexpr (resetInputOnStop) {
-        input = nullptr;
-      }
-    }
-    return false;
+    return VariableEchoStream<C, resetInputOnStop, S>::get(result) && p.test(result);
   }
 
-  void setStream(InputStream<C> *stream) { input = stream; }
-
-  void setPredicateFunction(StreamPredicateFunction<P> predicateFunction) {
-    predicate =
-        predicateFunction ? predicateFunction : falseStreamPredicateFunction<P>;
+  void setPredicateFunction(PredicateFunction<C> predicateFunction) {
+    p = predicateFunction ? predicateFunction : falsePredicateFunction<C>;
   }
 };
 

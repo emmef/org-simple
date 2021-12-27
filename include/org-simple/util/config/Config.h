@@ -73,7 +73,6 @@ struct KeyValueConfigTypes<org::simple::util::text::Utf8Encoding::codePoint> {
 template <typename CP> class KeyValueConfig {
   enum class State {
     LineStart,
-    QuotedKey,
     UnQuotedKey,
     SkipToEndOfLine,
     SkipToAssignment,
@@ -82,18 +81,21 @@ template <typename CP> class KeyValueConfig {
   KeyValueConfigTypes<char> configTypes;
   using positions = const org::simple::util::text::TextFilePositionData<CP>;
   typedef typename KeyValueConfigTypes<CP>::classifierType classifierType;
-
-  // Filters to indicate specific areas of a key value pair
-  using EchoStream = util::text::EchoRememberLastInputStream<CP>;
-  // Streams that terminate when specific areas (see filters) are ended
+  using GraphPredicate = util::text::GraphPredicate<CP, classifierType>;
+  const GraphPredicate &graphPredicate = GraphPredicate ::instance();
+  using NewLinePredicate = util::text::NewLinePredicate<CP, false>;
+  const NewLinePredicate &newLinePredicate = NewLinePredicate ::instance();
+  using QuoteBasedPredicate = util::text::QuoteStatePredicate<CP, true>;
+  using EchoStream = util::text::EchoRepeatOneStream<CP>;
   using EndOfQuoteStream =
-      util::text::QuotedBasedStreamWithPredicate<EchoStream, false, CP>;
-  using GraphOnlyStream = util::text::GraphBasedStreamWithProbedPredicate<
-      EchoStream, classifierType, false, CP>;
+      util::text::PredicateVariableInputStream<CP, QuoteBasedPredicate, false,
+                                               EchoStream>;
+  using GraphOnlyStream =
+      util::text::PredicateVariableInputStream<CP, GraphPredicate, false,
+                                               EchoStream>;
   using BeforeNewLineStream =
-      util::text::NewLineBasedStreamWithProbedPredicate<EchoStream, false, CP>;
-  text::GraphBasedStreamProbe<CP, classifierType> graphProbe;
-  text::NewLineBasedStreamProbe<CP> newLineProbe;
+      util::text::PredicateVariableInputStream<CP, NewLinePredicate, false,
+                                               EchoStream>;
 
   void handleKey(State &state, text::InputStream<CP> &stream,
                  KeyReader<CP> &keyReader, bool ignoreErrors,
@@ -146,16 +148,10 @@ public:
 
     State state = State::LineStart;
     EchoStream echoStream(commentStream);
-    EndOfQuoteStream inQuoteStream(commentStream.state(), &echoStream,
-                                   text::QuoteState<CP>::insideFunction);
-    GraphOnlyStream nonGraphTerminatedStream(
-        graphProbe, &echoStream,
-        text::GraphBasedStreamProbe<CP,
-                                    classifierType>::isGraphPredicateFunction);
-
-    BeforeNewLineStream newLineTerminatedStream(
-        newLineProbe, &echoStream,
-        text::NewLineBasedStreamProbe<CP>::noNewLinePredicateFunction);
+    QuoteBasedPredicate quoteBasedPredicate(commentStream.state());
+    EndOfQuoteStream inQuoteStream(&echoStream, quoteBasedPredicate);
+    GraphOnlyStream nonGraphTerminatedStream(&echoStream, graphPredicate);
+    BeforeNewLineStream newLineTerminatedStream(&echoStream, newLinePredicate);
 
     CP c;
     while (echoStream.get(c)) {
@@ -166,10 +162,14 @@ public:
           continue;
         }
         if (commentStream.state().inQuote()) {
-          state = State::QuotedKey;
+          handleKey(state, inQuoteStream, keyReader, ignoreErrors, pos,
+                    echoStream.lastValue());
           continue;
         } else if (c != '=' && configTypes.classifier.isGraph(c)) {
           state = State::UnQuotedKey;
+          echoStream.repeat();
+          handleKey(state, nonGraphTerminatedStream, keyReader, ignoreErrors,
+                    pos, echoStream.lastValue());
           continue;
         }
         if (ignoreErrors) {
@@ -181,14 +181,6 @@ public:
         if (c == '\n') {
           state = State::LineStart;
         }
-        break;
-      case State::QuotedKey:
-        handleKey(state, inQuoteStream, keyReader, ignoreErrors, pos,
-                  echoStream.lastValue());
-        break;
-      case State::UnQuotedKey:
-        handleKey(state, nonGraphTerminatedStream, keyReader, ignoreErrors, pos,
-                  echoStream.lastValue());
         break;
       case State::SkipToAssignment:
         if (c == '=') {
@@ -205,6 +197,8 @@ public:
                       keyReader.getKey(), ignoreErrors, pos);
         }
         break;
+      default:
+        throw createError("Unexpected state.", pos);
       }
     };
     if (state != State::LineStart) {

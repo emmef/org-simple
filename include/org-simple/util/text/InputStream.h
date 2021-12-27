@@ -80,8 +80,8 @@ requires(!std::is_base_of_v<InputStream<C>, S> && hasInputStreamSignature<S, C>)
   return typename InputStream<C>::template Wrapped<S>(wrapped);
 }
 template <class S, typename C>
-requires(std::is_base_of_v<InputStream<C>, S>)
-    S &wrapAsInputStream(S &wrapped) {
+requires(std::is_base_of_v<InputStream<C>, S>) S &wrapAsInputStream(
+    S &wrapped) {
   return wrapped;
 }
 
@@ -104,44 +104,119 @@ public:
   }
 };
 
-template <typename T> class EchoStream : public InputStream<T> {
-  InputStream<T> &input;
+template <typename C, class S = InputStream<C>> class EchoStream : public InputStream<C> {
+  static_assert(hasInputStreamSignature<S, C>);
+  S &input;
+  C v = 0;
 
 public:
-  bool get(T &result) final { return input.get(result); }
-  EchoStream(InputStream<T> &source) : input(source) {}
-};
+  EchoStream(S &stream) : input(stream) {}
 
-template <typename T> class ReplayStream : public InputStream<T> {
-  InputStream<T> *input = nullptr;
-
-public:
-  bool get(T &c) final {
-    if (input == nullptr) {
-      return false;
-    }
-    if (input->get(c)) {
+  bool get(C &result) final {
+    if (input.get(v)) {
+      result = v;
       return true;
     }
-    input = nullptr;
     return false;
   }
 
-  bool assignedStream(InputStream<T> *stream) {
-    input = stream;
-    return stream != DeadPillStream<T>::instance();
-  }
+  C getMostRecent() const { return v; }
 };
 
-template <typename T, unsigned N>
-class ReplayCharacterStream : public InputStream<T> {
-  static_assert(N > 0 && N < std::numeric_limits<unsigned>::max() / sizeof(T));
-
-  unsigned replayCount = 0;
-  T v[N];
+template <typename C, class S = InputStream<C>> class EchoRepeatOneStream : public InputStream<C> {
+  static_assert(hasInputStreamSignature<S, C>);
+  S &input;
+  bool mustRepeat = false;
+  C v = 0;
 
 public:
-  bool get(T &result) final {
+  EchoRepeatOneStream(S &stream) : input(stream) {}
+
+  bool get(C &result) override {
+    if (mustRepeat) {
+      result = v;
+      mustRepeat = false;
+      return true;
+    }
+    if (input.get(result)) {
+      v = result;
+      return true;
+    }
+    return false;
+  }
+
+  C &lastValue() { return v; }
+  C getMostRecent() const { return v; }
+  void repeat() { mustRepeat = true; }
+};
+
+template <typename C, bool resetWhenExhausted, class S = InputStream<C>>
+class VariableEchoStream : public InputStream<C> {
+  static_assert(hasInputStreamSignature<S, C>);
+  S *input = nullptr;
+
+public:
+  VariableEchoStream() {}
+  VariableEchoStream(S * stream) { input = stream; }
+
+  bool get(C &c) override {
+    if (input) {
+      if (input->get(c)) {
+        return true;
+      }
+      if constexpr (resetWhenExhausted) {
+        input = nullptr;
+      }
+    }
+    return false;
+  }
+
+  void assignStream(S *stream) { input = stream; }
+};
+
+template <typename C, bool resetWhenExhausted, class S = InputStream<C>>
+class VariableEchoRepeatOneStream : public InputStream<C> {
+  static_assert(hasInputStreamSignature<S, C>);
+  S *input = nullptr;
+  bool mustRepeat = false;
+  C v = 0;
+
+public:
+  VariableEchoRepeatOneStream() {}
+  VariableEchoRepeatOneStream(S * stream) { input = stream; }
+
+  bool get(C &result) override {
+    if (mustRepeat) {
+      result = v;
+      mustRepeat = false;
+      return true;
+    }
+    if (input) {
+      if (input->get(v)) {
+        result = v;
+        return true;
+      }
+      if constexpr (resetWhenExhausted) {
+        input = nullptr;
+      }
+    }
+    return false;
+  }
+
+  void assignStream(S *stream) { input = stream; }
+  C getMostRecent() const { return v; }
+  void repeat() { mustRepeat = true; }
+};
+
+template <typename C, unsigned N>
+class ReplayCharacterStream : public InputStream<C> {
+  static_assert(N > 0 && N < std::numeric_limits<unsigned>::max() / sizeof(C));
+
+  unsigned replayCount = 0;
+  C v[N];
+
+public:
+  bool get(C &result) override {
     if (replayCount) {
       replayCount--;
       result = v[N - 1 - replayCount];
@@ -152,7 +227,7 @@ public:
 
   bool available() final { return replayCount > 0; }
 
-  ReplayCharacterStream &operator<<(T value) {
+  ReplayCharacterStream &operator<<(C value) {
     if (replayCount < N) {
       v[replayCount++] = value;
     }
