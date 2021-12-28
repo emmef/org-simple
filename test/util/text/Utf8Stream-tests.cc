@@ -50,23 +50,38 @@ BOOST_AUTO_TEST_CASE(testPureAsciiYieldsSameResult) {
 }
 
 BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
-  char charArray[5];
-  org::simple::util::text::StringInputStream<char> sstream(charArray);
+  struct Stream : public org::simple::util::text::InputStream<char> {
+    char charArray[5] = { 0, 0, 0, 0, 0 };
+    size_t pos = 0;
+
+    bool get(char &value) {
+      char x = charArray[pos];
+      if (x) {
+        value = x;
+        pos++;
+        return true;
+      }
+      return false;
+    }
+
+    void rewind() { pos = 0; }
+  } sstream;
+
   int attempt = 0;
   for (Utf8::codePoint cp = 1; cp <= Utf8::maximumCodePoint; cp++) {
-    char *afterEncodedPosition = Utf8::unsafeEncode(cp, charArray);
+    char *afterEncodedPosition = Utf8::unsafeEncode(cp, sstream.charArray);
     if (afterEncodedPosition == nullptr) {
       BOOST_CHECK(afterEncodedPosition != nullptr);
       return;
     }
     *afterEncodedPosition = 0;
-    int length = afterEncodedPosition - charArray;
+    int length = afterEncodedPosition - sstream.charArray;
     sstream.rewind();
     bool failed = false;
     org::simple::util::text::ValidatedUtf8Stream stream(sstream);
     for (int i = 0; i < length; i++) {
       char x;
-      if (!stream.get(x) || x != charArray[i]) {
+      if (!stream.get(x) || x != sstream.charArray[i]) {
         failed = true;
       }
     }
@@ -74,7 +89,7 @@ BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
       std::stringstream out;
       out << "Failure\n\tcp = " << org::simple::core::bits::renderBits(cp) << "\n\tbytes  =";
       for (int p = 0; p < length; p++) {
-        out << " " << org::simple::core::bits::renderBits(charArray[p]);
+        out << " " << org::simple::core::bits::renderBits(sstream.charArray[p]);
       }
       out << "\n\tstream =";
       sstream.rewind();
