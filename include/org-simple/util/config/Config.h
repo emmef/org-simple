@@ -152,10 +152,11 @@ template <typename CP> class KeyValueConfig {
         }
         state = State::EndOfKeyValuePair;
         break;
-      case ReaderResult::TooLong:
+      case ReaderResult::Invalid:
         if (!ignoreErrors) {
-          std::string message = "Value length exceeded for key ";
-          message += keyName;
+          std::string message = keyName;
+          message += ": ";
+          message += ValueReader<CP>::getMessage();
           throw createError(message.c_str(), pos);
         }
         state = State::EndOfKeyValuePair;
