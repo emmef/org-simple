@@ -27,38 +27,6 @@
 namespace org::simple::util::text {
 
 template <typename T>
-class CStringInputStream : public InputStream<T> {
-  const T *input;
-  int pos;
-
-public:
-  explicit CStringInputStream(const T *string) : input(string), pos(0) {}
-
-  bool get(T &result) override {
-    T c = input[pos];
-    if (c != '\0') {
-      result = c;
-      ++pos;
-      return true;
-    }
-    return false;
-  }
-
-  bool available() const {
-    return input[pos] != '\0';
-  }
-
-  void rewind() { pos = 0; }
-
-  void set(const T *string) {
-    input = string;
-    rewind();
-  }
-
-  const T *getCString() const { return input; }
-};
-
-template <typename T>
 class StringInputStream : public InputStream<T> {
   std::basic_string<T> input;
   size_t pos;

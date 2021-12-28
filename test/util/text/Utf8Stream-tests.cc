@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(testPureAsciiYieldsSameResult) {
 
 BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
   char charArray[5];
-  org::simple::util::text::CStringInputStream<char> sstream(charArray);
+  org::simple::util::text::StringInputStream<char> sstream(charArray);
   int attempt = 0;
   for (Utf8::codePoint cp = 1; cp <= Utf8::maximumCodePoint; cp++) {
     char *afterEncodedPosition = Utf8::unsafeEncode(cp, charArray);
