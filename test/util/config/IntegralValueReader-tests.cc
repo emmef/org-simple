@@ -3,8 +3,9 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/config/ConfigReaders.h>
+#include <org-simple/util/config/IntegralNumberReader.h>
 #include <org-simple/util/text/StringStream.h>
+#include <org-simple/util/text/StreamPredicate.h>
 
 namespace {
 template <typename Value>
@@ -12,9 +13,10 @@ using IntegralNumberReader =
     org::simple::util::config::IntegralNumberReader<char, Value>;
 using Stream = org::simple::util::text::StringInputStream<char>;
 using Result = org::simple::util::config::ReaderResult;
-
+using Basics = org::simple::util::config::IntegralValueReadingBasics;
 template <typename Value>
-static const char *printNumber(Value v, char *buffer, size_t cap, int leadingZeroes) {
+static const char *printNumber(Value v, char *buffer, size_t cap,
+                               int leadingZeroes) {
   if constexpr (std::is_same_v<bool, Value>) {
     buffer[0] = v != 0 ? "1" : "0";
     buffer[1] = 0;
@@ -49,7 +51,8 @@ static const char *printNumber(Value v, char *buffer, size_t cap, int leadingZer
 }
 
 template <typename Value>
-static const char *printNumber(Value v, int leadingZeroes, const char *before = "",
+static const char *printNumber(Value v, int leadingZeroes,
+                               const char *before = "",
                                const char *after = "") {
   static constexpr int LEN = 50;
   static char numBuffer[50 + 1];
@@ -94,7 +97,7 @@ requires(sizeof(Value) < sizeof(long long)) //
   if (v > max) {
     return org::simple::util::config::ReaderResult::Invalid;
   }
-  if (v <min) {
+  if (v < min) {
     return org::simple::util::config::ReaderResult::Invalid;
   }
   return org::simple::util::config::ReaderResult::Ok;
@@ -138,7 +141,7 @@ template <typename Value> struct Scenario {
       : input(printNumber(value, 0)),
         expectedResult(calculateExpectedResult<Value>(value)),
         expectedValue(value) {}
-  Scenario(inputValueType value, bool )
+  Scenario(inputValueType value, bool)
       : input(printNumber(value, std::numeric_limits<Value>::digits10)),
         expectedResult(calculateExpectedResult<Value>(value)),
         expectedValue(value) {}
@@ -219,8 +222,7 @@ void Scenario<Value>::writeTo(std::ostream &out) const {
   if (expectedResult == Result::Ok) {
     if constexpr (sizeof(Value) == 1) {
       out << "(value = " << (int(expectedValue) & 0xff) << ")";
-    }
-    else {
+    } else {
       out << "(value = " << expectedValue << ")";
     }
   }
@@ -265,8 +267,8 @@ static std::vector<Scenario<Value>> &generateUnsignedSamples() {
     results.push_back({testValue, " ", ""});
     results.push_back({testValue, "", " "});
     results.push_back({testValue, " ", " "});
-    results.push_back({testValue, "", ","});
-    results.push_back({testValue, " ", ","});
+//    results.push_back({testValue, "", ","});
+//    results.push_back({testValue, " ", ","});
     results.push_back({testValue, true});
   }
   return results;
@@ -323,19 +325,76 @@ BOOST_DATA_TEST_CASE(testSignedLongLongScenarios,
   testScenario(sample);
 }
 
-//BOOST_AUTO_TEST_CASE(testMultipleReads) {
-//  Reader<int> reader;
-//  Stream stream("13, -54, 154");
-//
-//  Result actualResult = reader.read(stream, "key");
-//
-//  BOOST_CHECK_EQUAL(scenario.expectedResult, actualResult);
-//  bool expectedToBeSet =
-//      scenario.expectedResult == org::simple::util::config::ReaderResult::Ok;
-//  BOOST_CHECK_EQUAL(expectedToBeSet, reader.actuallySet);
-//  if (expectedToBeSet) {
-//    BOOST_CHECK_EQUAL(scenario.expectedValue, reader.actualValue);
-//  }
-//}
-//
+void testThreeKnownNumbers(const char *string) {
+  Stream stringStream(string);
+  org::simple::util::text::EchoRepeatOneStream<char, Stream> echo(
+      stringStream);
+  struct NoCommaPredicate : org::simple::util::Predicate<char> {
+    bool test(const char &c) const { return c != ',';}
+  } predicate;
+  org::simple::util::text::PredicateStream<char, NoCommaPredicate, false> stream(&echo, predicate);
+
+  org::simple::util::config::ReaderResult actualResult;
+  int actualValue;
+  char x;
+
+  actualResult = Basics::readIntegralValueFromStream(stream, actualValue);
+  BOOST_CHECK_EQUAL(org::simple::util::config::ReaderResult::Ok, actualResult);
+  BOOST_CHECK_EQUAL(13, actualValue);
+  x = echo.lastValue();
+  do {
+    if (!predicate.test(x)) {
+      // separator!
+      break;
+    }
+    else if (x == ' ') {
+      echo.get(x);
+    }
+    else {
+      echo.repeat();
+      break;
+    }
+  } while(true);
+  actualResult = Basics::readIntegralValueFromStream(stream, actualValue);
+  BOOST_CHECK_EQUAL(org::simple::util::config::ReaderResult::Ok, actualResult);
+  BOOST_CHECK_EQUAL(-54, actualValue);
+  x = echo.lastValue();
+  do {
+    if (!predicate.test(x)) {
+      // separator!
+      break;
+    }
+    else if (x == ' ') {
+      echo.get(x);
+    }
+    else {
+      echo.repeat();
+      break;
+    }
+  }
+  while(true);
+  actualResult = Basics::readIntegralValueFromStream(stream, actualValue);
+  BOOST_CHECK_EQUAL(org::simple::util::config::ReaderResult::Ok, actualResult);
+  BOOST_CHECK_EQUAL(154, actualValue);
+}
+
+BOOST_AUTO_TEST_CASE(testMultipleReadsSpaceSeparated) {
+  testThreeKnownNumbers("13 -54 154");
+}
+
+BOOST_AUTO_TEST_CASE(testMultipleReadsCommaSeparated) {
+  testThreeKnownNumbers("13,-54,154");
+}
+
+BOOST_AUTO_TEST_CASE(testMultipleReadsSpaceCommaSeparated) {
+  testThreeKnownNumbers("13 ,-54 ,154");
+}
+
+BOOST_AUTO_TEST_CASE(testMultipleReadsCommaSpaceSeparated) {
+  testThreeKnownNumbers("13, -54, 154");
+}
+
+BOOST_AUTO_TEST_CASE(testMultipleReadsSpaceCommaSpaceSeparated) {
+  testThreeKnownNumbers(" 13 , -54 , 154");
+}
 BOOST_AUTO_TEST_SUITE_END()
