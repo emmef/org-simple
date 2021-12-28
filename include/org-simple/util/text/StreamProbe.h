@@ -21,6 +21,7 @@
  * limitations under the License.
  */
 
+#include <org-simple/util/text/InputStream.h>
 #include <type_traits>
 
 namespace org::simple::util::text {
