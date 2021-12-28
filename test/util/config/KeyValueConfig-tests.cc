@@ -17,9 +17,9 @@ typedef org::simple::util::config::ValueReader<char> ValueReader;
 typedef org::simple::util::text::InputStream<char> InputStream;
 typedef org::simple::util::text::CommentStreamConfig<char> CommentStreamConfig;
 typedef org::simple::util::text::CommentStream<char> CommentStream;
-typedef org::simple::util::text::CStringInputStream<char> StringStream;
+typedef org::simple::util::text::StringInputStream<char> StringStream;
 
-static CommentStreamConfig config("//", "/*", "'\"");
+static CommentStreamConfig config("//", "/*", "'");
 
 class SourceStream {
   StringStream source;
@@ -29,12 +29,15 @@ public:
   SourceStream(const char *string)
       : source(string), stream(source, config, 3) {}
 
+
   void reset() {
     source.rewind();
     stream.reset();
   }
 
   CommentStream &commentStream() { return stream; }
+
+  const char * getSource() const { return source.getCString(); }
 };
 
 struct KeyValuePair {
@@ -56,7 +59,7 @@ class PrintingReader {
       while (input.get(c)) {
         key += c;
       }
-//      std::cout << "Key=" << key << std::endl;
+      //      std::cout << "Key=" << key << std::endl;
       return org::simple::util::config::ReaderResult::Ok;
     }
 
@@ -77,7 +80,7 @@ class PrintingReader {
       while (input.get(c)) {
         value += c;
       }
-//      std::cout << "\tValue=" << value << std::endl;
+      //      std::cout << "\tValue=" << value << std::endl;
       results.push_back({keyName, value});
       key.reset();
       return org::simple::util::config::ReaderResult::Ok;
@@ -96,65 +99,163 @@ public:
                          keyReader, valueReader);
     return results;
   }
+
+  const std::vector<KeyValuePair> &getResults() const {
+    return results;
+  }
+
+  const char * getSource() const { return sourceStream.getSource(); }
 };
+
+class Scenario {
+  std::string source;
+  std::vector<KeyValuePair> expectedResults;
+
+public:
+  Scenario(const char *input) : source(input) {}
+  Scenario(const char *input, const char *key, const char *value) : Scenario(input) {
+    expectedResults.push_back({key, value});
+  };
+
+  void add(const char *key, const char *value) {
+    expectedResults.push_back({key, value});
+  }
+
+  const char * getSource() const { return source.c_str(); }
+  std::size_t getSize() const { return expectedResults.size(); }
+  const std::vector<KeyValuePair> &getExpectedResults() const { return expectedResults; }
+};
+
+std::vector<Scenario> generateTestScenarios() {
+  std::vector<std::pair<const char *, const char *>> keyTests;
+  
+  keyTests.push_back({"key", "key"});
+  keyTests.push_back({" key", "key"});
+  keyTests.push_back({"key ", "key"});
+  keyTests.push_back({" key ", "key"});
+  keyTests.push_back({"'key'", "key"});
+  keyTests.push_back({" 'key'", "key"});
+  keyTests.push_back({"'key' ", "key"});
+  keyTests.push_back({" 'key' ", "key"});
+  keyTests.push_back({"'ke y'", "ke y"});
+  keyTests.push_back({" 'ke y'", "ke y"});
+  keyTests.push_back({"'ke y' ", "ke y"});
+  keyTests.push_back({" 'ke y' ", "ke y"});
+  
+  std::vector<std::pair<const char *, const char *>> valueTests;
+
+  valueTests.push_back({"value", "value"});
+  valueTests.push_back({" value", "value"});
+  valueTests.push_back({"value ", "value "});
+  valueTests.push_back({" value ", "value "});
+  valueTests.push_back({"'value'", "value"});
+  valueTests.push_back({" 'value'", "value"});
+  valueTests.push_back({"'value' ", "value"});
+  valueTests.push_back({" 'value' ", "value"});
+  valueTests.push_back({"'val ue'", "val ue"});
+  valueTests.push_back({" 'val ue'", "val ue"});
+  valueTests.push_back({"'val ue' ", "val ue"});
+  valueTests.push_back({" 'val ue' ", "val ue"});
+  
+  valueTests.push_back({"value 'has' one", "value 'has' one"});
+  valueTests.push_back({"value 'has' one ", "value 'has' one "});
+  valueTests.push_back({" value 'has' one ", "value 'has' one "});
+  valueTests.push_back({" value 'has' one", "value 'has' one"});
+  
+  
+  std::vector<Scenario> scenarios;
+
+  scenarios.push_back("");
+
+  for (auto key : keyTests) {
+    for (auto value : valueTests) {
+      std::string source = key.first;
+      source += '=';
+      source += value.first;
+      scenarios.push_back({source.c_str(), key.second, value.second});
+      source += '\n';
+      scenarios.push_back({source.c_str(), key.second, value.second});
+    }
+  }
+  
+  size_t nrKeys = keyTests.size();
+  size_t keyNumber = 0;
+  size_t nrValues = valueTests.size();
+  size_t valueNumber = 0;
+  for (size_t i = 0; i < 100; i++) {
+    auto key1 = keyTests.at(keyNumber % nrKeys);
+    keyNumber--;
+    auto key2 = keyTests.at(keyNumber % nrKeys);
+    keyNumber--;
+    auto value1 = valueTests.at(valueNumber % nrValues);
+    valueNumber++;
+    auto value2 = valueTests.at(valueNumber % nrValues);
+    valueNumber++;  
+    std::string source = key1.first;
+    source += '=';
+    source += value1.first;
+    source += '\n';
+    source += key2.first;
+    source += '=';
+    source += value2.first;
+    source += '\n';
+
+    Scenario scenario(source.c_str(), key1.second, value1.second);
+    scenario.add(key2.second, value2.second);
+
+    scenarios.push_back(scenario);
+  }
+  
+  return scenarios;
+}
+
+static std::ostream &operator << (std::ostream & out, const Scenario &scenario) {
+  out << "Scenario [" << scenario.getSource() << "]";
+  return out;
+}
+
+
 } // namespace
+
 
 BOOST_AUTO_TEST_SUITE(test_org_simple_util_config_KeyvalueConfig)
 
-BOOST_AUTO_TEST_CASE(testInitialize) {
-  PrintingReader reader("");
+BOOST_DATA_TEST_CASE(testNonThrowingScenarios, generateTestScenarios()) {
+  PrintingReader reader(sample.getSource());
+
+  auto actual = reader.parse();
+  auto expected = sample.getExpectedResults();
+  BOOST_CHECK_EQUAL(sample.getSize(), actual.size());
+
+  const int count = expected.size();
+  for (int comparisonNr = 0; comparisonNr < count; comparisonNr++) {
+    BOOST_CHECK_EQUAL(expected[comparisonNr].key, actual[comparisonNr].key);
+    BOOST_CHECK_EQUAL(expected[comparisonNr].value, actual[comparisonNr].value);
+  }
+
 }
 
-BOOST_AUTO_TEST_CASE(testParseEmpty) {
-  PrintingReader reader("");
-  auto results = reader.parse();
-  BOOST_CHECK_EQUAL(0, results.size());
-}
-
-BOOST_AUTO_TEST_CASE(testParseOneLine) {
-  PrintingReader reader("key=value");
-  auto results = reader.parse();
-  BOOST_CHECK_EQUAL(1, results.size());
-  BOOST_CHECK_EQUAL("key", results.at(0).key);
-  BOOST_CHECK_EQUAL("value", results.at(0).value);
-}
-
-BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKey) {
-  PrintingReader reader("\"key\"=value");
-  auto results = reader.parse();
-  BOOST_CHECK_EQUAL(1, results.size());
-  BOOST_CHECK_EQUAL("key", results.at(0).key);
-  BOOST_CHECK_EQUAL("value", results.at(0).value);
-}
-
-BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValue) {
-  PrintingReader reader("\"key\"=\"value\"");
-  auto results = reader.parse();
-  BOOST_CHECK_EQUAL(1, results.size());
-  BOOST_CHECK_EQUAL("key", results.at(0).key);
-  BOOST_CHECK_EQUAL("value", results.at(0).value);
-}
+BOOST_AUTO_TEST_CASE(testInitialize) { PrintingReader reader(""); }
 
 BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValueWithQuoteLater) {
-  PrintingReader reader("\"key\"=val\"lala");
+  PrintingReader reader("'key'=val'lala");
   BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
 }
 
 BOOST_AUTO_TEST_CASE(testParseOneLineUnquotedKeyWithQuoteLater) {
-  PrintingReader reader("\"ke\"y\"=value");
+  PrintingReader reader("'ke'y'=value");
   BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
 }
 
 BOOST_AUTO_TEST_CASE(testParseOneLineNothUnquotedWithQuoteLater) {
-  PrintingReader reader("\"ke\"y\"=val\"ue");
+  PrintingReader reader("'ke'y'=val'ue");
   BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
 }
 
 BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValueUnclosed) {
-  PrintingReader reader("\"key\"=\"value");
+  PrintingReader reader("'key'='value");
   BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
 }
-
 
 BOOST_AUTO_TEST_CASE(testParseTwoLines) {
   PrintingReader reader("key1=value1\n"
