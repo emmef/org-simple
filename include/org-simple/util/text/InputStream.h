@@ -209,7 +209,7 @@ public:
 };
 
 template <typename C, unsigned N>
-class ReplayCharacterStream : public InputStream<C> {
+class ReplayStream : public InputStream<C> {
   static_assert(N > 0 && N < std::numeric_limits<unsigned>::max() / sizeof(C));
 
   unsigned replayCount = 0;
@@ -227,7 +227,7 @@ public:
 
   bool available() final { return replayCount > 0; }
 
-  ReplayCharacterStream &operator<<(C value) {
+  ReplayStream &operator<<(C value) {
     if (replayCount < N) {
       v[replayCount++] = value;
     }
