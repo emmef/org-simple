@@ -33,6 +33,8 @@ toReaderResult(text::NumberParser::Result numberParserResult) {
     return ReaderResult::Ok;
   case text::NumberParser::Result::OutOfRange:
     return ReaderResult::OutOfRange;
+  case text::NumberParser::Result::InputTooLong:
+    return ReaderResult::TooLarge;
   case text::NumberParser::Result::UnexpectedCharacter:
   case text::NumberParser::Result::UnexpectedEndOfInput:
   default:

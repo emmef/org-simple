@@ -447,6 +447,64 @@ public:
   }
 };
 
+
+template <typename Value>
+static const char *printNumber(Value v, char *buffer, size_t cap,
+                               int leadingZeroes) {
+  if constexpr (std::is_same_v<bool, Value>) {
+    buffer[0] = v != 0 ? "1" : "0";
+    buffer[1] = 0;
+    return buffer + 1;
+  } else {
+    char format[8];
+    int pos = 0;
+    format[pos++] = '%';
+    if (leadingZeroes) {
+      leadingZeroes += 3;
+      format[pos++] = '0';
+      if (leadingZeroes > 10) {
+        format[pos++] = '0' + (leadingZeroes / 10);
+      }
+      format[pos++] = '0' + (leadingZeroes % 10);
+    }
+    if constexpr (sizeof(Value) == sizeof(long)) {
+      format[pos++] = 'l';
+    }
+    if constexpr (sizeof(Value) > sizeof(long)) {
+      format[pos++] = 'l';
+    }
+    if constexpr (std::is_signed<Value>()) {
+      format[pos++] = 'i';
+    } else {
+      format[pos++] = 'u';
+    }
+    format[pos] = 0;
+    int l = snprintf(buffer, cap, format, v);
+    return buffer + (l > 0 ? l : 0);
+  }
+}
+
+template <typename Value>
+static const char *printNumber(Value v, int leadingZeroes,
+                               const char *before = "",
+                               const char *after = "") {
+  static constexpr int LEN = 50;
+  static char numBuffer[50 + 1];
+  int pos = 0;
+  const char *p = before;
+  while (pos < LEN && *p) {
+    numBuffer[pos++] = *p++;
+  }
+  pos = printNumber(v, numBuffer + pos, LEN - pos, leadingZeroes) - numBuffer;
+  p = after;
+  while (pos < LEN && *p) {
+    numBuffer[pos++] = *p++;
+  }
+  numBuffer[pos] = 0;
+  return numBuffer;
+}
+
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
 

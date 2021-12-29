@@ -23,25 +23,35 @@
 
 #include <cmath>
 #include <limits>
+#include <org-simple/core/Bits.h>
 #include <org-simple/util/Predicate.h>
+#include <org-simple/util/text/Characters.h>
 #include <type_traits>
+#include <charconv>
 
 namespace org::simple::util::text {
 
 struct NumberParser {
-  enum class Result { Ok,
-    OutOfRange, UnexpectedCharacter, UnexpectedEndOfInput };
+  enum class Result {
+    Ok,
+    OutOfRange,
+    UnexpectedCharacter,
+    UnexpectedEndOfInput,
+    InputTooLong
+  };
 
   static constexpr const char *resultToString(Result r) {
     switch (r) {
     case Result::Ok:
       return "Ok";
     case Result::OutOfRange:
-      return "LimitsExceeded";
+      return "OutOfRange";
     case Result::UnexpectedCharacter:
       return "UnexpectedCharacter";
     case Result::UnexpectedEndOfInput:
       return "UnexpectedEndOfInput";
+    case Result::InputTooLong:
+      return "InputTooLong";
     default:
       return "[unknown]";
     }
@@ -173,8 +183,7 @@ struct NumberParser {
           return Result::UnexpectedCharacter;
         }
         state = State::Reading;
-      }
-      else if (state == State::Reading) {
+      } else if (state == State::Reading) {
         if (isDigit(c)) {
           if (!addDigit(temp, digitValueUnchecked(c), negative)) {
             return Result::OutOfRange;
@@ -196,33 +205,57 @@ struct NumberParser {
   }
 
   template <typename V>
-  static Result setResultValue(V &result, long long signed mantissa,
+  static Result setResultValue(V &value, long long signed mantissa,
                                long long signed exponent, int decimals) {
     typedef long double temp;
-    static constexpr temp LOG_10_OF_2 = M_LN2 / M_LN10;
+    static constexpr temp TEN = 10;
 
-    const temp effExp2 =
-        (decimals > 0 ? (exponent - decimals) : exponent) * LOG_10_OF_2;
-    const int effExp2Whole = floorl(effExp2);
-    const temp effExp2Fraction = effExp2 - effExp2Whole;
+    if (mantissa == 0) {
+      value = 0;
+      return Result::Ok;
+    }
+    bool positive;
+    temp m1 = ((positive = mantissa > 0)) ? mantissa : -mantissa;
 
-    const temp v = static_cast<temp>(mantissa) * pow(2.0, effExp2Fraction);
-    const temp r = ldexpl(v, effExp2Whole);
-    if (r == HUGE_VAL || r == HUGE_VALF || r == HUGE_VALL) {
+    auto effExp = exponent - (decimals > 0 ? decimals : 0);
+    temp e10 = pow(TEN, effExp);
+    temp result;
+    if (e10 != HUGE_VALL && e10 != -HUGE_VALL) {
+      result = m1 * e10;
+      if (result == HUGE_VALL || result == -HUGE_VALL) {
+        return Result::OutOfRange;
+      }
+    }
+    else if (effExp > 0) {
       return Result::OutOfRange;
     }
-    result = r;
+    else  {
+      int log10MantissaFloor = floorl(log10l(m1));
+      temp m0 = mantissa * pow(TEN, - log10MantissaFloor);
+      e10 = pow(10, effExp + log10MantissaFloor);
+      if (e10 == -HUGE_VALL) {
+        return Result::OutOfRange;
+      }
+      result = m0 * e10;
+      if (result == HUGE_VALL || result == -HUGE_VALL) {
+        return Result::OutOfRange;
+      }
+    }
+    if (result > std::numeric_limits<V>::max()) {
+      return Result::OutOfRange;
+    }
+    value = positive ? result : -result;
     return Result::Ok;
   }
 
   template <typename C, typename V, class S>
-  requires(text::hasInputStreamSignature<S, C> &&std::is_floating_point<V>()) //
+  requires(text::hasInputStreamSignature<S, C> &&std::is_floating_point_v<V>) //
       static Result readRealValueFromStream(S &input, V &resultValue) {
     enum class State { MantissaStart, MantissaRead, ExponenStart, ExponenRead };
     typedef long long signed buildType;
     auto classifier = util::text::Classifiers::defaultInstance<C>();
     bool negative;
-    State state = State::Initial;
+    State state = State::MantissaStart;
     buildType mantissa = 0;
     buildType exponent = 0;
     int decimals = -1;
