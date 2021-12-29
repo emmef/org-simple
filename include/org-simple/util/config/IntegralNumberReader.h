@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_CONFIG_M_INTEGRAL_VALUE_READER_H
-#define ORG_SIMPLE_UTIL_CONFIG_M_INTEGRAL_VALUE_READER_H
+#ifndef ORG_SIMPLE_UTIL_CONFIG_M_INTEGRAL_NUMBER_READER_H
+#define ORG_SIMPLE_UTIL_CONFIG_M_INTEGRAL_NUMBER_READER_H
 /*
- * org-simple/util/config/IntegralValueReader.h
+ * org-simple/util/config/IntegralNumberReader.h
  *
  * Added by michel on 2021-12-28
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -22,100 +22,23 @@
  */
 
 #include <org-simple/util/config/ConfigReaders.h>
+#include <org-simple/util/text/NumberParser.h>
 
 namespace org::simple::util::config {
 
-struct IntegralValueReadingBasics {
-
-  template <typename V>
-  static bool setWithinMax(V &temp, V diff, bool negative) {
-    static constexpr V max = std::numeric_limits<V>::max();
-    static constexpr V maxBeforeValue = max / 10;
-    static constexpr V maxBeforeDiff = max - 10 * maxBeforeValue;
-
-    if constexpr (std::is_signed<V>()) {
-      static constexpr V min = std::numeric_limits<V>::min();
-      static constexpr V minBeforeValue = min / 10;
-      static constexpr V minBeforeDiff = min - 10 * minBeforeValue;
-      if (negative) {
-        V neg = -diff;
-        if (temp < minBeforeValue ||
-            (temp == minBeforeValue && neg < minBeforeDiff)) {
-          return false;
-        }
-        temp *= 10;
-        temp += neg;
-        return true;
-      }
-    }
-    if (temp > maxBeforeValue ||
-        (temp == maxBeforeValue && diff > maxBeforeDiff)) {
-      return false;
-    }
-    temp *= 10;
-    temp += diff;
-    return true;
-  }
-
-  template <typename C, typename V>
-  static ReaderResult
-  readIntegralValueFromStream(text::InputStream<C> &input, V &resultValue) {
-    enum class State { Initial, Reading };
-    auto classifier = util::text::Classifiers::defaultInstance<C>();
-    auto numberClassifier = util::text::Classifiers::ascii();
-    bool negative = false;
-    State state = State::Initial;
-    V temp = 0;
-    C c;
-    while (input.get(c)) {
-      switch (state) {
-      case State::Initial:
-        if (classifier.isWhiteSpace(c)) {
-          break;
-        } else if (numberClassifier.isDigit(c)) {
-          V diff = c - '0';
-          if (setWithinMax(temp, diff, negative)) {
-            state = State::Reading;
-          } else {
-            return ValueReader<C>::invalid("Number too large");
-          }
-          break;
-        } else if (c == '-') {
-          if constexpr (std::is_signed<V>()) {
-            if (negative) {
-              return ValueReader<C>::invalid("Unexpected extra minus sign");
-            }
-            negative = true;
-          } else {
-            return ValueReader<C>::invalid(
-                "Unexpected minus sign (for unsigned number)");
-          }
-          break;
-        } else {
-          return ValueReader<C>::invalid("Unexpected character");
-        }
-      case State::Reading:
-        if (numberClassifier.isDigit(c)) {
-          V diff = c - '0';
-          if (!setWithinMax(temp, diff, negative)) {
-            return ValueReader<C>::invalid("Number too large");
-          }
-          break;
-        } else if (numberClassifier.isWhiteSpace(c)) {
-          resultValue = temp;
-          return ReaderResult::Ok;
-        } else {
-          return ValueReader<C>::invalid("Unexpected character");
-        }
-      }
-    }
-    if (state == State::Reading) {
-      resultValue = temp;
-      return ReaderResult::Ok;
-    }
-    return ValueReader<C>::invalid("No data or unexpected end of input");
-  }
-};
+static constexpr ReaderResult
+toReaderResult(text::NumberParser::Result numberParserResult) {
+  switch (numberParserResult) {
+  case text::NumberParser::Result::Ok:
+    return ReaderResult::Ok;
+  case text::NumberParser::Result::TooLarge:
+    return ReaderResult::TooLarge;
+  case text::NumberParser::Result::UnexpectedCharacter:
+  case text::NumberParser::Result::UnexpectedEndOfInput:
+  default:
+    return ReaderResult::Invalid;
+  };
+}
 
 template <typename C, typename V>
 class IntegralNumberReader : public SingleValueReader<C, V> {
@@ -126,8 +49,8 @@ class IntegralNumberReader : public SingleValueReader<C, V> {
 
 protected:
   virtual ReaderResult readValue(text::InputStream<C> &input, V &resultValue) {
-    return IntegralValueReadingBasics::readIntegralValueFromStream(
-        input, resultValue);
+    return toReaderResult(
+        text::NumberParser::readIntegralValueFromStream<C>(input, resultValue));
   }
 
 public:
@@ -138,4 +61,4 @@ public:
 
 } // namespace org::simple::util::config
 
-#endif // ORG_SIMPLE_UTIL_CONFIG_M_INTEGRAL_VALUE_READER_H
+#endif // ORG_SIMPLE_UTIL_CONFIG_M_INTEGRAL_NUMBER_READER_H

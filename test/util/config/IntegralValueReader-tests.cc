@@ -4,8 +4,8 @@
 
 #include "boost-unit-tests.h"
 #include <org-simple/util/config/IntegralNumberReader.h>
-#include <org-simple/util/text/StringStream.h>
 #include <org-simple/util/text/StreamPredicate.h>
+#include <org-simple/util/text/StringStream.h>
 
 namespace {
 template <typename Value>
@@ -13,7 +13,8 @@ using IntegralNumberReader =
     org::simple::util::config::IntegralNumberReader<char, Value>;
 using Stream = org::simple::util::text::StringInputStream<char>;
 using Result = org::simple::util::config::ReaderResult;
-using Basics = org::simple::util::config::IntegralValueReadingBasics;
+using Basics = org::simple::util::text::NumberParser;
+
 template <typename Value>
 static const char *printNumber(Value v, char *buffer, size_t cap,
                                int leadingZeroes) {
@@ -95,10 +96,12 @@ requires(sizeof(Value) < sizeof(long long)) //
   static typename ScenarioNumberType<Value>::type min =
       std::is_same<bool, Value>() ? 1 : std::numeric_limits<Value>::min();
   if (v > max) {
-    return org::simple::util::config::ReaderResult::Invalid;
+    return org::simple::util::config::ReaderResult::TooLarge;
   }
   if (v < min) {
-    return org::simple::util::config::ReaderResult::Invalid;
+    return std::is_signed<Value>()
+               ? org::simple::util::config::ReaderResult::TooLarge
+               : org::simple::util::config::ReaderResult::Invalid;
   }
   return org::simple::util::config::ReaderResult::Ok;
 }
@@ -190,17 +193,12 @@ static void testScenario(const Scenario<Value> &scenario) {
 namespace std {
 static ostream &operator<<(ostream &out,
                            org::simple::util::config::ReaderResult result) {
-  switch (result) {
-  case org::simple::util::config::ReaderResult::Ok:
-    out << "Ok";
-    break;
-  case org::simple::util::config::ReaderResult::NotFound:
-    out << "NotFound";
-    break;
-  case org::simple::util::config::ReaderResult::Invalid:
-    out << "Invalid";
-    break;
-  }
+  out << org::simple::util::config::readerResultToString(result);
+  return out;
+}
+static ostream &
+operator<<(ostream &out, org::simple::util::text::NumberParser::Result result) {
+  out << org::simple::util::text::NumberParser::resultToString(result);
   return out;
 }
 
@@ -267,8 +265,8 @@ static std::vector<Scenario<Value>> &generateUnsignedSamples() {
     results.push_back({testValue, " ", ""});
     results.push_back({testValue, "", " "});
     results.push_back({testValue, " ", " "});
-//    results.push_back({testValue, "", ","});
-//    results.push_back({testValue, " ", ","});
+    //    results.push_back({testValue, "", ","});
+    //    results.push_back({testValue, " ", ","});
     results.push_back({testValue, true});
   }
   return results;
@@ -327,54 +325,50 @@ BOOST_DATA_TEST_CASE(testSignedLongLongScenarios,
 
 void testThreeKnownNumbers(const char *string) {
   Stream stringStream(string);
-  org::simple::util::text::EchoRepeatOneStream<char, Stream> echo(
-      stringStream);
+  org::simple::util::text::EchoRepeatOneStream<char, Stream> echo(stringStream);
   struct NoCommaPredicate : org::simple::util::Predicate<char> {
-    bool test(const char &c) const { return c != ',';}
+    bool test(const char &c) const { return c != ','; }
   } predicate;
-  org::simple::util::text::PredicateStream<char, NoCommaPredicate, false> stream(&echo, predicate);
-
-  org::simple::util::config::ReaderResult actualResult;
+  using Result = org::simple::util::text::NumberParser::Result;
+  org::simple::util::text::PredicateStream<char, NoCommaPredicate, false>
+      stream(&echo, predicate);
+  Result actualResult;
+  static constexpr Result Ok = Result::Ok;
   int actualValue;
   char x;
 
-  actualResult = Basics::readIntegralValueFromStream(stream, actualValue);
-  BOOST_CHECK_EQUAL(org::simple::util::config::ReaderResult::Ok, actualResult);
+  actualResult = Basics::readIntegralValueFromStream<char>(stream, actualValue);
+  BOOST_CHECK_EQUAL(Ok, actualResult);
   BOOST_CHECK_EQUAL(13, actualValue);
   x = echo.lastValue();
   do {
     if (!predicate.test(x)) {
       // separator!
       break;
-    }
-    else if (x == ' ') {
+    } else if (x == ' ') {
       echo.get(x);
-    }
-    else {
+    } else {
       echo.repeat();
       break;
     }
-  } while(true);
-  actualResult = Basics::readIntegralValueFromStream(stream, actualValue);
-  BOOST_CHECK_EQUAL(org::simple::util::config::ReaderResult::Ok, actualResult);
+  } while (true);
+  actualResult = Basics::readIntegralValueFromStream<char>(stream, actualValue);
+  BOOST_CHECK_EQUAL(Ok, actualResult);
   BOOST_CHECK_EQUAL(-54, actualValue);
   x = echo.lastValue();
   do {
     if (!predicate.test(x)) {
       // separator!
       break;
-    }
-    else if (x == ' ') {
+    } else if (x == ' ') {
       echo.get(x);
-    }
-    else {
+    } else {
       echo.repeat();
       break;
     }
-  }
-  while(true);
-  actualResult = Basics::readIntegralValueFromStream(stream, actualValue);
-  BOOST_CHECK_EQUAL(org::simple::util::config::ReaderResult::Ok, actualResult);
+  } while (true);
+  actualResult = Basics::readIntegralValueFromStream<char>(stream, actualValue);
+  BOOST_CHECK_EQUAL(Ok, actualResult);
   BOOST_CHECK_EQUAL(154, actualValue);
 }
 

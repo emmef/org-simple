@@ -35,7 +35,27 @@ template <typename CodePoint> struct ValueReaderClassifier {
   }
 };
 
-enum class ReaderResult { Ok, NotFound, Invalid };
+enum class ReaderResult { Ok, NotFound, Invalid, OutOfRange,
+  TooLarge, TooMany };
+
+static constexpr const char * readerResultToString(ReaderResult result) {
+  switch(result) {
+  case ReaderResult::Ok:
+    return "Ok";
+  case ReaderResult::NotFound:
+    return "NotFound";
+  case ReaderResult::OutOfRange:
+    return "OutOfRange";
+  case ReaderResult::TooLarge:
+    return "TooLarge";
+  case ReaderResult::TooMany:
+    return "TooMany";
+  case ReaderResult::Invalid:
+    return "Invalid";
+  default:
+    return "[unknown]";
+  }
+}
 
 template <typename C> class KeyReader {
 public:
