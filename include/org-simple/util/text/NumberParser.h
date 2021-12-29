@@ -54,8 +54,7 @@ struct NumberParser {
     return value - static_cast<C>('0');
   }
 
-  template <typename C>
-  static constexpr int digitValue(const C &value) {
+  template <typename C> static constexpr int digitValue(const C &value) {
     if (!isDigit(value)) {
       return digitValueUnchecked(value);
     }
@@ -67,18 +66,45 @@ struct NumberParser {
            (value >= static_cast<C>('a') && value <= static_cast<C>('f'));
   }
 
-  template <typename C>
-  static constexpr int hexDigitValue(const C &value) {
+  template <typename C> static constexpr int hexDigitValue(const C &value) {
     if (isDigit(value)) {
       return digitValue<false>(value);
-    }
-    else if (value >= static_cast<C>('A') && value <= static_cast<C>('F')) {
+    } else if (value >= static_cast<C>('A') && value <= static_cast<C>('F')) {
       return value - static_cast<C>('A') + 10;
-    }
-    else if (value >= static_cast<C>('a') && value <= static_cast<C>('f')) {
+    } else if (value >= static_cast<C>('a') && value <= static_cast<C>('f')) {
       return value - static_cast<C>('a') + 10;
     }
     return -1;
+  }
+
+  template <typename V>
+  static constexpr bool isIntegralNumber = std::is_integral<V>() &&
+                                           !std::is_same<bool, V>();
+
+  /**
+   * Adds a digit to the integral number being built in \c value, where digit
+   * SHOULD be between 0 and 9 (not checked). Returns \c true if the digit was
+   * added successfully, and \c false when the result would become too large for
+   * the used value type.
+   * @tparam V The type of value.
+   * @param value The value being built.
+   * @param digit The digit to add.
+   * @return \c true on success, and \c false if number is out of range.
+   */
+  template <typename V>
+  requires(isIntegralNumber<V>) //
+      static bool addDigitToPositive(V &value, int digit) {
+    static constexpr V max = std::numeric_limits<V>::max();
+    static constexpr V maxBeforeValue = max / 10;
+    static constexpr V maxBeforeDiff = max - 10 * maxBeforeValue;
+
+    if (value > maxBeforeValue ||
+        (value == maxBeforeValue && digit > maxBeforeDiff)) {
+      return false;
+    }
+    value *= 10;
+    value += digit;
+    return true;
   }
 
   /**
@@ -95,11 +121,9 @@ struct NumberParser {
    * @param negative Indicates if the value is/should be negative.
    * @return \c true on success, and \c false if number is out of range.
    */
-  template <typename V> static bool addDigit(V &value, V digit, bool negative) {
-    static constexpr V max = std::numeric_limits<V>::max();
-    static constexpr V maxBeforeValue = max / 10;
-    static constexpr V maxBeforeDiff = max - 10 * maxBeforeValue;
-
+  template <typename V>
+  requires(isIntegralNumber<V>) //
+      static bool addDigit(V &value, int digit, bool negative) {
     if constexpr (std::is_signed<V>()) {
       static constexpr V min = std::numeric_limits<V>::min();
       static constexpr V minBeforeValue = min / 10;
@@ -115,17 +139,11 @@ struct NumberParser {
         return true;
       }
     }
-    if (value > maxBeforeValue ||
-        (value == maxBeforeValue && digit > maxBeforeDiff)) {
-      return false;
-    }
-    value *= 10;
-    value += digit;
-    return true;
+    return addDigitToPositive(value, digit);
   }
 
   template <typename C, typename V, class S>
-  requires(text::hasInputStreamSignature<S, C>) // prevent ugly formatting
+  requires(text::hasInputStreamSignature<S, C> &&isIntegralNumber<V>) //
       static Result readIntegralValueFromStream(S &input, V &resultValue) {
     enum class State { Initial, Reading };
     auto classifier = util::text::Classifiers::defaultInstance<C>();
@@ -139,8 +157,7 @@ struct NumberParser {
         if (classifier.isWhiteSpace(c)) {
           break;
         } else if (isDigit(c)) {
-          V digit = digitValueUnchecked(c);
-          if (addDigit(temp, digit, negative)) {
+          if (addDigit(temp, digitValueUnchecked(c), negative)) {
             state = State::Reading;
           } else {
             return Result::TooLarge;
@@ -161,8 +178,63 @@ struct NumberParser {
         }
       case State::Reading:
         if (isDigit(c)) {
-          V digit = digitValueUnchecked(c);
-          if (!addDigit(temp, digit, negative)) {
+          if (!addDigit(temp, digitValueUnchecked(c), negative)) {
+            return Result::TooLarge;
+          }
+          break;
+        } else if (classifier.isWhiteSpace(c)) {
+          resultValue = temp;
+          return Result::Ok;
+        } else {
+          return Result::UnexpectedCharacter;
+        }
+      }
+    }
+    if (state == State::Reading) {
+      resultValue = temp;
+      return Result::Ok;
+    }
+    return Result::UnexpectedEndOfInput;
+  }
+
+  template <typename C, typename V, class S>
+  requires(text::hasInputStreamSignature<S, C> &&std::is_floating_point<V>()) //
+      static Result readRealValueFromStream(S &input, V &resultValue) {
+    enum class State { Initial, Reading };
+    typedef long long unsigned buildType;
+    auto classifier = util::text::Classifiers::defaultInstance<C>();
+    bool negative;
+    State state = State::Initial;
+    buildType temp = 0;
+    C c;
+    while (input.get(c)) {
+      switch (state) {
+      case State::Initial:
+        if (classifier.isWhiteSpace(c)) {
+          break;
+        } else if (isDigit(c)) {
+          if (addDigit(temp, digitValueUnchecked(c), negative)) {
+            state = State::Reading;
+          } else {
+            return Result::TooLarge;
+          }
+          break;
+        } else if (c == '-') {
+          if constexpr (std::is_signed<V>()) {
+            if (negative) {
+              return Result::UnexpectedCharacter;
+            }
+            negative = true;
+          } else {
+            return Result::UnexpectedCharacter;
+          }
+          break;
+        } else {
+          return Result::UnexpectedCharacter;
+        }
+      case State::Reading:
+        if (isDigit(c)) {
+          if (!addDigit(temp, digitValueUnchecked(c), negative)) {
             return Result::TooLarge;
           }
           break;
