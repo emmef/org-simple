@@ -169,7 +169,7 @@ template <typename Value> struct Scenario {
     Reader<Value> reader;
     reader.actualValue = 0;
     Stream stream(scenario.input);
-    Result actualResult = reader.read(stream, "key");
+    Result actualResult = reader.read(stream, "key", nullptr);
 
     BOOST_CHECK_EQUAL(scenario.expectedResult, actualResult);
     bool expectedToBeSet =

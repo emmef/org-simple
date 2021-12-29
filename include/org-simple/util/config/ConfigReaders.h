@@ -25,6 +25,7 @@
 #include <org-simple/util/config/ConfigException.h>
 #include <org-simple/util/text/Characters.h>
 #include <org-simple/util/text/InputStream.h>
+#include <org-simple/util/text/QuoteState.h>
 
 namespace org::simple::util::config {
 
@@ -57,7 +58,21 @@ static constexpr const char * readerResultToString(ReaderResult result) {
   }
 }
 
-template <typename C> class KeyReader {
+class AbstractReader {
+
+protected:
+  static ReaderResult &readerResult() {
+    static thread_local ReaderResult result;
+    return result;
+  }
+
+public:
+  static ReaderResult getReaderResult() {
+    return readerResult();
+  }
+};
+
+template <typename C> class KeyReader : public AbstractReader {
 public:
   /**
    * Read a key name from the input stream.
@@ -86,16 +101,8 @@ public:
   virtual ~KeyReader() = default;
 };
 
-template <typename C> class ValueReader {
+template <typename C> class ValueReader : public AbstractReader {
   const util::Predicate<C> *separatorPredicate;
-
-protected:
-  static const char *&staticMessage() {
-    static thread_local const char *message;
-    return message;
-  }
-
-  static void resetMessage() { staticMessage() = ""; }
 
 public:
   ValueReader(const util::Predicate<C> *allowedSeparators)
@@ -118,16 +125,10 @@ public:
    * @param input The input stream to read from.
    * @throws ConfigException
    */
-  virtual ReaderResult read(text::InputStream<C> &input, const C *keyName) = 0;
+  virtual ReaderResult read(text::InputStream<C> &input, const C *keyName, const util::text::QuoteState<C> *quoteState) = 0;
 
   const util::Predicate<C> &getSeparatorPredicate() const { return *separatorPredicate; }
 
-  static ReaderResult invalid(const char *message) {
-    staticMessage() = message;
-    return ReaderResult::Invalid;
-  }
-
-  static const char *getMessage() { return staticMessage(); }
   virtual ~ValueReader() = default;
 };
 
@@ -137,8 +138,8 @@ public:
   template <typename... A>
   SingleValueReader(A... arguments) : ValueReader<C>(arguments...) {}
 
-  ReaderResult read(text::InputStream<C> &input, const C *) override {
-    ValueReader<C>::resetMessage();
+  ReaderResult read(text::InputStream<C> &input, const C *, const util::text::QuoteState<C> *) override {
+    AbstractReader::readerResult() = ReaderResult::Ok;
     V resultValue;
     ReaderResult result = readValue(input, resultValue);
     if (result == ReaderResult::Ok) {

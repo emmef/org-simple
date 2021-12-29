@@ -74,7 +74,7 @@ class PrintingReader {
     std::vector<KeyValuePair> &results;
 
   public:
-    ReaderResult read(InputStream &input, const char *keyName) final {
+    ReaderResult read(InputStream &input, const char *keyName, const org::simple::util::text::QuoteState<char> *) final {
       value.clear();
       char c;
       while (input.get(c)) {

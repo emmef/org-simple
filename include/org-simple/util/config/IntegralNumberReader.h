@@ -45,8 +45,6 @@ class IntegralNumberReader : public SingleValueReader<C, V> {
   static_assert(std::is_integral<V>() && !std::is_same<bool, V>());
   static constexpr bool isSigned = std::is_signed<V>();
 
-  using ValueReader<C>::invalid;
-
 protected:
   virtual ReaderResult readValue(text::InputStream<C> &input, V &resultValue) {
     return toReaderResult(
