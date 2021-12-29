@@ -27,7 +27,7 @@
 
 namespace org::simple::util::text {
 
-template <typename C> class QuoteState : public StreamProbe<C> {
+template <typename C> class QuoteState : public StreamProbe<C>, public Predicate<C> {
   bool escaped = false;
   C openQuote = 0;
   C closeQuote = 0;
@@ -67,6 +67,16 @@ public:
     } else if (c == '\\') {
       escaped = true;
     }
+  }
+  /**
+   * Tests whether a character indicates a valid start of a quoted section, not
+   * whether this \c QuoteState is inside or outside a quoted section.
+   * @param c The character to test.
+   * @return
+   */
+  bool test(const C &c) const final {
+    C endQuote;
+    return matcher(c, endQuote);
   }
 };
 
