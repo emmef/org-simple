@@ -31,8 +31,8 @@ toReaderResult(text::NumberParser::Result numberParserResult) {
   switch (numberParserResult) {
   case text::NumberParser::Result::Ok:
     return ReaderResult::Ok;
-  case text::NumberParser::Result::TooLarge:
-    return ReaderResult::TooLarge;
+  case text::NumberParser::Result::OutOfRange:
+    return ReaderResult::OutOfRange;
   case text::NumberParser::Result::UnexpectedCharacter:
   case text::NumberParser::Result::UnexpectedEndOfInput:
   default:

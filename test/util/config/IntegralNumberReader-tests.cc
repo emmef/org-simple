@@ -96,11 +96,11 @@ requires(sizeof(Value) < sizeof(long long)) //
   static typename ScenarioNumberType<Value>::type min =
       std::is_same<bool, Value>() ? 1 : std::numeric_limits<Value>::min();
   if (v > max) {
-    return org::simple::util::config::ReaderResult::TooLarge;
+    return org::simple::util::config::ReaderResult::OutOfRange;
   }
   if (v < min) {
     return std::is_signed<Value>()
-               ? org::simple::util::config::ReaderResult::TooLarge
+               ? org::simple::util::config::ReaderResult::OutOfRange
                : org::simple::util::config::ReaderResult::Invalid;
   }
   return org::simple::util::config::ReaderResult::Ok;

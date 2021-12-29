@@ -21,6 +21,7 @@
  * limitations under the License.
  */
 
+#include <cmath>
 #include <limits>
 #include <org-simple/util/Predicate.h>
 #include <type_traits>
@@ -28,14 +29,15 @@
 namespace org::simple::util::text {
 
 struct NumberParser {
-  enum class Result { Ok, TooLarge, UnexpectedCharacter, UnexpectedEndOfInput };
+  enum class Result { Ok,
+    OutOfRange, UnexpectedCharacter, UnexpectedEndOfInput };
 
   static constexpr const char *resultToString(Result r) {
     switch (r) {
     case Result::Ok:
       return "Ok";
-    case Result::TooLarge:
-      return "TooLarge";
+    case Result::OutOfRange:
+      return "LimitsExceeded";
     case Result::UnexpectedCharacter:
       return "UnexpectedCharacter";
     case Result::UnexpectedEndOfInput:
@@ -93,7 +95,7 @@ struct NumberParser {
    */
   template <typename V>
   requires(isIntegralNumber<V>) //
-      static bool addDigitToPositive(V &value, int digit) {
+      static bool addDigitToPositive(V &value, unsigned digit) {
     static constexpr V max = std::numeric_limits<V>::max();
     static constexpr V maxBeforeValue = max / 10;
     static constexpr V maxBeforeDiff = max - 10 * maxBeforeValue;
@@ -123,13 +125,13 @@ struct NumberParser {
    */
   template <typename V>
   requires(isIntegralNumber<V>) //
-      static bool addDigit(V &value, int digit, bool negative) {
+      static bool addDigit(V &value, unsigned digit, bool negative) {
     if constexpr (std::is_signed<V>()) {
       static constexpr V min = std::numeric_limits<V>::min();
       static constexpr V minBeforeValue = min / 10;
       static constexpr V minBeforeDiff = min - 10 * minBeforeValue;
       if (negative) {
-        V neg = -digit;
+        V neg = -static_cast<V>(digit);
         if (value < minBeforeValue ||
             (value == minBeforeValue && neg < minBeforeDiff)) {
           return false;
@@ -149,39 +151,35 @@ struct NumberParser {
     auto classifier = util::text::Classifiers::defaultInstance<C>();
     bool negative = false;
     State state = State::Initial;
+    int digitsSeen = 0;
     V temp = 0;
     C c;
     while (input.get(c)) {
-      switch (state) {
-      case State::Initial:
+      if (state == State::Initial) {
         if (classifier.isWhiteSpace(c)) {
-          break;
+          continue;
         } else if (isDigit(c)) {
-          if (addDigit(temp, digitValueUnchecked(c), negative)) {
-            state = State::Reading;
-          } else {
-            return Result::TooLarge;
+          if (!addDigit(temp, digitValueUnchecked(c), negative)) {
+            return Result::OutOfRange;
           }
-          break;
+          digitsSeen++;
         } else if (c == '-') {
-          if constexpr (std::is_signed<V>()) {
-            if (negative) {
-              return Result::UnexpectedCharacter;
-            }
-            negative = true;
-          } else {
+          if constexpr (!std::is_signed<V>()) {
             return Result::UnexpectedCharacter;
+          } else {
+            negative = true;
           }
-          break;
         } else {
           return Result::UnexpectedCharacter;
         }
-      case State::Reading:
+        state = State::Reading;
+      }
+      else if (state == State::Reading) {
         if (isDigit(c)) {
           if (!addDigit(temp, digitValueUnchecked(c), negative)) {
-            return Result::TooLarge;
+            return Result::OutOfRange;
           }
-          break;
+          digitsSeen++;
         } else if (classifier.isWhiteSpace(c)) {
           resultValue = temp;
           return Result::Ok;
@@ -190,65 +188,120 @@ struct NumberParser {
         }
       }
     }
-    if (state == State::Reading) {
+    if (digitsSeen > 0) {
       resultValue = temp;
       return Result::Ok;
     }
     return Result::UnexpectedEndOfInput;
   }
 
+  template <typename V>
+  static Result setResultValue(V &result, long long signed mantissa,
+                               long long signed exponent, int decimals) {
+    typedef long double temp;
+    static constexpr temp LOG_10_OF_2 = M_LN2 / M_LN10;
+
+    const temp effExp2 =
+        (decimals > 0 ? (exponent - decimals) : exponent) * LOG_10_OF_2;
+    const int effExp2Whole = floorl(effExp2);
+    const temp effExp2Fraction = effExp2 - effExp2Whole;
+
+    const temp v = static_cast<temp>(mantissa) * pow(2.0, effExp2Fraction);
+    const temp r = ldexpl(v, effExp2Whole);
+    if (r == HUGE_VAL || r == HUGE_VALF || r == HUGE_VALL) {
+      return Result::OutOfRange;
+    }
+    result = r;
+    return Result::Ok;
+  }
+
   template <typename C, typename V, class S>
   requires(text::hasInputStreamSignature<S, C> &&std::is_floating_point<V>()) //
       static Result readRealValueFromStream(S &input, V &resultValue) {
-    enum class State { Initial, Reading };
-    typedef long long unsigned buildType;
+    enum class State { MantissaStart, MantissaRead, ExponenStart, ExponenRead };
+    typedef long long signed buildType;
     auto classifier = util::text::Classifiers::defaultInstance<C>();
     bool negative;
     State state = State::Initial;
-    buildType temp = 0;
+    buildType mantissa = 0;
+    buildType exponent = 0;
+    int decimals = -1;
+    int seenDigits = 0;
     C c;
     while (input.get(c)) {
-      switch (state) {
-      case State::Initial:
+      if (state == State::MantissaStart) {
         if (classifier.isWhiteSpace(c)) {
-          break;
+          continue;
         } else if (isDigit(c)) {
-          if (addDigit(temp, digitValueUnchecked(c), negative)) {
-            state = State::Reading;
-          } else {
-            return Result::TooLarge;
+          if (!addDigit(mantissa, digitValueUnchecked(c), negative)) {
+            return Result::OutOfRange;
           }
-          break;
+          seenDigits++;
         } else if (c == '-') {
-          if constexpr (std::is_signed<V>()) {
-            if (negative) {
-              return Result::UnexpectedCharacter;
-            }
-            negative = true;
-          } else {
-            return Result::UnexpectedCharacter;
-          }
-          break;
+          negative = true;
+        } else if (c == '+') {
+          negative = false;
+        } else if (c == '.') {
+          decimals = 0;
         } else {
           return Result::UnexpectedCharacter;
         }
-      case State::Reading:
+        state = State::MantissaRead;
+      } else if (state == State::MantissaRead) {
         if (isDigit(c)) {
-          if (!addDigit(temp, digitValueUnchecked(c), negative)) {
-            return Result::TooLarge;
+          if (!addDigit(mantissa, digitValueUnchecked(c), negative)) {
+            return Result::OutOfRange;
           }
-          break;
+          if (decimals >= 0) {
+            decimals++;
+          }
+          seenDigits++;
+        } else if (c == '.') {
+          if (decimals >= 0) {
+            return Result::UnexpectedCharacter;
+          }
+          decimals = 0;
         } else if (classifier.isWhiteSpace(c)) {
-          resultValue = temp;
-          return Result::Ok;
+          return setResultValue(resultValue, mantissa, exponent, decimals);
+        } else if (c == 'E' || c == 'e') {
+          state = State::ExponenStart;
+          seenDigits = 0;
+          negative = false;
+        } else {
+          return Result::UnexpectedCharacter;
+        }
+      } else if (state == State::ExponenStart) {
+        if (isDigit(c)) {
+          if (!addDigit(exponent, digitValueUnchecked(c), negative)) {
+            return Result::OutOfRange;
+          }
+          seenDigits++;
+        } else if (c == '-') {
+          negative = true;
+        } else if (c == '+') {
+          negative = false;
+        } else if (classifier.isWhiteSpace(c)) {
+          return setResultValue(resultValue, mantissa, exponent, decimals);
+        } else {
+          return Result::UnexpectedCharacter;
+        }
+        state = State::ExponenRead;
+      } else if (state == State::ExponenRead) {
+        if (isDigit(c)) {
+          if (!addDigit(exponent, digitValueUnchecked(c), negative)) {
+            return Result::OutOfRange;
+          }
+          state = State::ExponenRead;
+          seenDigits++;
+        } else if (classifier.isWhiteSpace(c)) {
+          return setResultValue(resultValue, mantissa, exponent, decimals);
         } else {
           return Result::UnexpectedCharacter;
         }
       }
     }
-    if (state == State::Reading) {
-      resultValue = temp;
-      return Result::Ok;
+    if (seenDigits > 0) {
+      return setResultValue(resultValue, mantissa, exponent, decimals);
     }
     return Result::UnexpectedEndOfInput;
   }
