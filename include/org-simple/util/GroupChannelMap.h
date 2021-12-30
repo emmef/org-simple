@@ -20,6 +20,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#include <array>
+#include <utility>
+
 namespace org::simple::util {
 
 /**
@@ -32,150 +36,99 @@ namespace org::simple::util {
  */
 template <int MAX_GROUPS, int MAX_CHANNELS, int... GR> class GroupChannelMap {
 protected:
-  static constexpr int groupCount_ = 0;
-  static constexpr int totalChannels_ = 0;
+  static constexpr int groups = 0;
+  static constexpr int channels = 0;
 };
 
 template <int MAX_GROUPS, int MAX_CHANNELS, int GROUP_CHANNELS, int... GR>
 class GroupChannelMap<MAX_GROUPS, MAX_CHANNELS, GROUP_CHANNELS, GR...>
     : public GroupChannelMap<MAX_GROUPS, MAX_CHANNELS, GR...> {
   using Relation = GroupChannelMap<MAX_GROUPS, MAX_CHANNELS, GR...>;
-
-protected:
   static_assert(GROUP_CHANNELS > 0);
-  static constexpr int groupCount_ = 1 + Relation::groupCount_;
-  static constexpr int totalChannels_ =
-      GROUP_CHANNELS + Relation::totalChannels_;
-  static_assert(groupCount_ <= MAX_GROUPS);
-  static_assert(totalChannels_ <= MAX_CHANNELS);
-  static constexpr int channels_ = GROUP_CHANNELS;
 
-  static constexpr int groupChannels_(int group) {
-    if (group == 0) {
-      return channels_;
-    } else if constexpr (groupCount_ > 1) {
-      return Relation::groupChannels_(group - 1);
-    } else {
-      return 0;
-    }
-  }
+public:
+  /**
+   * Contains the number of mapped groups.
+   */
+  static constexpr int groups = 1 + Relation::groups;
+  /**
+   * Contains the total number of channels mapped by all groups.
+   */
+  static constexpr int channels = GROUP_CHANNELS + Relation::channels;
 
-  template <int TOTAL_CHANNELS> static constexpr int beginChannel_(int group) {
-    if (group == 0) {
-      return TOTAL_CHANNELS - totalChannels_;
-    }
-    if constexpr (groupCount_ > 1) {
-      return Relation::template beginChannel_<TOTAL_CHANNELS>(group - 1);
-    }
-  }
+private:
+  static_assert(groups <= MAX_GROUPS);
+  static_assert(channels <= MAX_CHANNELS);
 
   template <int TOTAL_CHANNELS, int GROUP_INDEX>
-  static constexpr int groupOff_(int channel) {
-    const int offset = beginChannel_<TOTAL_CHANNELS>(GROUP_INDEX);
-    const int max = offset + groupChannels_(GROUP_INDEX);
+  static constexpr int calculateGroupOff(int channel) {
+    const int offset = beginChannel[GROUP_INDEX];
+    const int max = offset + groupChannels[GROUP_INDEX];
     if (channel >= offset && channel < max) {
       return GROUP_INDEX;
     }
-    if constexpr (GROUP_INDEX < groups() - 1) {
-      return groupOff_<TOTAL_CHANNELS, GROUP_INDEX + 1>(channel);
+    if constexpr (GROUP_INDEX < groups - 1) {
+      return calculateGroupOff<TOTAL_CHANNELS, GROUP_INDEX + 1>(channel);
     }
     return -1;
   }
 
+  template <int INDEX, int COUNT, int SUM, int... A>
+  static constexpr std::array<int, COUNT> generateBeginChannels() {
+    if constexpr (INDEX > 0) {
+      const int newSum = SUM + groupChannels[COUNT - INDEX];
+      return generateBeginChannels<INDEX - 1, COUNT, newSum, A..., SUM>();
+    } else {
+      return {A...};
+    }
+  }
+
+  template <int INDEX, int COUNT, int... A>
+  static constexpr std::array<int, channels> generateGroupForChannels() {
+    if constexpr (INDEX > 0) {
+      const int newValue = calculateGroupOff<channels, 0>(COUNT - INDEX);
+      return generateGroupForChannels<INDEX - 1, COUNT, A..., newValue>();
+    } else {
+      return {A...};
+    }
+  }
+
+  template <int INDEX, int... A>
+  static constexpr std::array<int, groups> generateEndChannels() {
+    if constexpr (INDEX >= 0) {
+      return generateEndChannels<
+          INDEX - 1, beginChannel[INDEX] + groupChannels[INDEX], A...>();
+    } else {
+      return {A...};
+    }
+  }
+
 public:
   /**
-   * Returns the total number of groups, which are zero-based numbered.
-   * @return the total number of groups
+   * Contains the number of channels for each group.
    */
-  static constexpr int groups() { return groupCount_; };
+  static constexpr int groupChannels[groups] = {GROUP_CHANNELS, GR...};
 
   /**
-   * Returns the total number of channels, which are zero-based numbered.
-   * @return the total number of channels
+   * Contains the begin-channel for each group.
    */
-  static constexpr int channels() { return totalChannels_; }
+  static constexpr auto beginChannel =
+      generateBeginChannels<groups, groups, 0>();
 
   /**
-   * Returns the first channel that belongs to this group (offset).
-   * @param group The zero-based group-number.
-   * @return the zero-based channel number.
+   * Contains for each channel the group that it is mapped to.
    */
-  static constexpr int beginChannel(int group) {
-    return beginChannel_<totalChannels_>(group);
-  }
-
-  template <int group> static constexpr int beginChannel() {
-    return beginChannel(group);
-  }
+  static constexpr auto groupForChannel =
+      generateGroupForChannels<channels, channels>();
 
   /**
-   * Returns the number of channels in this group.
-   * @param group The zero-based group-number.
-   * @return the zero-based channel number.
+   * Contains for each group the channel just past the last channel that belongs
+   * to it. This can be used in iterations like:
+   *
+   * for (int i =
+   * mapping.beginChannel[group]; i < mapping.endChannel[group; i++) {}
    */
-  static constexpr int groupChannels(int group) {
-    return groupChannels_(group);
-  }
-
-  template <int group> static constexpr int groupChannels() {
-    return groupChannels(group);
-  }
-
-  /**
-   * Returns the number of the channel just past this group. For the last group
-   * this is equal to the total number of channels.
-   * @param group The zero-based group-number.
-   * @return the zero-based channel number.
-   */
-  static constexpr int endChannel(int group) {
-    return beginChannel(group) + groupChannels_(group);
-  }
-
-  template <int group> static constexpr int endChannel() {
-    return endChannel(group);
-  }
-
-  /**
-   * Returns the number of the last channel in this group (inclusive).
-   * @param group The zero-based group-number.
-   * @return the zero-based channel number.
-   */
-  static constexpr int lastChannel(int group) { return endChannel(group) - 1; }
-
-  template <int group> static constexpr int lastChannel() {
-    return lastChannel(group);
-  }
-
-  /**
-   * Returns to which group this channel belongs.
-   * @param index The zero-based channel number.
-   * @return the zero-based group-number.
-   */
-  static constexpr int groupOf(int index) {
-    return groupOff_<totalChannels_, 0>(index);
-  }
-
-  template <int CHANNEL> static constexpr int groupOf() {
-    return groupOf(CHANNEL);
-  }
-
-  // For builders
-
-  /**
-   * Returns the number of groups that is available to add (for an extended
-   * topology, based on this one).
-   * @return the number of available groups, which can be zero.
-   */
-  static constexpr int availableGroups() { return MAX_GROUPS - groupCount_; };
-
-  /**
-   * Returns the number channels that is available to add (for an extended
-   * topology, based on this one).
-   * @return the number of available channels, which can be zero.
-   */
-  static constexpr int availableChannels() {
-    return MAX_CHANNELS - totalChannels_;
-  }
+  static constexpr auto endChannel = generateEndChannels<groups - 1>();
 };
 } // namespace org::simple::util
 

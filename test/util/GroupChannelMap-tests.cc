@@ -27,6 +27,7 @@ BOOST_AUTO_TEST_CASE(testExploreFirstTopology__G4_C16__2_3_4_1) {
                 GROUP_CHANNELS[2], GROUP_CHANNELS[3]>
       topology;
 
+  std::cout << std::endl;
   int groupsForChannels[MAX_CHANNELS];
   int totalGroups = sizeof(GROUP_CHANNELS) / sizeof(int);
   int totalChannels = 0;
@@ -36,16 +37,13 @@ BOOST_AUTO_TEST_CASE(testExploreFirstTopology__G4_C16__2_3_4_1) {
   int availableGroups = MAX_GROUPS - totalGroups;
   int availableChannels = MAX_CHANNELS - totalChannels;
 
-  BOOST_CHECK_EQUAL(totalGroups, topology.groups());
-  BOOST_CHECK_EQUAL(totalChannels, topology.channels());
-  BOOST_CHECK_EQUAL(availableGroups, topology.availableGroups());
-  BOOST_CHECK_EQUAL(availableChannels, topology.availableChannels());
-  for (int i = 0, beginChannel = 0; i < topology.groups(); i++) {
-    BOOST_CHECK_EQUAL(GROUP_CHANNELS[i], topology.groupChannels(i));
-    BOOST_CHECK_EQUAL(beginChannel, topology.beginChannel(i));
-    int endCHannel = beginChannel + GROUP_CHANNELS[i];
-    BOOST_CHECK_EQUAL(endCHannel, topology.endChannel(i));
-    BOOST_CHECK_EQUAL(endCHannel - 1, topology.lastChannel(i));
+  BOOST_CHECK_EQUAL(totalGroups, topology.groups);
+  BOOST_CHECK_EQUAL(totalChannels, topology.channels);
+  for (int i = 0, beginChannel = 0; i < topology.groups; i++) {
+    BOOST_CHECK_EQUAL(GROUP_CHANNELS[i], topology.groupChannels[i]);
+    BOOST_CHECK_EQUAL(beginChannel, topology.beginChannel[i]);
+    int endChannel = beginChannel + GROUP_CHANNELS[i];
+    BOOST_CHECK_EQUAL(endChannel, topology.endChannel[i]);
     beginChannel += GROUP_CHANNELS[i];
   }
 
@@ -59,8 +57,12 @@ BOOST_AUTO_TEST_CASE(testExploreFirstTopology__G4_C16__2_3_4_1) {
   }
 
   for (int channel = 0; channel < totalChannels; channel++) {
-    BOOST_CHECK_EQUAL(groupsForChannels[channel], topology.groupOf(channel));
+    BOOST_CHECK_EQUAL(groupsForChannels[channel], topology.groupForChannel[channel]);
   }
+
+//  for (int group = 0; group < totalGroups; group++) {
+//    BOOST_CHECK_EQUAL(topology.test[group], topology.groupChannels[group]);
+//  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
