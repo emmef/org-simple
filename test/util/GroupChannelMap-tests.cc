@@ -2,12 +2,15 @@
 // Created by michel on 30-12-21.
 //
 
+#include <org-simple/util/Generator.h>
 #include "test-helper.h"
-#include <org-simple/util/GroupChannelMap.h>
 
 template <int MAX_GROUPS, int MAX_CHANNELS, int... GR>
-using GroupTopology =
-    org::simple::util::GroupChannelMap<MAX_GROUPS, MAX_CHANNELS, GR...>;
+using Generator =
+    org::simple::util::CompileTimeGenerator<MAX_GROUPS, MAX_CHANNELS, GR...>;
+template <int MAX_GROUPS, int MAX_CHANNELS>
+using Mapping =
+    org::simple::util::GroupChannelMap<MAX_GROUPS, MAX_CHANNELS>;
 
 struct Scenario {
   const int MAX_GROUPS;
@@ -23,7 +26,7 @@ BOOST_AUTO_TEST_CASE(testExploreFirstTopology__G4_C16__2_3_4_1) {
   static constexpr int MAX_GROUPS = 4;
   static constexpr int MAX_CHANNELS = 16;
   static constexpr int GROUP_CHANNELS[] = {2, 3, 4, 1};
-  GroupTopology<MAX_GROUPS, MAX_CHANNELS, GROUP_CHANNELS[0], GROUP_CHANNELS[1],
+  Generator<MAX_GROUPS, MAX_CHANNELS, GROUP_CHANNELS[0], GROUP_CHANNELS[1],
                 GROUP_CHANNELS[2], GROUP_CHANNELS[3]>
       topology;
 
@@ -34,9 +37,6 @@ BOOST_AUTO_TEST_CASE(testExploreFirstTopology__G4_C16__2_3_4_1) {
   for (int i = 0; i < totalGroups; i++) {
     totalChannels += GROUP_CHANNELS[i];
   }
-  int availableGroups = MAX_GROUPS - totalGroups;
-  int availableChannels = MAX_CHANNELS - totalChannels;
-
   BOOST_CHECK_EQUAL(totalGroups, topology.groups);
   BOOST_CHECK_EQUAL(totalChannels, topology.channels);
   for (int i = 0, beginChannel = 0; i < topology.groups; i++) {
@@ -59,10 +59,86 @@ BOOST_AUTO_TEST_CASE(testExploreFirstTopology__G4_C16__2_3_4_1) {
   for (int channel = 0; channel < totalChannels; channel++) {
     BOOST_CHECK_EQUAL(groupsForChannels[channel], topology.groupForChannel[channel]);
   }
-
-//  for (int group = 0; group < totalGroups; group++) {
-//    BOOST_CHECK_EQUAL(topology.test[group], topology.groupChannels[group]);
-//  }
 }
+
+BOOST_AUTO_TEST_CASE(testExploreFirstTopology_Instance__G4_C16__2_3_4_1) {
+  static constexpr int MAX_GROUPS = 4;
+  static constexpr int MAX_CHANNELS = 16;
+  static constexpr int GROUP_CHANNELS[] = {2, 3, 4, 1};
+
+  const Mapping<MAX_GROUPS, MAX_CHANNELS> topology {2, 3, 4, 1};
+
+  int groupsForChannels[MAX_CHANNELS];
+  int totalGroups = sizeof(GROUP_CHANNELS) / sizeof(int);
+  int totalChannels = 0;
+  for (int i = 0; i < totalGroups; i++) {
+    totalChannels += GROUP_CHANNELS[i];
+  }
+
+  BOOST_CHECK_EQUAL(totalGroups, topology->groups);
+  BOOST_CHECK_EQUAL(totalChannels, topology->channels);
+  for (int i = 0, beginChannel = 0; i < topology->groups; i++) {
+    BOOST_CHECK_EQUAL(GROUP_CHANNELS[i], topology->groupChannels[i]);
+    BOOST_CHECK_EQUAL(beginChannel, topology->beginChannel[i]);
+    int endChannel = beginChannel + GROUP_CHANNELS[i];
+    BOOST_CHECK_EQUAL(endChannel, topology->endChannel[i]);
+    beginChannel += GROUP_CHANNELS[i];
+  }
+
+  for (int channel = 0; channel < totalChannels; channel++) {
+    groupsForChannels[channel] = 0;
+  }
+  for (int group = 0, channel = 0; group < totalGroups; group++) {
+    for (int j = 0; j < GROUP_CHANNELS[group]; j++, channel++) {
+      groupsForChannels[channel] = group;
+    }
+  }
+
+  for (int channel = 0; channel < totalChannels; channel++) {
+    BOOST_CHECK_EQUAL(groupsForChannels[channel], topology->groupForChannel[channel]);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(testExploreFirstTopology_Copy__G4_C16__2_3_4_1) {
+  static constexpr int MAX_GROUPS = 4;
+  static constexpr int MAX_CHANNELS = 16;
+  static constexpr int GROUP_CHANNELS[] = {2, 3, 4, 1};
+
+  const Mapping<MAX_GROUPS, MAX_CHANNELS> original {2, 3, 4, 1};
+  auto topology = original;
+
+  int groupsForChannels[MAX_CHANNELS];
+  int totalGroups = sizeof(GROUP_CHANNELS) / sizeof(int);
+  int totalChannels = 0;
+  for (int i = 0; i < totalGroups; i++) {
+    totalChannels += GROUP_CHANNELS[i];
+  }
+
+  BOOST_CHECK_EQUAL(totalGroups, topology->groups);
+  BOOST_CHECK_EQUAL(totalChannels, topology->channels);
+  for (int i = 0, beginChannel = 0; i < topology->groups; i++) {
+    BOOST_CHECK_EQUAL(GROUP_CHANNELS[i], topology->groupChannels[i]);
+    BOOST_CHECK_EQUAL(beginChannel, topology->beginChannel[i]);
+    int endChannel = beginChannel + GROUP_CHANNELS[i];
+    BOOST_CHECK_EQUAL(endChannel, topology->endChannel[i]);
+    beginChannel += GROUP_CHANNELS[i];
+  }
+
+  for (int channel = 0; channel < totalChannels; channel++) {
+    groupsForChannels[channel] = 0;
+  }
+  for (int group = 0, channel = 0; group < totalGroups; group++) {
+    for (int j = 0; j < GROUP_CHANNELS[group]; j++, channel++) {
+      groupsForChannels[channel] = group;
+    }
+  }
+
+  for (int channel = 0; channel < totalChannels; channel++) {
+    BOOST_CHECK_EQUAL(groupsForChannels[channel], topology->groupForChannel[channel]);
+  }
+
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()
