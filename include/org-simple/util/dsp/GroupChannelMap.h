@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_M_GROUP_TOPOLOGY_H
-#define ORG_SIMPLE_UTIL_M_GROUP_TOPOLOGY_H
+#ifndef ORG_SIMPLE_UTIL_DSP_M_GROUP_CHANNEL_MAP_H
+#define ORG_SIMPLE_UTIL_DSP_M_GROUP_CHANNEL_MAP_H
 /*
- * org-simple/util/GroupTopology.h
+ * org-simple/util/dsp/GroupChannelMap.h
  *
  * Added by michel on 2021-12-29
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -23,21 +23,23 @@
 
 #include <array>
 #include <numeric>
+#include <functional>
 
-namespace org::simple::util {
+namespace org::simple::util::dsp {
 
-template <int GROUPS, int CHANNELS>
+template <size_t GROUPS, size_t CHANNELS>
 static constexpr bool validGroupAndChannelCounts =
     GROUPS > 0 && CHANNELS >= GROUPS;
 
-template <int GROUPS, int CHANNELS>
+template <size_t GROUPS, size_t CHANNELS>
 requires(validGroupAndChannelCounts<GROUPS, CHANNELS>) //
     static constexpr bool isValidInitializer(
-        const std::initializer_list<int> &list, int *totalChannels = nullptr) {
+        const std::initializer_list<size_t> &list,
+        size_t *totalChannels = nullptr) {
   if (list.size() > GROUPS) {
     return false;
   }
-  int accumulated = std::accumulate(list.begin(), list.end(), 0);
+  size_t accumulated = std::accumulate(list.begin(), list.end(), 0);
   if (accumulated > CHANNELS) {
     return false;
   }
@@ -53,19 +55,19 @@ requires(validGroupAndChannelCounts<GROUPS, CHANNELS>) //
  * @tparam GROUPS
  * @tparam CHANNELS
  */
-template <int GROUPS, int CHANNELS> struct GroupChannelMapData {
+template <size_t GROUPS, size_t CHANNELS> struct GroupChannelMapData {
   static_assert(validGroupAndChannelCounts<GROUPS, CHANNELS>);
-  typedef std::array<int, GROUPS> GroupArray;
-  typedef std::array<int, CHANNELS> ChannelArray;
+  typedef std::array<size_t, GROUPS> GroupArray;
+  typedef std::array<size_t, CHANNELS> ChannelArray;
 
   /**
    * Contains the number of mapped groups.
    */
-  int groups;
+  size_t groups;
   /**
    * Contains the total number of channels mapped by all groups.
    */
-  int channels;
+  size_t channels;
   /**
    * Contains the number of channels for each group.
    */
@@ -78,7 +80,7 @@ template <int GROUPS, int CHANNELS> struct GroupChannelMapData {
    * Contains for each group the channel just past the last channel that
    * belongs to it. This can be used in iterations like:
    *
-   * for (int i =
+   * for (size_t i =
    * mapping.beginChannel[group]; i < mapping.endChannel[group; i++) {}
    */
   GroupArray endChannel;
@@ -88,26 +90,27 @@ template <int GROUPS, int CHANNELS> struct GroupChannelMapData {
   ChannelArray groupForChannel;
 
   bool areValidGroupChannels(
-      const std::initializer_list<int> &listOfGroupChannels) const {
+      const std::initializer_list<size_t> &listOfGroupChannels) const {
     return isValidInitializer<GROUPS, CHANNELS>(listOfGroupChannels);
   }
 
   static bool createFromGroupChannels(
       GroupChannelMapData &result,
-      const std::initializer_list<int> listOfGroupChannels) {
-    int channels;
+      const std::initializer_list<size_t> listOfGroupChannels) {
+    size_t channels;
     if (isValidInitializer<GROUPS, CHANNELS>(listOfGroupChannels, &channels)) {
       result.channels = channels;
       result.groups = listOfGroupChannels.size();
-      int start = 0;
+      size_t start = 0;
       auto it = listOfGroupChannels.begin();
-      for (int group = 0; group < result.groups; group++, it++) {
+      for (size_t group = 0; group < result.groups; group++, it++) {
         result.groupChannels[group] = *it;
         result.beginChannel[group] = start;
         start += result.groupChannels[group];
         result.endChannel[group] = start;
       }
-      for (int channel = 0, group = 0; channel < result.channels; channel++) {
+      for (size_t channel = 0, group = 0; channel < result.channels;
+           channel++) {
         if (channel >= result.endChannel[group]) {
           group++;
         }
@@ -126,19 +129,24 @@ template <int GROUPS, int CHANNELS> struct GroupChannelMapData {
  * @tparam CHANNELS The maximum number of channels, which is equal or bigger
  * than the number of groups.
  */
-template <int GROUPS, int CHANNELS>
+template <size_t GROUPS, size_t CHANNELS>
 struct GroupChannelMap : private GroupChannelMapData<GROUPS, CHANNELS> {
   static_assert(validGroupAndChannelCounts<GROUPS, CHANNELS>);
 
-  const GroupChannelMapData<GROUPS, CHANNELS> *operator->() const { return this; }
+  static constexpr size_t maxGroups = GROUPS;
+  static constexpr size_t maxChannels = CHANNELS;
 
-  GroupChannelMap(const std::initializer_list<int> list) { assign(list); }
+  const GroupChannelMapData<GROUPS, CHANNELS> *operator->() const {
+    return this;
+  }
 
-  GroupChannelMap &operator=(const std::initializer_list<int> list) {
+  GroupChannelMap(const std::initializer_list<size_t> list) { assign(list); }
+
+  GroupChannelMap &operator=(const std::initializer_list<size_t> list) {
     assign(list);
   }
 
-  void assign(const std::initializer_list<int> list) {
+  void assign(const std::initializer_list<size_t> list) {
     if (!this->createFromGroupChannels(*this, list)) {
       throw std::invalid_argument(list.size() > GROUPS
                                       ? "Maximum number of groups exceeded"
@@ -147,8 +155,6 @@ struct GroupChannelMap : private GroupChannelMapData<GROUPS, CHANNELS> {
   }
 
   const GroupChannelMap<GROUPS, CHANNELS> &data() { return *this; }
-
-
 };
 
 /**
@@ -159,40 +165,41 @@ struct GroupChannelMap : private GroupChannelMapData<GROUPS, CHANNELS> {
  * @tparam MAX_CHANNELS
  * @tparam GR A list with the number of channels for each group.
  */
-template <int MAX_GROUPS, int MAX_CHANNELS, int... GR>
-class CompileTimeGenerator {
+template <size_t MAX_GROUPS, size_t MAX_CHANNELS, size_t... GR>
+class GroupChannelMapCT {
   static_assert(validGroupAndChannelCounts<MAX_GROUPS, MAX_CHANNELS>);
 
 protected:
-  static constexpr int groups = 0;
-  static constexpr int channels = 0;
+  static constexpr size_t groups = 0;
+  static constexpr size_t channels = 0;
 };
 
-template <int MAX_GROUPS, int MAX_CHANNELS, int GROUP_CHANNELS, int... GR>
-class CompileTimeGenerator<MAX_GROUPS, MAX_CHANNELS, GROUP_CHANNELS, GR...>
-    : public CompileTimeGenerator<MAX_GROUPS, MAX_CHANNELS, GR...> {
+template <size_t MAX_GROUPS, size_t MAX_CHANNELS, size_t GROUP_CHANNELS,
+          size_t... GR>
+class GroupChannelMapCT<MAX_GROUPS, MAX_CHANNELS, GROUP_CHANNELS, GR...>
+    : public GroupChannelMapCT<MAX_GROUPS, MAX_CHANNELS, GR...> {
   static_assert(GROUP_CHANNELS > 0);
 
-  using Relation = CompileTimeGenerator<MAX_GROUPS, MAX_CHANNELS, GR...>;
+  using Relation = GroupChannelMapCT<MAX_GROUPS, MAX_CHANNELS, GR...>;
 
 public:
   /**
    * Contains the number of mapped groups.
    */
-  static constexpr int groups = 1 + Relation::groups;
+  static constexpr size_t groups = 1 + Relation::groups;
   /**
    * Contains the total number of channels mapped by all groups.
    */
-  static constexpr int channels = GROUP_CHANNELS + Relation::channels;
+  static constexpr size_t channels = GROUP_CHANNELS + Relation::channels;
 
 private:
   static_assert(groups <= MAX_GROUPS);
   static_assert(channels <= MAX_CHANNELS);
 
-  template <int TOTAL_CHANNELS, int GROUP_INDEX>
-  static constexpr int calculateGroupOff(int channel) {
-    const int offset = beginChannel[GROUP_INDEX];
-    const int max = offset + groupChannels[GROUP_INDEX];
+  template <size_t TOTAL_CHANNELS, size_t GROUP_INDEX>
+  static constexpr size_t calculateGroupOff(size_t channel) {
+    const size_t offset = beginChannel[GROUP_INDEX];
+    const size_t max = offset + groupChannels[GROUP_INDEX];
     if (channel >= offset && channel < max) {
       return GROUP_INDEX;
     }
@@ -202,28 +209,29 @@ private:
     return -1;
   }
 
-  template <int INDEX, int COUNT, int SUM, int... A>
-  static constexpr std::array<int, COUNT> generateBeginChannels() {
+  template <size_t INDEX, size_t COUNT, size_t SUM, size_t... A>
+  static constexpr std::array<size_t, COUNT> generateBeginChannels() {
     if constexpr (INDEX > 0) {
-      const int newSum = SUM + groupChannels[COUNT - INDEX];
+      const size_t newSum = SUM + groupChannels[COUNT - INDEX];
       return generateBeginChannels<INDEX - 1, COUNT, newSum, A..., SUM>();
     } else {
       return {A...};
     }
   }
 
-  template <int INDEX, int COUNT, int... A>
-  static constexpr std::array<int, channels> generateGroupForChannels() {
+  template <size_t INDEX, size_t COUNT, size_t... A>
+  static constexpr std::array<size_t, channels> generateGroupForChannels() {
     if constexpr (INDEX > 0) {
-      const int newValue = calculateGroupOff<channels, 0>(COUNT - INDEX);
+      const size_t newValue = calculateGroupOff<channels, 0>(COUNT - INDEX);
       return generateGroupForChannels<INDEX - 1, COUNT, A..., newValue>();
     } else {
       return {A...};
     }
   }
 
-  template <int INDEX, int... A>
-  static constexpr std::array<int, groups> generateEndChannels() {
+  template <ssize_t INDEX, size_t... A>
+  // The constexpr check is the reason that size_t won't suffice
+  static constexpr std::array<size_t, groups> generateEndChannels() {
     if constexpr (INDEX >= 0) {
       return generateEndChannels<
           INDEX - 1, beginChannel[INDEX] + groupChannels[INDEX], A...>();
@@ -236,8 +244,8 @@ public:
   /**
    * Contains the number of channels for each group.
    */
-  static constexpr std::array<int, groups> groupChannels = {GROUP_CHANNELS,
-                                                            GR...};
+  static constexpr std::array<size_t, groups> groupChannels = {GROUP_CHANNELS,
+                                                               GR...};
 
   /**
    * Contains the begin-channel for each group.
@@ -255,7 +263,7 @@ public:
    * Contains for each group the channel just past the last channel that
    * belongs to it. This can be used in iterations like:
    *
-   * for (int i =
+   * for (size_t i =
    * mapping.beginChannel[group]; i < mapping.endChannel[group; i++) {}
    */
   static constexpr auto endChannel = generateEndChannels<groups - 1>();
@@ -263,8 +271,68 @@ public:
   static constexpr GroupChannelMap<groups, channels> createData() {
     return GroupChannelMap<groups, channels>(GR...);
   }
+
+  typedef GroupChannelMap<groups, channels> Map;
+
+  template <typename T, class BinaryOperation>
+  static void accumulateGroupValue(std::array<T, groups> &groupsValues,
+                            const std::array<T, channels> &channelValues,
+                            T initialValue,
+                            BinaryOperation op) {
+    for (int group = 0; group < groups; group++) {
+      const auto p = channelValues.begin();
+      groupsValues[group] = std::accumulate(p + beginChannel[group],
+                                      p + endChannel[group], initialValue, op);
+    }
+  }
+
+  template <typename T, class Function>
+  static void applyGroupValueToChannels(
+                                 std::array<T, channels> &channelValues,
+                                 const std::array<T, groups> &groupValues,
+                                 Function function) {
+    for (int group = 0; group < groups; group++) {
+      const T &groupValue = groupValues[group];
+      auto p = channelValues.begin();
+      for (auto v = p + beginChannel[group]; v < p + endChannel[group];
+           v++) {
+        *v = function(*static_cast<const T*>(v), groupValue);
+      }
+    }
+  }
+
+
 };
+// Look into https://en.wikipedia.org/wiki/Expression_templates
 
-} // namespace org::simple::util
+template <typename T, size_t G, size_t C, class BinaryOperation>
+void accumulateGroupValue(const GroupChannelMap<G, C> &map,
+                          std::array<T, G> &groups,
+                          const std::array<T, C> &channels,
+                          T initialValue,
+                          BinaryOperation op) {
+  const auto p = channels.begin();
+  for (int group = 0; group < map->groups; group++) {
+    groups[group] = std::accumulate(p + map->beginChannel[group],
+                                    p + map->endChannel[group], initialValue, op);
+  }
+}
 
-#endif // ORG_SIMPLE_UTIL_M_GROUP_TOPOLOGY_H
+template <typename T, size_t G, size_t C, class Function>
+void applyGroupValueToChannels(const GroupChannelMap<G, C> &map,
+                               std::array<T, C> &channels,
+                               const std::array<T, G> &groups,
+                               Function function) {
+  auto p = channels.begin();
+  for (int group = 0; group < map->groups; group++) {
+    const T &groupValue = groups[group];
+    for (auto v = p + map->beginChannel[group]; v < p + map->endChannel[group];
+         v++) {
+      *v = function(*static_cast<const T*>(v), groupValue);
+    }
+  }
+}
+
+} // namespace org::simple::util::dsp
+
+#endif // ORG_SIMPLE_UTIL_DSP_M_GROUP_CHANNEL_MAP_H
