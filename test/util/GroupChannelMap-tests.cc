@@ -3,11 +3,11 @@
 //
 
 #include "test-helper.h"
-#include <org-simple/util/GroupTopology.h>
+#include <org-simple/util/GroupChannelMap.h>
 
 template <int MAX_GROUPS, int MAX_CHANNELS, int... GR>
 using GroupTopology =
-    org::simple::util::GroupTopology<MAX_GROUPS, MAX_CHANNELS, GR...>;
+    org::simple::util::GroupChannelMap<MAX_GROUPS, MAX_CHANNELS, GR...>;
 
 struct Scenario {
   const int MAX_GROUPS;
@@ -17,7 +17,7 @@ struct Scenario {
 
 static constexpr Scenario testG4_C16__2_3_4_1{4, 16, {2, 3, 4, 1, 0}};
 
-BOOST_AUTO_TEST_SUITE(test_org_simple_util_GroupTopologyTests)
+BOOST_AUTO_TEST_SUITE(test_org_simple_util_GroupChannelMapTests)
 
 BOOST_AUTO_TEST_CASE(testExploreFirstTopology__G4_C16__2_3_4_1) {
   static constexpr int MAX_GROUPS = 4;

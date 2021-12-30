@@ -30,16 +30,16 @@ namespace org::simple::util {
  * @tparam MAX_CHANNELS
  * @tparam GR A list with the number of channels for each group.
  */
-template <int MAX_GROUPS, int MAX_CHANNELS, int... GR> class GroupTopology {
+template <int MAX_GROUPS, int MAX_CHANNELS, int... GR> class GroupChannelMap {
 protected:
   static constexpr int groupCount_ = 0;
   static constexpr int totalChannels_ = 0;
 };
 
 template <int MAX_GROUPS, int MAX_CHANNELS, int GROUP_CHANNELS, int... GR>
-class GroupTopology<MAX_GROUPS, MAX_CHANNELS, GROUP_CHANNELS, GR...>
-    : public GroupTopology<MAX_GROUPS, MAX_CHANNELS, GR...> {
-  using Relation = GroupTopology<MAX_GROUPS, MAX_CHANNELS, GR...>;
+class GroupChannelMap<MAX_GROUPS, MAX_CHANNELS, GROUP_CHANNELS, GR...>
+    : public GroupChannelMap<MAX_GROUPS, MAX_CHANNELS, GR...> {
+  using Relation = GroupChannelMap<MAX_GROUPS, MAX_CHANNELS, GR...>;
 
 protected:
   static_assert(GROUP_CHANNELS > 0);
