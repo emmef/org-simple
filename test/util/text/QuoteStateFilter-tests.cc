@@ -13,6 +13,8 @@ using Result = org::simple::util::text::InputFilterResult;
 using Stream = org::simple::util::text::InputStream<character>;
 template <typename S>
 using FilteredStream = org::simple::util::text::QuoteFilteredStream<character , S>;
+template <typename S>
+using QuoteTokenizedStream = org::simple::util::text::QuoteStateTokenizedStream<character, S>;
 
 namespace {
 

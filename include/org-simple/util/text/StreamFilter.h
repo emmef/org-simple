@@ -158,6 +158,8 @@ public:
   FilteredInputStream(F &filter, S &stream) : f(filter), s(stream) {}
 
   bool get(C &c) final { return applyInputFilter(f, s, c); }
+
+  const F&getFilter() const { return f; }
 };
 
 template <class F, class S, bool resetInputOnStop,

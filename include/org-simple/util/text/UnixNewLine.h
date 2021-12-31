@@ -49,19 +49,55 @@ public:
       return InputFilterResult::Ok;
     }
   }
-
 };
 
-template <typename C> class UnixNewLineStream : public InputStream<C> {
-  InputStream<C> &input;
+template <typename C, class S = InputStream<C>>
+class UnixNewLineStream : public InputStream<C> {
+  S &input;
   UnixNewLineFilter<C> filter;
 
 public:
-  explicit UnixNewLineStream(InputStream<C> &stream) : input(stream) {}
+  explicit UnixNewLineStream(S &stream) : input(stream) {}
 
   const UnixNewLineFilter<C> &state() { return filter; }
   bool get(C &result) final { return applyInputFilter(filter, input, result); }
   void reset() { filter.reset(); }
+};
+
+template <typename C, class S = InputStream<C>>
+class NewlineTokenizedStream : public TokenizedInputStream<C> {
+  S &input;
+  ReplayStream<C, 1> replay;
+  bool exhausted = false;
+
+public:
+  explicit NewlineTokenizedStream(S &stream) : input(stream) {}
+
+  bool get(C &result) final {
+    C c;
+    bool skipping = false;
+    while (replay.get(c) || input.get(c)) {
+      if (skipping) {
+        if (c != '\n') {
+          replay << c;
+          return false;
+        }
+      } else if (c != '\n') {
+        result = c;
+        return true;
+      } else {
+        skipping = true;
+      }
+    }
+    exhausted = true;
+    return false;
+  }
+
+  bool isExhausted() const final { return exhausted; }
+
+  void resetExhausted() {
+    exhausted = false;
+  }
 };
 
 } // namespace org::simple::util::text

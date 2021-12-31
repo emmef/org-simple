@@ -42,25 +42,23 @@ public:
     matcher quoteMatcher;
 
     Config(matcher function, C escapeCharacter)
-        : escapeChr(escapeCharacter), quoteMatcher(function ? function : QuoteMatcher<C>::none) {}
+        : escapeChr(escapeCharacter),
+          quoteMatcher(function ? function : QuoteMatcher<C>::none) {}
 
-    Config(matcher function)
-        : Config(function, defaultEscapeCharacter) {}
+    Config(matcher function) : Config(function, defaultEscapeCharacter) {}
 
     Config(const char *symmetricQuoteChars, C escapeCharacter)
-        : Config(QuoteMatchers::getDefaultMatcherFor<C>(
-                         symmetricQuoteChars, QuoteMatcher<C>::none),
-                     escapeCharacter) {}
+        : Config(QuoteMatchers::getDefaultMatcherFor<C>(symmetricQuoteChars,
+                                                        QuoteMatcher<C>::none),
+                 escapeCharacter) {}
 
     Config(const char *symmetricQuoteChars)
         : Config(symmetricQuoteChars, defaultEscapeCharacter) {}
   } config;
 
-  template <typename ...A>
-  QuoteState(A... args)
-      : config(args...) {}
+  template <typename... A> QuoteState(A... args) : config(args...) {}
 
-  explicit QuoteState(const Config &c) : config(c) {};
+  explicit QuoteState(const Config &c) : config(c){};
 
   void reset() { *this = QuoteState(config); }
 
@@ -97,7 +95,8 @@ public:
    */
   bool test(const C &c) const final {
     C endQuote;
-    return (closeQuote != 0 && c == closeQuote) || config.quoteMatcher(c, endQuote);
+    return (closeQuote != 0 && c == closeQuote) ||
+           config.quoteMatcher(c, endQuote);
   }
 };
 
@@ -128,7 +127,6 @@ public:
   QuoteStatePredicate(const QuoteState<C> &quoteState) : state(quoteState) {}
 };
 
-
 template <typename C>
 class QuoteStateFilter : private QuoteState<C>,
                          public StreamFilter<C>,
@@ -140,7 +138,7 @@ public:
   template <typename... Args>
   QuoteStateFilter(Args... args) : QuoteState<C>(args...) {}
 
-  const QuoteState<C> *operator->() { return this; }
+  const QuoteState<C> *operator->() const { return this; }
 
   InputFilterResult filter(C &result) override {
     bool inQuote = this->inQuote();
@@ -168,10 +166,100 @@ public:
   bool get(C &c) override { return replay.get(c); }
 };
 
-template<typename C, class S = InputStream<C>>
+template <typename C, class S = InputStream<C>>
 using QuoteFilteredStream = FilteredInputStream<C, QuoteStateFilter<C>, S>;
 
+template <typename C, class S = InputStream<C>>
+class QuoteStateTokenizedStream : public TokenizedInputStream<C> {
+  ReplayStream<C, 1> replay;
+  enum class State { SkipWhilePredicate, OutsideQuotes, InsideQuotes, Exhausted };
+  State state = State::SkipWhilePredicate;
 
+public:
+  QuoteStateTokenizedStream(
+      QuoteFilteredStream<C, S> &stream,
+      const Predicate<C> *terminationPredicateOutsideQuote)
+      : input(stream),
+        outsideQuoteTerminationPredicate(terminationPredicateOutsideQuote) {}
+
+  QuoteStateTokenizedStream(QuoteFilteredStream<C, S> &stream)
+      : QuoteStateTokenizedStream(stream, nullptr) {}
+
+  virtual bool isExhausted() const { return state == State::Exhausted; }
+
+  bool get(C &result) {
+    C c;
+    if (replay.get(c)) {
+      result = c;
+      return true;
+    }
+    while (getWithReplay(c)) {
+      if (state == State::SkipWhilePredicate) {
+        if (input.getFilter()->inQuote()) {
+          state = State::InsideQuotes;
+        } else if (!meetsPredicate(c)) {
+          state = State::OutsideQuotes;
+        }
+        else {
+          continue;
+        }
+        replay << c;
+        continue;
+      }
+      bool inQuote = input.getFilter()->inQuote();
+      if (state == State::InsideQuotes) {
+        if (inQuote) {
+          result = c;
+          return true;
+        } else if (meetsPredicate(c)) {
+          state = State::SkipWhilePredicate;
+        } else {
+          state = State::OutsideQuotes;
+          replay << c;
+        }
+        return false;
+      }
+      if (state == State::OutsideQuotes) {
+        if (inQuote) {
+          state = State::InsideQuotes;
+          replay << c;
+          return false;
+        }
+        else if (meetsPredicate(c)) {
+          state = State::SkipWhilePredicate;
+          return false;
+        } else {
+          result = c;
+          return true;
+        }
+      }
+    }
+    state = State::Exhausted;
+    return false;
+  }
+
+  void resetExhausted() override {
+    state = State::SkipWhilePredicate;
+  }
+
+private:
+  QuoteFilteredStream<C, S> input;
+  const Predicate<C> *outsideQuoteTerminationPredicate;
+
+  bool meetsPredicate(const C &c) const {
+    return outsideQuoteTerminationPredicate &&
+           outsideQuoteTerminationPredicate->test(c);
+  }
+
+  bool getWithReplay(C &result) {
+    C c;
+    if (replay.get(c) || input.get(c)) {
+      result = c;
+      return true;
+    }
+    return false;
+  }
+};
 } // namespace org::simple::util::text
 
 #endif // ORG_SIMPLE_UTIL_TEXT_M_QUOTE_STATE_H

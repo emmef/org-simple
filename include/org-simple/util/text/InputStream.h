@@ -104,7 +104,8 @@ public:
   }
 };
 
-template <typename C, class S = InputStream<C>> class EchoStream : public InputStream<C> {
+template <typename C, class S = InputStream<C>>
+class EchoStream : public InputStream<C> {
   static_assert(hasInputStreamSignature<S, C>);
   S &input;
   C v = 0;
@@ -123,7 +124,8 @@ public:
   C getMostRecent() const { return v; }
 };
 
-template <typename C, class S = InputStream<C>> class EchoRepeatOneStream : public InputStream<C> {
+template <typename C, class S = InputStream<C>>
+class EchoRepeatOneStream : public InputStream<C> {
   static_assert(hasInputStreamSignature<S, C>);
   S &input;
   bool mustRepeat = false;
@@ -157,7 +159,7 @@ class VariableEchoStream : public InputStream<C> {
 
 public:
   VariableEchoStream() {}
-  VariableEchoStream(S * stream) { input = stream; }
+  VariableEchoStream(S *stream) { input = stream; }
 
   bool get(C &c) override {
     if (input) {
@@ -183,7 +185,7 @@ class VariableEchoRepeatOneStream : public InputStream<C> {
 
 public:
   VariableEchoRepeatOneStream() {}
-  VariableEchoRepeatOneStream(S * stream) { input = stream; }
+  VariableEchoRepeatOneStream(S *stream) { input = stream; }
 
   bool get(C &result) override {
     if (mustRepeat) {
@@ -208,8 +210,22 @@ public:
   void repeat() { mustRepeat = true; }
 };
 
-template <typename C, unsigned N>
-class ReplayStream : public InputStream<C> {
+/**
+ * An input stream that terminates, returns \c false, when a token is finished,
+ * but can be used again unless it is exhausted.
+ * @tparam C The type of character the stream
+ */
+template <typename C> class TokenizedInputStream : public InputStream<C> {
+public:
+  virtual bool isExhausted() const = 0;
+  /**
+   * Resets the exhausted-state, which is useful if this token stream is based
+   * upon yet another token stream.
+   */
+  virtual void resetExhausted() = 0;
+};
+
+template <typename C, unsigned N> class ReplayStream : public InputStream<C> {
   static_assert(N > 0 && N < std::numeric_limits<unsigned>::max() / sizeof(C));
 
   unsigned replayCount = 0;
