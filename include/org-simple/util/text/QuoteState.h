@@ -27,34 +27,55 @@
 
 namespace org::simple::util::text {
 
-template <typename C> class QuoteState : public StreamProbe<C>, public Predicate<C> {
+template <typename C>
+class QuoteState : public StreamProbe<C>, public Predicate<C> {
   bool escaped = false;
   C openQuote = 0;
   C closeQuote = 0;
 
 public:
-  typename QuoteMatcher<C>::function matcher;
+  static constexpr char defaultEscapeCharacter = '\\';
 
-  QuoteState(typename QuoteMatcher<C>::function function)
-      : matcher(function ? function : QuoteMatcher<C>::none) {}
+  struct Config {
+    typedef typename QuoteMatcher<C>::function matcher;
+    C escapeChr;
+    matcher quoteMatcher;
 
-  QuoteState(const char *symmetricQuoteChars)
-      : matcher(QuoteMatchers::getDefaultMatcherFor<C>(symmetricQuoteChars,
-                                                       QuoteMatcher<C>::none)) {
-  }
+    Config(matcher function, C escapeCharacter)
+        : escapeChr(escapeCharacter), quoteMatcher(function ? function : QuoteMatcher<C>::none) {}
 
-  void reset() { *this = {matcher}; }
+    Config(matcher function)
+        : Config(function, defaultEscapeCharacter) {}
+
+    Config(const char *symmetricQuoteChars, C escapeCharacter)
+        : Config(QuoteMatchers::getDefaultMatcherFor<C>(
+                         symmetricQuoteChars, QuoteMatcher<C>::none),
+                     escapeCharacter) {}
+
+    Config(const char *symmetricQuoteChars)
+        : Config(symmetricQuoteChars, defaultEscapeCharacter) {}
+  } config;
+
+  template <typename ...A>
+  QuoteState(A... args)
+      : config(args...) {}
+
+  explicit QuoteState(const Config &c) : config(c) {};
+
+  void reset() { *this = QuoteState(config); }
 
   C getOpenQuote() const { return openQuote; }
   C getCloseQuote() const { return closeQuote; }
   bool isEscaped() const { return escaped; }
   bool inQuote() const { return openQuote != 0; }
+  C getEscapeCharacter() const { return config.escapeChr; }
+  const Config getConfig() const { return config; }
 
   void probe(const C &c) final {
     if (openQuote != 0) {
       if (escaped) {
         escaped = false;
-      } else if (c == '\\') {
+      } else if (c == config.escapeChr) {
         escaped = true;
       } else if (c == closeQuote) {
         openQuote = 0;
@@ -62,9 +83,9 @@ public:
       }
     } else if (escaped) {
       escaped = false;
-    } else if (matcher && matcher(c, closeQuote)) {
+    } else if (config.quoteMatcher(c, closeQuote)) {
       openQuote = c;
-    } else if (c == '\\') {
+    } else if (c == config.escapeChr) {
       escaped = true;
     }
   }
@@ -76,34 +97,80 @@ public:
    */
   bool test(const C &c) const final {
     C endQuote;
-    return matcher(c, endQuote);
+    return (closeQuote != 0 && c == closeQuote) || config.quoteMatcher(c, endQuote);
   }
 };
 
 template <typename C, class S = InputStream<C>>
 class QuotedStateStream : public ProbeInputStream<QuoteState<C>, C, S> {
 public:
-
-  QuotedStateStream(S &input, typename QuoteMatcher<C>::function function) : ProbeInputStream<QuoteState<C>, C, S>(input, function) {}
-  QuotedStateStream(S &input, const char *symmetricQuoteChars) : ProbeInputStream<QuoteState<C>, C, S>(input, symmetricQuoteChars) {}
+  QuotedStateStream(S &input, typename QuoteMatcher<C>::function function)
+      : ProbeInputStream<QuoteState<C>, C, S>(input, function) {}
+  QuotedStateStream(S &input, const char *symmetricQuoteChars)
+      : ProbeInputStream<QuoteState<C>, C, S>(input, symmetricQuoteChars) {}
 
   using ProbeInputStream<QuoteState<C>, C, S>::isEscaped;
 };
 
-template <typename C, bool inSide> class QuoteStatePredicate : public Predicate<C> {
+template <typename C, bool inSide>
+class QuoteStatePredicate : public Predicate<C> {
   const QuoteState<C> &state;
+
 public:
-  bool test(const C&) const final {
+  bool test(const C &) const final {
     if constexpr (inSide) {
       return state.inQuote();
-    }
-    else {
+    } else {
       return !state.inQuote();
     }
   }
 
-  QuoteStatePredicate(const QuoteState<C> & quoteState) : state(quoteState) {}
+  QuoteStatePredicate(const QuoteState<C> &quoteState) : state(quoteState) {}
 };
+
+
+template <typename C>
+class QuoteStateFilter : private QuoteState<C>,
+                         public StreamFilter<C>,
+                         public InputStream<C> {
+  ReplayStream<C, 1> replay;
+  bool inEscape = false;
+
+public:
+  template <typename... Args>
+  QuoteStateFilter(Args... args) : QuoteState<C>(args...) {}
+
+  const QuoteState<C> *operator->() { return this; }
+
+  InputFilterResult filter(C &result) override {
+    bool inQuote = this->inQuote();
+    this->probe(result);
+    if (inEscape) {
+      inEscape = false;
+      if (this->test(result)) {
+        return InputFilterResult::Ok;
+      } else {
+        replay << result;
+        result = this->getEscapeCharacter();
+        return InputFilterResult::Ok;
+      }
+    }
+    if (inQuote != this->inQuote()) {
+      return InputFilterResult::GetNext;
+    } else if (this->isEscaped()) {
+      inEscape = true;
+      return InputFilterResult::GetNext;
+    } else {
+      return InputFilterResult::Ok;
+    }
+  }
+
+  bool get(C &c) override { return replay.get(c); }
+};
+
+template<typename C, class S = InputStream<C>>
+using QuoteFilteredStream = FilteredInputStream<C, QuoteStateFilter<C>, S>;
+
 
 } // namespace org::simple::util::text
 

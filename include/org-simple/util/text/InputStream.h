@@ -225,8 +225,6 @@ public:
     return false;
   }
 
-  bool available() final { return replayCount > 0; }
-
   ReplayStream &operator<<(C value) {
     if (replayCount < N) {
       v[replayCount++] = value;

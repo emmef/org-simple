@@ -147,7 +147,7 @@ requires(canApplyFilterOnStream<F, S, C>) static bool applyInputFilter(
   } while (true);
 }
 
-template <class F, class S, typename C>
+template <typename C, class F, class S = InputStream<C>>
 class FilteredInputStream : public InputStream<C> {
   static_assert(canApplyFilterOnStream<F, S, C>);
 
