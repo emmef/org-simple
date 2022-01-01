@@ -125,7 +125,7 @@ public:
    * @param input The input stream to read from.
    * @throws ConfigException
    */
-  virtual ReaderResult read(text::InputStream<C> &input, const C *keyName, const util::text::QuoteState<C> *quoteState) = 0;
+  virtual ReaderResult read(text::TokenizedInputStream<C> &input, const C *keyName) = 0;
 
   const util::Predicate<C> &getSeparatorPredicate() const { return *separatorPredicate; }
 
@@ -138,7 +138,7 @@ public:
   template <typename... A>
   SingleValueReader(A... arguments) : ValueReader<C>(arguments...) {}
 
-  ReaderResult read(text::InputStream<C> &input, const C *, const util::text::QuoteState<C> *) override {
+  ReaderResult read(text::TokenizedInputStream<C> &input, const C *) override {
     AbstractReader::readerResult() = ReaderResult::Ok;
     V resultValue;
     ReaderResult result = readValue(input, resultValue);

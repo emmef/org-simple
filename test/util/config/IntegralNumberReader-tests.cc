@@ -11,8 +11,8 @@
 
 namespace {
 
-template <typename Value>
 using Stream = org::simple::util::text::StringInputStream<char>;
+using TokenizedStream = org::simple::util::text::TokenizedInputStream<char>;
 using ReaderResult = org::simple::util::config::ReaderResult;
 using Basics = org::simple::util::text::NumberParser;
 using Result = org::simple::util::text::NumberParser::Result;
@@ -54,7 +54,21 @@ struct Scenario {
       : Scenario(org::simple::test::printNumber(value, 0, before, after), expected, static_cast<Value>(value)) {}
 
   static void test(const Scenario &scenario) {
-    Stream<char> stream(scenario.input);
+    Stream streamSource(scenario.input);
+    class TS : public TokenizedStream {
+      Stream &input;
+    public:
+      TS(Stream &s) : input(s) {}
+
+      bool get(char &c) { return input.get(c); }
+      bool isExhausted() const override { return false; }
+      /**
+   * Resets the exhausted-state, which is useful if this token stream is based
+   * upon yet another token stream.
+       */
+      void resetExhausted() override {}
+      void rewind() { input.rewind(); }
+    } stream(streamSource);
     Reader reader;
     Value actualValue;
     Result actualParseResult =
@@ -66,7 +80,7 @@ struct Scenario {
     }
 
     stream.rewind();
-    ReaderResult actualReaderResult = reader.read(stream, "key", nullptr);
+    ReaderResult actualReaderResult = reader.read(stream, "key");
     BOOST_CHECK_EQUAL(scenario.expectedReaderResult, actualReaderResult);
     BOOST_CHECK_EQUAL(
         actualReaderResult,

@@ -95,42 +95,23 @@ struct Predicates {
     };
     return P{ f1, f2 } ;
   }
-
 //
-//  static auto of(PredicateFunction<C> f1, PredicateFunction<C> f2) {
-//    class P : public Predicate {
-//      PredicateFunction<C> f1, f2;
+//  template <typename C, class P> Predicate<C> of(P predicate) {
+//    class Pred : public Predicate<C> {
+//      std::function<bool(const char &)> f;
 //    public:
-//      bool test(const C &c) const { return f1(c) && f2(c); }
+//      Pred(P predicate) : f(predicate) {};
+//      bool test(const C &c) const final { return f(c); }
 //    };
-//    return P(f1, f2);
+//    return Pred(predicate);
 //  }
-
 };
 
 template <class P, typename C>
 static constexpr bool
     hasPredicateSignature = Predicate<C>::Traits::template isA<P>();
 
-template <typename C, class P1, class P2>
-class CombinedPredicate : public Predicate<C> {
-  static_assert(hasPredicateSignature<P1, C>);
-  static_assert(hasPredicateSignature<P2, C>);
 
-  const P1 &p1;
-  const P2 &p2;
-
-public:
-  CombinedPredicate(const P1 &predicate1, const P2 &predicate2)
-      : p1(predicate1), p2(predicate2) {}
-
-  bool test(const C &c) const override { return p1.test(c) && p2.test(c); }
-};
-
-template <class P1, class P2, typename C>
-static auto combinedPredicate(const P1 &p1, const P2 &p2) {
-  return CombinedPredicate<C, P1, P2>(p1, p2);
-}
 
 } // namespace org::simple::util
 

@@ -23,11 +23,13 @@
 
 #include <cstddef>
 #include <exception>
+#include <functional>
 #include <org-simple/util/config/ConfigReaders.h>
 #include <org-simple/util/text/CommentStream.h>
 #include <org-simple/util/text/InputStreams.h>
 #include <org-simple/util/text/StreamPredicate.h>
 #include <org-simple/util/text/TextFilePosition.h>
+#include <org-simple/util/text/UnixNewLine.h>
 #include <sstream>
 #include <string>
 
@@ -55,217 +57,143 @@ public:
   std::size_t getColumn() const { return col; }
 };
 
-template <typename T> struct KeyValueConfigTypes;
-
-template <> struct KeyValueConfigTypes<char> {
-  using classifierType = org::simple::util::text::Ascii;
-  const classifierType classifier =
-      org::simple::util::text::Classifiers::instance<classifierType>();
-};
-
-template <>
-struct KeyValueConfigTypes<org::simple::util::text::Utf8Encoding::codePoint> {
-  using classifierType = org::simple::util::text::Unicode;
-  const classifierType classifier =
-      org::simple::util::text::Classifiers::instance<classifierType>();
-};
-
-template <typename CP> class KeyValueConfig {
-  enum class State {
-    LineStart,
-    UnQuotedKey,
-    SkipToEndOfLine,
-    SkipToAssignment,
-    SkipToValue,
-    EndOfKeyValuePair
-  };
-  static bool noAssignmentPredicate(const CP &c) { return c != '='; }
-  static bool isAssignmentPredicate(const CP &c) { return c == '='; }
-
-  KeyValueConfigTypes<char> configTypes;
-  using positions = const org::simple::util::text::TextFilePositionData<CP>;
-  typedef typename KeyValueConfigTypes<CP>::classifierType classifierType;
-  typedef decltype(util::Predicates::of(
-      util::text::GraphPredicate<CP, classifierType>::function,
-      noAssignmentPredicate)) UnquotedKeyPredicate;
-  UnquotedKeyPredicate unquotedKeyPredicate = util::Predicates::of(
-      util::text::GraphPredicate<CP, classifierType>::function,
-      noAssignmentPredicate);
-  using NewLinePredicate = util::text::NewLinePredicate<CP, true>;
-  const NewLinePredicate &newLinePredicate = NewLinePredicate ::instance();
-  using QuoteBasedPredicate = util::text::QuoteStatePredicate<CP, true>;
-  using EchoStream = util::text::EchoStream<CP>;
-  using EndOfQuoteStream =
-      util::text::PredicateVariableInputStream<CP, QuoteBasedPredicate,
-                                               EchoStream>;
-  using GraphOnlyStream =
-      util::text::PredicateVariableInputStream<CP, UnquotedKeyPredicate,
-                                               EchoStream>;
-  using BeforeNewLineStream =
-      util::text::PredicateVariableInputStream<CP, NewLinePredicate,
-                                               EchoStream>;
+template <typename C> class KeyValueConfig {
+  using Positions = const org::simple::util::text::TextFilePositionData<C>;
 
   class Parser {
-    KeyValueConfigTypes<char> configTypes;
-    State state = State::LineStart;
-    EchoStream echoStream;
-    const text::QuoteState<CP> &quoteState;
-    QuoteBasedPredicate quoteBasedPredicate;
-    EndOfQuoteStream inQuoteStream;
-    GraphOnlyStream nonGraphTerminatedStream;
-    BeforeNewLineStream newLineTerminatedStream;
-    const positions *pos;
-    KeyReader<CP> &keyReader;
-    ValueReader<CP> &valueReader;
+    enum class State {
+      LineStart,
+      SkipToAssignment,
+      SkipToValue,
+      EndOfKeyValuePair
+    };
+    class Predicate : public util::Predicate<C> {
+    public:
+      using Classifiers = org::simple::util::text::Classifiers;
+
+      Classifiers ::defaultType<C> &classifier =
+          org::simple::util::text::Classifiers::defaultInstance<C>();
+
+      std::function<bool(const char &)> whiteSpace() {
+        return [&](const char &c) { return classifier.isWhitespace(c); };
+      }
+
+      bool test(const C &c) const override {
+        return assignment(c) || classifier.isWhiteSpace(c);
+      }
+
+      static bool assignment(const char &c) { return c == '=' || c == ':'; }
+    } predicate;
+
+    using NewlineTokenizedStream =
+        util::text::NewlineTokenizedStream<C, util::text::CommentStream<C>>;
+    using QuoteConfig = typename util::text::QuoteState<C>::Config;
+    using QuoteStateFilter = util::text::QuoteStateFilter<C>;
+
+    using QuoteFilteredStream =
+        util::text::QuoteFilteredStream<C, NewlineTokenizedStream>;
+
+    using QuoteTokenizedStream =
+        util::text::QuoteStateTokenizedStream<C, NewlineTokenizedStream>;
+
+    const Positions *pos;
+    NewlineTokenizedStream newlineTokenizedStream;
+    QuoteStateFilter quoteStateFilter;
+    QuoteFilteredStream quoteFilteredStream;
+    QuoteTokenizedStream quoteTokenizedStream;
+    KeyReader<C> &keyReader;
+    ValueReader<C> &valueReader;
     bool ignoreErrors;
 
-    void handleKey(text::InputStream<CP> &stream, const CP &lastReadValue) {
-      try {
-        keyReader.read(stream);
-      } catch (const ParseError &e) {
-        if (ignoreErrors) {
-          state = State::SkipToEndOfLine;
-          return;
-        }
-        throw createError(e.what(), pos);
-      }
-      if (!keyReader.getKey()) {
-        if (ignoreErrors) {
-          state = State::SkipToEndOfLine;
-          return;
-        }
-        throw createError("Error reading key value", pos);
-      }
-      if (state == State::UnQuotedKey) {
-        if (quoteState.inQuote()) {
-          throw createError("Unfinished quote inside key-name", pos);
-        }
-        if (lastReadValue == '=') {
-          state = State::SkipToValue;
-          return;
-        }
-      }
-      state = State::SkipToAssignment;
+    void skipToEol() {
+      C c;
+      while (quoteTokenizedStream.get(c))
+        ;
     }
 
-    void handleValue(text::InputStream<CP> &stream, const CP *keyName) {
-      try {
-        switch (valueReader.read(stream, keyName, &quoteState)) {
-        case ReaderResult::Ok:
-          state = State::EndOfKeyValuePair;
-          break;
-        default:
-          if (!ignoreErrors) {
-            std::string message = keyName;
-            message += ": ";
-            message += readerResultToString(AbstractReader::getReaderResult());
-            throw createError(message.c_str(), pos);
-          }
-          state = State::EndOfKeyValuePair;
-          break;
+    bool handleKey() {
+      bool success = false;
+      ReaderResult result = keyReader.read(quoteTokenizedStream);
+      if (result != ReaderResult::Ok) {
+        if (!ignoreErrors) {
+          std::string message = "Error while reading key: ";
+          message += readerResultToString(result);
+          throw createError(message.c_str());
         }
-      } catch (const ParseError &e) {
-        if (ignoreErrors) {
-          state = State::EndOfKeyValuePair;
-          return;
-        }
-        throw createError(e.what(), pos);
       }
+      return keyReader.getKey() && *keyReader.getKey();
     }
 
-    ParseError createError(const char *msg, const positions *pos) {
+    bool handleValue(const C *keyName) {
+      bool success = false;
+      switch (valueReader.read(quoteTokenizedStream, keyName)) {
+      case ReaderResult::Ok:
+        success = true;
+        break;
+      default:
+        if (!ignoreErrors) {
+          std::string message = keyName;
+          message += ": ";
+          message += readerResultToString(AbstractReader::getReaderResult());
+          throw createError(message.c_str());
+        }
+        break;
+      }
+      return success;
+    }
+
+    ParseError createError(const char *msg) {
       return ParseError(msg, pos ? pos->getLine() + 1 : 0,
                         pos ? pos->getColumn() + 1 : 0);
     }
 
   public:
-    Parser(util::text::CommentStream<CP> &commentStream,
-           const positions *positions, bool ignoreErrors_,
-           KeyReader<CP> &keyReader_, ValueReader<CP> &valueReader_,
-           const UnquotedKeyPredicate &unquotedKeyPredicate)
-        : state(State::LineStart), echoStream(&commentStream),
-          quoteState(commentStream.state()), quoteBasedPredicate(quoteState),
-          inQuoteStream(&echoStream, quoteBasedPredicate),
-          nonGraphTerminatedStream(&echoStream, unquotedKeyPredicate),
-          newLineTerminatedStream(&echoStream, NewLinePredicate ::instance()),
-          pos(positions), keyReader(keyReader_), valueReader(valueReader_),
+    Parser(util::text::CommentStream<C> &commentStream,
+           const Positions *positions, bool ignoreErrors_,
+           KeyReader<C> &keyReader_, ValueReader<C> &valueReader_)
+        : pos(positions), newlineTokenizedStream(commentStream),
+          quoteStateFilter(commentStream.state().getConfig()),
+          quoteFilteredStream(quoteStateFilter, newlineTokenizedStream),
+          quoteTokenizedStream(quoteFilteredStream, &predicate),
+          keyReader(keyReader_), valueReader(valueReader_),
           ignoreErrors(ignoreErrors_) {}
 
-    void parse() {
-      CP c;
-      while (echoStream.get(c)) {
-        switch (state) {
-
-        case State::LineStart:
-          if (configTypes.classifier.isWhiteSpace(c) || (c == '\n')) {
-            continue;
-          }
-          if (quoteState.inQuote()) {
-            handleKey(inQuoteStream, echoStream.peek());
-            continue;
-          } else if (c != '=' && configTypes.classifier.isGraph(c)) {
-            state = State::UnQuotedKey;
-            echoStream.repeat();
-            handleKey(nonGraphTerminatedStream, echoStream.peek());
-            continue;
-          }
-          if (ignoreErrors) {
-            state = State::SkipToEndOfLine;
-            break;
-          }
-          throw createError("Unexpected start of key-value pair", pos);
-        case State::SkipToEndOfLine:
-          if (c == '\n') {
+    bool parse() {
+      State state = State::LineStart;
+      while (!newlineTokenizedStream.isExhausted()) {
+        if (state == State::LineStart) {
+          state = handleKey() ? State::SkipToValue : State::EndOfKeyValuePair;
+        } else if (state == State::SkipToValue) {
+          quoteTokenizedStream.resetExhausted();
+          handleValue(keyReader.getKey());
+          state = State::EndOfKeyValuePair;
+        } else if (state == State::EndOfKeyValuePair) {
+          if (!newlineTokenizedStream.isExhausted()) {
+            skipToEol();
             state = State::LineStart;
+            quoteTokenizedStream.resetExhausted();
           }
-          break;
-        case State::SkipToAssignment:
-          if (c == '=') {
-            state = State::SkipToValue;
-          } else if (configTypes.classifier.isWhiteSpace(c)) {
-            break;
-          } else if (c == '\n') {
-            state = State::LineStart;
-          }
-          break;
-        case State::SkipToValue:
-          if (quoteState.inQuote()) {
-            handleValue(inQuoteStream, keyReader.getKey());
-          } else if (!configTypes.classifier.isWhiteSpace(c)) {
-            echoStream.repeat();
-            handleValue(newLineTerminatedStream, keyReader.getKey());
-          }
-          break;
-        case State::EndOfKeyValuePair:
-          if (!quoteState.inQuote()) {
-            state = State::LineStart;
-            echoStream.repeat();
-            break;
-          }
-          throw createError("Unclosed quote in key-value pair", pos);
-        default:
-          throw createError("Unexpected state.", pos);
         }
-      };
-      if (state == State::LineStart) {
-        return;
       }
-      if (state == State::EndOfKeyValuePair) {
-        if (!quoteState.inQuote()) {
-          return;
+      if (state != State::LineStart && state != State::EndOfKeyValuePair) {
+        if (!ignoreErrors) {
+          throw createError("Unexpected end of input!");
         }
-        throw createError("Unclosed quote in key-value pair", pos);
+        return false;
       }
-      throw createError("Unexpected end of input.", pos);
+      else if (quoteFilteredStream.getFilter()->inQuote()) {
+        throw createError("Unclosed quote at end of input");
+      }
+      return true;
     }
   };
 
 public:
-  void parse(util::text::CommentStream<CP> &commentStream, const positions *pos,
-             bool ignoreErrors, KeyReader<CP> &keyReader,
-             ValueReader<CP> &valueReader) {
+  void parse(util::text::CommentStream<C> &commentStream, const Positions *pos,
+             bool ignoreErrors, KeyReader<C> &keyReader,
+             ValueReader<C> &valueReader) {
 
-    Parser parser(commentStream, pos, ignoreErrors, keyReader, valueReader, unquotedKeyPredicate);
+    Parser parser(commentStream, pos, ignoreErrors, keyReader, valueReader);
     parser.parse();
   }
 };

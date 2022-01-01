@@ -173,15 +173,6 @@ struct Unicode {
 };
 
 class Classifiers {
-  template <typename CodePoint>
-  static auto getDefaultTypeFor() {
-    if constexpr (std::is_same<char, CodePoint>()) {
-      return ascii();
-    }
-    else {
-      return unicode();
-    }
-  }
 public:
 
   static const Ascii &ascii() {
@@ -202,19 +193,18 @@ public:
   requires(std::is_same_v<T, Unicode>) static const T &instance() {
     return unicode();
   }
-
   template <typename CodePoint>
-  using defaultType = decltype(getDefaultTypeFor<CodePoint>());
-
-  template <typename CodePoint>
-  static auto defaultInstance() -> defaultType<CodePoint> {
-    if constexpr (std::is_same<char, CodePoint>()) {
-      return ascii();
-    }
-    else {
-      return unicode();
-    }
+  requires (std::is_same_v<char, CodePoint>)
+      static const Ascii &defaultInstance() {
+    return ascii();
   }
+  template <typename CodePoint>
+  requires (!std::is_same_v<char, CodePoint>)
+      static const Unicode &defaultInstance() {
+    return unicode();
+  }
+  template <typename CodePoint>
+  using defaultType = decltype(defaultInstance<CodePoint>());
 };
 
 template <typename T> struct QuoteMatcher {

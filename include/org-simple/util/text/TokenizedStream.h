@@ -21,8 +21,8 @@
  * limitations under the License.
  */
 
-#include <org-simple/util/text/ReplayStream.h>
 #include <functional>
+#include <org-simple/util/text/ReplayStream.h>
 
 namespace org::simple::util::text {
 
@@ -36,6 +36,11 @@ namespace org::simple::util::text {
  */
 template <typename C> class TokenizedInputStream : public InputStream<C> {
 public:
+  /**
+   * Returns whether the underlying stream was exhausted, i.e., returned \c
+   * false on a \c get.
+   * @return
+   */
   virtual bool isExhausted() const = 0;
   /**
    * Resets the exhausted-state, which is useful if this token stream is based
@@ -53,11 +58,14 @@ class PredicateTokenStream : public TokenizedInputStream<C> {
   ReplayStream<C, 1> replay;
   State state = State::Skip;
   bool exhausted = false;
+  bool tokenFinished = false;
 
 public:
   template <class P1, class P2>
   PredicateTokenStream(S &stream, P1 p1, P2 p2)
       : input(stream), tokenPredicate(p1), skipPredicate(p2) {}
+
+  const S &stream() const { return input; }
 
   bool get(C &result) override {
     C c;
@@ -65,12 +73,15 @@ public:
       result = c;
       return true;
     }
+    if (exhausted) {
+      return false;
+    }
     while (replay.get(c) || input.get(c)) {
-      exhausted = false;
       switch (state) {
       case State::Skip:
         if (!skipPredicate(c)) {
           if (tokenPredicate(c)) {
+            tokenFinished = true;
             return false;
           }
           state = State::Scan;
@@ -80,6 +91,7 @@ public:
       case State::Scan:
         if (tokenPredicate(c)) {
           state = State::Skip;
+          tokenFinished = true;
           return false;
         }
         if (skipPredicate(c)) {
@@ -96,10 +108,11 @@ public:
   }
 
   bool isExhausted() const override { return exhausted; }
-  void resetExhausted() override { exhausted = false; state=State::Skip; }
+  void resetExhausted() override {
+    exhausted = false;
+    state = State::Skip;
+  }
 };
-
-
 
 } // namespace org::simple::util::text
 

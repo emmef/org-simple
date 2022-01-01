@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(testSubAsAFormality) {
   Sub x;
   char value = 0;
   BOOST_CHECK_EQUAL(true, x.get(value));
-  BOOST_CHECK_EQUAL(dummyValue, x.get(value));
+  BOOST_CHECK_EQUAL(dummyValue, value);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

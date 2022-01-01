@@ -175,8 +175,10 @@ class QuoteStateTokenizedStream : public TokenizedInputStream<C> {
   ReplayStream<C, 1> replay;
   enum class State { SkipWhilePredicate, OutsideQuotes, InsideQuotes, Exhausted };
   State state = State::SkipWhilePredicate;
+  bool tokenFinished = false;
 
 public:
+
   QuoteStateTokenizedStream(
       QuoteFilteredStream<C, S> &stream,
       const Predicate<C> *terminationPredicateOutsideQuote)
@@ -193,6 +195,9 @@ public:
     if (replay.get(c)) {
       result = c;
       return true;
+    }
+    if (state == State::Exhausted) {
+      return false;
     }
     while (getWithReplay(c)) {
       if (state == State::SkipWhilePredicate) {
