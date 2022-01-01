@@ -22,7 +22,7 @@
  */
 
 #include <org-simple/util/Predicate.h>
-#include <org-simple/util/text/InputStream.h>
+#include <org-simple/util/text/EchoStream.h>
 #include <org-simple/util/text/StreamFilter.h>
 
 namespace org::simple::util::text {
@@ -30,7 +30,7 @@ namespace org::simple::util::text {
 template <typename C, bool resetIfExhausted, class S = InputStream<C>>
 class PredicateFunctionStream : public InputStream<C> {
   static_assert(hasInputStreamSignature<S, C>);
-  VariableEchoRepeatOneStream<C, resetIfExhausted, S> stream;
+  EchoStream<C, S> stream;
   PredicateFunction<C> predicate;
 
 public:
@@ -42,7 +42,7 @@ public:
 
   bool get(C &result) final { return stream.get(result) && function(result); }
 
-  void assignStream(S *newStream) { stream.assignStream(newStream); }
+  void assignStream(S *newStream) { stream.set(newStream); }
   C getMostRecent() const { return stream.getMostRecent(); }
 };
 
@@ -51,7 +51,7 @@ class PredicateStream : public InputStream<C> {
   static_assert(hasInputStreamSignature<S, C>);
   static_assert(hasPredicateSignature<P, C>);
 
-  VariableEchoRepeatOneStream<C, resetIfExhausted, S> stream;
+  EchoStream<C, S> stream;
   const P &predicate;
 
 public:
@@ -62,13 +62,13 @@ public:
     return stream.get(result) && predicate.test(result);
   }
 
-  void assignStream(S *newStream) { stream.assignStream(newStream); }
+  void assignStream(S *newStream) { stream.set(newStream); }
   C getMostRecent() const { return stream.getMostRecent(); }
 };
 
-template <typename C, bool resetInputOnStop, class S = InputStream<C>>
+template <typename C, class S = InputStream<C>>
 class PredicateFunctionVariableInputStream
-    : public VariableEchoStream<C, resetInputOnStop, S> {
+    : public EchoStream<C, S>  {
   static_assert(hasInputStreamSignature<S, C>);
 
   PredicateFunction<C> predicate;
@@ -76,17 +76,17 @@ class PredicateFunctionVariableInputStream
 public:
   PredicateFunctionVariableInputStream(S *stream,
                                        PredicateFunction<C> predicateFunction)
-      : VariableEchoStream<C, resetInputOnStop, S>(stream),
+      : EchoStream<C, S> (stream),
         predicate(predicateFunction ? predicateFunction
                                     : falsePredicateFunction<C>) {}
 
   PredicateFunctionVariableInputStream(PredicateFunction<C> predicateFunction)
-      : VariableEchoStream<C, resetInputOnStop, S>(),
+      : EchoStream<C, S> (),
         predicate(predicateFunction ? predicateFunction
                                     : falsePredicateFunction<C>) {}
 
   bool get(C &result) final {
-    return VariableEchoStream<C, resetInputOnStop, S>::get(result) &&
+    return EchoStream<C, S> ::get(result) &&
            predicate(result);
   }
 
@@ -96,22 +96,22 @@ public:
   }
 };
 
-template <typename C, class P, bool resetInputOnStop, class S = InputStream<C>>
+template <typename C, class P, class S = InputStream<C>>
 class PredicateVariableInputStream
-    : public VariableEchoStream<C, resetInputOnStop, S> {
+    : public EchoStream<C, S>  {
   static_assert(hasInputStreamSignature<S, C>);
 
   const Predicate<C> &p;
 
 public:
   PredicateVariableInputStream(S *stream, const Predicate<C> &predicate)
-      : VariableEchoStream<C, resetInputOnStop, S>(stream), p(predicate) {}
+      : EchoStream<C, S> (stream), p(predicate) {}
 
   PredicateVariableInputStream(const Predicate<C> &predicate)
-      : VariableEchoStream<C, resetInputOnStop, S>(), p(predicate) {}
+      : EchoStream<C, S> (), p(predicate) {}
 
   bool get(C &result) final {
-    return VariableEchoStream<C, resetInputOnStop, S>::get(result) && p.test(result);
+    return EchoStream<C, S> ::get(result) && p.test(result);
   }
 
   void setPredicateFunction(PredicateFunction<C> predicateFunction) {

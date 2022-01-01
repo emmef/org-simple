@@ -191,7 +191,7 @@ static std::vector<Scenario<Value>> &generateUnsignedSamples() {
 
 void testThreeKnownNumbers(const char *string) {
   Stream<char> stringStream(string);
-  org::simple::util::text::EchoRepeatOneStream<char, Stream<char>> echo(stringStream);
+  org::simple::util::text::EchoStream<char, Stream<char>> echo(&stringStream);
   struct NoCommaPredicate : org::simple::util::Predicate<char> {
     bool test(const char &c) const { return c != ','; }
   } predicate;
@@ -205,7 +205,7 @@ void testThreeKnownNumbers(const char *string) {
   actualResult = NumberParser::readIntegralValueFromStream<char>(stream, actualValue);
   BOOST_CHECK_EQUAL(Ok, actualResult);
   BOOST_CHECK_EQUAL(13, actualValue);
-  x = echo.lastValue();
+  x = echo.peek();
   do {
     if (!predicate.test(x)) {
       // separator!
@@ -220,7 +220,7 @@ void testThreeKnownNumbers(const char *string) {
   actualResult = NumberParser::readIntegralValueFromStream<char>(stream, actualValue);
   BOOST_CHECK_EQUAL(Ok, actualResult);
   BOOST_CHECK_EQUAL(-54, actualValue);
-  x = echo.lastValue();
+  x = echo.peek();
   do {
     if (!predicate.test(x)) {
       // separator!

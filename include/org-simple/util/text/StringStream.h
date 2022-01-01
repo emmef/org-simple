@@ -32,9 +32,9 @@ class StringInputStream : public InputStream<T> {
   size_t pos;
 
 public:
-  explicit StringInputStream(const std::basic_string<T> &string)
+  StringInputStream(const std::basic_string<T> &string)
       : input(string), pos(0) {}
-  explicit StringInputStream(const T *string) : input(string), pos(0) {}
+  StringInputStream(const T *string) : input(string), pos(0) {}
   StringInputStream(StringInputStream &&) = default;
 
   bool get(T &result) final {

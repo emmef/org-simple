@@ -94,15 +94,15 @@ template <typename CP> class KeyValueConfig {
   using NewLinePredicate = util::text::NewLinePredicate<CP, true>;
   const NewLinePredicate &newLinePredicate = NewLinePredicate ::instance();
   using QuoteBasedPredicate = util::text::QuoteStatePredicate<CP, true>;
-  using EchoStream = util::text::EchoRepeatOneStream<CP>;
+  using EchoStream = util::text::EchoStream<CP>;
   using EndOfQuoteStream =
-      util::text::PredicateVariableInputStream<CP, QuoteBasedPredicate, false,
+      util::text::PredicateVariableInputStream<CP, QuoteBasedPredicate,
                                                EchoStream>;
   using GraphOnlyStream =
-      util::text::PredicateVariableInputStream<CP, UnquotedKeyPredicate, false,
+      util::text::PredicateVariableInputStream<CP, UnquotedKeyPredicate,
                                                EchoStream>;
   using BeforeNewLineStream =
-      util::text::PredicateVariableInputStream<CP, NewLinePredicate, false,
+      util::text::PredicateVariableInputStream<CP, NewLinePredicate,
                                                EchoStream>;
 
   class Parser {
@@ -183,7 +183,7 @@ template <typename CP> class KeyValueConfig {
            const positions *positions, bool ignoreErrors_,
            KeyReader<CP> &keyReader_, ValueReader<CP> &valueReader_,
            const UnquotedKeyPredicate &unquotedKeyPredicate)
-        : state(State::LineStart), echoStream(commentStream),
+        : state(State::LineStart), echoStream(&commentStream),
           quoteState(commentStream.state()), quoteBasedPredicate(quoteState),
           inQuoteStream(&echoStream, quoteBasedPredicate),
           nonGraphTerminatedStream(&echoStream, unquotedKeyPredicate),
@@ -201,12 +201,12 @@ template <typename CP> class KeyValueConfig {
             continue;
           }
           if (quoteState.inQuote()) {
-            handleKey(inQuoteStream, echoStream.lastValue());
+            handleKey(inQuoteStream, echoStream.peek());
             continue;
           } else if (c != '=' && configTypes.classifier.isGraph(c)) {
             state = State::UnQuotedKey;
             echoStream.repeat();
-            handleKey(nonGraphTerminatedStream, echoStream.lastValue());
+            handleKey(nonGraphTerminatedStream, echoStream.peek());
             continue;
           }
           if (ignoreErrors) {

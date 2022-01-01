@@ -21,7 +21,9 @@
  * limitations under the License.
  */
 
+#include <org-simple/util/text/TokenizedStream.h>
 #include <org-simple/util/text/StreamFilter.h>
+#include <org-simple/util/text/ReplayStream.h>
 
 namespace org::simple::util::text {
 
