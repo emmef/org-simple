@@ -21,9 +21,9 @@
  * limitations under the License.
  */
 
-#include <org-simple/util/text/TokenizedStream.h>
-#include <org-simple/util/text/StreamFilter.h>
 #include <org-simple/util/text/ReplayStream.h>
+#include <org-simple/util/text/StreamFilter.h>
+#include <org-simple/util/text/TokenizedStream.h>
 
 namespace org::simple::util::text {
 
@@ -68,38 +68,20 @@ public:
 
 template <typename C, class S = InputStream<C>>
 class NewlineTokenizedStream : public TokenizedInputStream<C> {
-  S &input;
-  ReplayStream<C, 1> replay;
-  bool exhausted = false;
+  PredicateTokenStream<C, S> input;
+
+  static bool isNewLine(const char &c) { return c == '\n'; }
 
 public:
-  explicit NewlineTokenizedStream(S &stream) : input(stream) {}
+  explicit NewlineTokenizedStream(S &stream)
+      : input(
+            stream, isNewLine, isNewLine) {}
 
-  bool get(C &result) final {
-    C c;
-    bool skipping = false;
-    while (replay.get(c) || input.get(c)) {
-      if (skipping) {
-        if (c != '\n') {
-          replay << c;
-          return false;
-        }
-      } else if (c != '\n') {
-        result = c;
-        return true;
-      } else {
-        skipping = true;
-      }
-    }
-    exhausted = true;
-    return false;
-  }
+  bool get(C &result) final { return input.get(result); }
 
-  bool isExhausted() const final { return exhausted; }
+  bool isExhausted() const final { return input.isExhausted(); }
 
-  void resetExhausted() {
-    exhausted = false;
-  }
+  void resetExhausted() { input.resetExhausted(); }
 };
 
 } // namespace org::simple::util::text
