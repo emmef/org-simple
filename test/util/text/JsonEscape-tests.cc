@@ -1,23 +1,14 @@
 //
 // Created by michel on 27-01-22.
 //
-#include "boost-unit-tests.h"
-#include <charconv>
+
 #include <org-simple/util/text/Json.h>
 #include <string>
+#include "boost-unit-tests.h"
 
 using EscapeState = org::simple::util::text::JsonEscapeState;
 
 static constexpr EscapeState ESCAPE_CHAR = {1, 0, 0};
-static constexpr EscapeState ESCAPE_NONE = {0, 0, 0};
-
-static constexpr bool noEscapeState(const EscapeState &state) {
-  return state.type == 0 && state.count == 0 && state.value == 0;
-}
-
-static constexpr bool singleEscapeState(const EscapeState &state) {
-  return state.type == 1 && state.count == 0 && state.value == 0;
-}
 
 namespace org::simple::util::text {
 
@@ -294,7 +285,6 @@ Scenario generateForCodePoint(char32_t cp) {
   uint16_t c = 1;
   for (int j = 3; j >= 0; j--, c++) {
     char32_t ld = (leading >> (j * 4)) & 0x000f;
-    char32_t lv = (leading >> ((3 - j) * 4)) & 0x000f;
     value <<= 4;
     value |= ld;
     if (j != 0) {
@@ -309,7 +299,6 @@ Scenario generateForCodePoint(char32_t cp) {
   steps.push_back({'u', true, {2, c++, value}});
   for (int j = 3; j >= 0; j--, c++) {
     char32_t td = (trailing >> (j * 4)) & 0x000f;
-    char32_t tv = (trailing >> ((3 - j) * 4)) & 0x000f;
     value <<= 4;
     value |= td;
     if (j != 0) {

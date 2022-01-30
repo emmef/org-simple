@@ -93,6 +93,11 @@ public:
       state = State::Repeat;
     }
   }
+
+  void replay(const C &c) {
+    lastValue = c;
+    state = State::Repeat;
+  }
   /**
    * Reset the state, basically undo the call to \c repeat/
    */
