@@ -69,8 +69,13 @@ public:
     return *this;
   }
 
-  template <typename V> JsonException &operator<<(const V &v) {
-    message += std::to_string(v);
+  template <typename V> requires(std::is_integral_v<V>)JsonException &operator<<(const V &v) {
+    static constexpr const char digit[] = "0123456789abcdef";
+    static constexpr int startShifts = sizeof(V) * 8 - 4;
+
+    for (int shifts = startShifts; shifts >= 0; shifts -= 4) {
+      message += digit[(v >> shifts) & 0x00f];
+    }
     return *this;
   }
 
@@ -90,6 +95,21 @@ public:
   JsonUnexpectedCharacter(const char *m, char c)
       : JsonException("Unexpected character ") {
     (*this) << c << " " << m;
+  }
+};
+
+class JsonUnicodeEscapeException : public JsonException {
+public:
+  JsonUnicodeEscapeException(const char *m) : JsonException("Escaped unicode: "){
+    (*this) << m;
+  }
+  JsonUnicodeEscapeException(const char *m, char c) : JsonException("Escaped unicode: "){
+    (*this) << m << "; instead got '" << c << '\'';
+  }
+  template <typename V>
+  requires(std::is_integral_v<V> && sizeof(V) > 1)
+  JsonUnicodeEscapeException(const char *m, V v) : JsonException("Escaped unicode: "){
+    (*this) << m << ": " << v;
   }
 };
 
@@ -130,7 +150,7 @@ requires(std::is_same_v<CodePoint, char> || std::is_same_v<CodePoint, char8_t> |
   static constexpr char32_t MARK_LEADING = 0xD800;
   static constexpr char32_t MARK_TRAILING = 0xDC00;
   static constexpr char32_t MARK_MASK = 0xFC00;
-  static constexpr char32_t MARK_NOMASK = ~MARK_MASK;
+  static constexpr char32_t MARK_NOMASK = 0x03ff;
   char32_t c = cp;
   if constexpr (std::is_same_v<CodePoint, char>) {
     c &= 0x00ff;
@@ -186,12 +206,12 @@ requires(std::is_same_v<CodePoint, char> || std::is_same_v<CodePoint, char8_t> |
   if (escaped.type == 2) {
     if (escaped.count == 4) {
       if (c != '\\') {
-        throw JsonUnexpectedCharacter("is not expected '\\' for trailing surrogate sequence", c);
+        throw JsonUnicodeEscapeException("Expecting trailing surrogate pair, starting with '\\'", char(c));
       }
     }
     else if (escaped.count == 5) {
       if (c != 'u') {
-        throw JsonUnexpectedCharacter("is not expected 'u' for trailing surrogate sequence", c);
+        throw JsonUnicodeEscapeException("Expecting trailing surrogate pair, starting with \"\\u\"", char(c));
       }
     }
     else {
@@ -203,7 +223,7 @@ requires(std::is_same_v<CodePoint, char> || std::is_same_v<CodePoint, char8_t> |
         escaped.value += (c - 'a' + 10);
       }
       else {
-        throw JsonUnexpectedCharacter("is not a valid hexadecimal digit", c);
+        throw JsonUnicodeEscapeException("Expected hexadecimal digit", char(c));
       }
       if (escaped.count == 3) {
         if (escaped.value < 0xd800 || escaped.value >= 0xe000) {
@@ -215,20 +235,20 @@ requires(std::is_same_v<CodePoint, char> || std::is_same_v<CodePoint, char8_t> |
           escaped.value &= MARK_NOMASK;
         }
         else {
-          throw JsonException("Invalid leading surrogate unicode");
+          throw JsonUnicodeEscapeException("Invalid leading surrogate value", char16_t (escaped.value));
         }
       }
       if (escaped.count == 9) {
         if ((escaped.value & MARK_MASK) == MARK_TRAILING) {
           char32_t hi = (escaped.value & 0xffff0000) >> 6;
           char32_t lo = escaped.value & MARK_NOMASK;
-          char32_t cp = (hi | lo);
+          char32_t cp = (hi | lo) + 0x10000;
           bool result = codePointToUtf8(add, cp);
           escaped = {};
           return result;
         }
         else {
-          throw JsonException("Invalid trailing surrogate unicode");
+          throw JsonUnicodeEscapeException("Invalid trailing surrogate unicode", char16_t (escaped.value));
         }
       }
     }
