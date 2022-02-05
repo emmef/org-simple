@@ -188,9 +188,9 @@ public:
   QuoteStateTokenizedStream(QuoteFilteredStream<C, S> &stream)
       : QuoteStateTokenizedStream(stream, nullptr) {}
 
-  virtual bool isExhausted() const { return state == State::Exhausted; }
+  virtual bool isExhausted() const override { return state == State::Exhausted; }
 
-  bool get(C &result) {
+  bool get(C &result) override {
     C c;
     if (replay.get(c)) {
       result = c;

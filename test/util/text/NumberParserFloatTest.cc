@@ -30,7 +30,7 @@ template <typename Value = double> struct Scenario {
 
   Scenario(long double number, Result result, Value value) : Scenario("", result, value) {
     static constexpr size_t FMT_LEN = 10;
-    static constexpr size_t MANTISSA_DIGITS = std::numeric_limits<Value>::max_digits10;
+    static constexpr int MANTISSA_DIGITS = std::numeric_limits<Value>::max_digits10;
     static constexpr size_t EXP_DIGITS = org::simple::core::Bits<unsigned>::most_significant(std::numeric_limits<Value>::max_exponent10) / 2;
     static constexpr size_t SIGNS_EXP_DECIMAL = 4;
     static constexpr size_t LEN = MANTISSA_DIGITS + EXP_DIGITS + SIGNS_EXP_DECIMAL + 10;
@@ -97,8 +97,6 @@ static std::vector<Scenario<Value>> &generateFLoatTestSamples() {
       static_cast<testValueType>(std::numeric_limits<Value>::max());
   static constexpr testValueType min =
       static_cast<testValueType>(std::numeric_limits<Value>::lowest());
-  static constexpr testValueType small =
-      static_cast<testValueType>(std::numeric_limits<Value>::min());
   std::vector<testValueType> testValues;
 
   if (std::is_same<bool, Value>()) {

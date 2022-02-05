@@ -52,9 +52,9 @@ public:
 template <typename C, class S = InputStream<C>>
 class PredicateTokenStream : public TokenizedInputStream<C> {
   enum class State { Skip, Scan };
+  S &input;
   std::function<bool(const C &)> tokenPredicate;
   std::function<bool(const C &)> skipPredicate;
-  S &input;
   ReplayStream<C, 1> replay;
   State state = State::Skip;
   bool exhausted = false;

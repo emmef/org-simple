@@ -310,7 +310,7 @@ const std::vector<size_t> test_create_periods() {
   return v;
 }
 
-const std::vector<size_t> &get_test_periods() {
+[[maybe_unused]] const std::vector<size_t> &get_test_periods() {
   static std::vector<size_t> v = test_create_periods();
 
   return v;
@@ -370,7 +370,8 @@ struct FilterScenario {
 };
 
 } // end of anonymous namespace
-static std::ostream &operator<<(std::ostream &out,
+
+[[maybe_unused]] static std::ostream &operator<<(std::ostream &out,
     const FilterScenario &scenario) {
   scenario.write(out);
   return out;

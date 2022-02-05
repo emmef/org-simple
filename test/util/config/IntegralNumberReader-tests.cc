@@ -60,7 +60,7 @@ struct Scenario {
     public:
       TS(Stream &s) : input(s) {}
 
-      bool get(char &c) { return input.get(c); }
+      bool get(char &c) override { return input.get(c); }
       bool isExhausted() const override { return false; }
       /**
    * Resets the exhausted-state, which is useful if this token stream is based

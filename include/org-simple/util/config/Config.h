@@ -112,7 +112,6 @@ template <typename C> class KeyValueConfig {
     }
 
     bool handleKey() {
-      bool success = false;
       ReaderResult result = keyReader.read(quoteTokenizedStream);
       if (result != ReaderResult::Ok) {
         if (!ignoreErrors) {

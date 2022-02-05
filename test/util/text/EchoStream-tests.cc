@@ -10,11 +10,6 @@ using namespace org::simple::util::text;
 
 using StringStream = StringInputStream<char>;
 
-namespace {
-  void testIdenticalReturnValues(const char *text) {
-  }
-}
-
 BOOST_AUTO_TEST_SUITE(test_org_simple_util_text_EchoStream)
 
 BOOST_AUTO_TEST_CASE(testIdenticalWithUnderlyingStream) {

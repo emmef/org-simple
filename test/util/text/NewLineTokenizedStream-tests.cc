@@ -24,7 +24,7 @@ struct Scenario {
   Scenario(const std::string &string,
            const std::initializer_list<std::string> &list)
       : input(string) {
-    for (const auto exp : list) {
+    for (const auto &exp : list) {
       this->operator<<(exp);
     }
   }
@@ -62,7 +62,7 @@ std::string trim(const std::string &input) {
   ssize_t end = input.length();
   ssize_t lastNW = -1;
 
-  for (size_t i = 0; i < end; i++) {
+  for (ssize_t i = 0; i < end; i++) {
     character c = input.at(i);
     if (start < 0) {
       if (c == '\n') {

@@ -31,7 +31,7 @@ struct Scenario {
   Scenario(const std::string &string, bool skipWhitespace,
            const std::initializer_list<std::string> &list)
       : Scenario(string, skipWhitespace) {
-    for (const auto exp : list) {
+    for (const auto &exp : list) {
       this->operator<<(exp);
     }
   }
