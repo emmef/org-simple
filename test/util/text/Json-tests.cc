@@ -326,36 +326,40 @@ std::vector<Scenario> getInitialScenarios() {
       {"{ \"name\" : 13.84 }",
        {Step::pushName("name"), Step::setNumber("13.84"), Step::popName()}});
 
-  scenarios.push_back({"{ \"name\" : \"string value\" }",
-                       {Step::pushName("name"), Step::setString("string value"),
-                        Step::popName()}});
+  scenarios.push_back({
+      R"({
+      "name" : "string value"
+      })",
+      {Step::pushName("name"), Step::setString("string value"),
+       Step::popName()}});
 
   scenarios.push_back(
-      {"{ \"name1\" : true, \"name2\" : 13 }",
+      {R"({ "name1" : true, "name2" : 13 })",
        {Step::pushName("name1"), Step::setBoolean(true), Step::popName(),
         Step::pushName("name2"), Step::setNumber("13"), Step::popName()}});
 
   scenarios.push_back(
-      {"{ \"name1\" : true, \"name2\" : { \"name2.1\" : 13}} }",
+      {R"({ "name1" : true, "name2" : { "name2.1" : 13}} })",
        {Step::pushName("name1"), Step::setBoolean(true), Step::popName(),
         Step::pushName("name2"), Step::pushName("name2.1"),
         Step::setNumber("13"), Step::popName(), Step::popName()}});
 
   scenarios.push_back(
-      {"{ \"name\" : [13.84, 16.3,18.9] }",
+      {R"({ "name" : [13.84, 16.3,18.9] })",
        {Step::pushName("name"), Step::pushIndex(0), Step::setNumber("13.84"),
         Step::popIndex(), Step::pushIndex(1), Step::setNumber("16.3"),
         Step::popIndex(), Step::pushIndex(2), Step::setNumber("18.9"),
         Step::popIndex(), Step::popName()}});
 
   scenarios.push_back(
-      {"{ \"name\" : [13.84, { \"name2\" : 18.9 }] }",
+      {R"({ "name" : [13.84, { "name2" : 18.9 }] })",
        {Step::pushName("name"), Step::pushIndex(0), Step::setNumber("13.84"),
-        Step::popIndex(), Step::pushIndex(1), Step::pushName("name2"), Step::setNumber("18.9"),
-        Step::popName(), Step::popIndex(), Step::popName()}});
+        Step::popIndex(), Step::pushIndex(1), Step::pushName("name2"),
+        Step::setNumber("18.9"), Step::popName(), Step::popIndex(),
+        Step::popName()}});
 
   scenarios.push_back(
-      {"{ \"name\" : [13.84, [16.3,18.9]] }",
+      {R"({ "name" : [13.84, [16.3,18.9]] })",
        {Step::pushName("name"), Step::pushIndex(0), Step::setNumber("13.84"),
         Step::popIndex(), Step::pushIndex(1), Step::pushIndex(0),
         Step::setNumber("16.3"), Step::popIndex(), Step::pushIndex(1),
