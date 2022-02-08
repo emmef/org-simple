@@ -25,6 +25,9 @@
 #include <org-simple/util/text/CharEncode.h>
 #include <org-simple/util/text/EchoStream.h>
 #include <org-simple/util/text/InputStream.h>
+#include <org-simple/util/text/StreamProbe.h>
+#include <org-simple/util/text/TextFilePosition.h>
+#include <org-simple/util/text/UnixNewLine.h>
 #include <stdexcept>
 #include <string>
 
@@ -34,6 +37,20 @@ template <typename CodePoint>
 concept isCodePoint =
     std::is_same_v<CodePoint, char> || std::is_same_v<CodePoint, char8_t> ||
     std::is_same_v<CodePoint, char16_t> || std::is_same_v<CodePoint, char32_t>;
+
+static constexpr const char hex_digit[] = "0123456789abcdef";
+
+template <typename V, class Add>
+requires(std::is_integral_v<V>) bool toHexadecimalDigits(const V &v, Add add) {
+  static constexpr int startShifts = sizeof(V) * 8 - 4;
+
+  for (int shifts = startShifts; shifts >= 0; shifts -= 4) {
+    if (!add(hex_digit[(v >> shifts) & 0x0f])) {
+      return false;
+    }
+  }
+  return true;
+}
 
 class JsonException : public std::exception {
   std::string message;
@@ -49,7 +66,6 @@ public:
   template <typename C>
   requires(isCodePoint<C>) //
       JsonException &addChar(const C &c) {
-    static constexpr const char digit[] = "0123456789abcdef";
     // Negative numbers are fine as tThe input is expected to be correct UTF-8.
     if (c >= ' ' && c < 127) {
       message += c;
@@ -74,7 +90,7 @@ public:
     } else {
       message += "\\x";
       for (int i = sizeof(C) * 4 - 4; i >= 0; i -= 4) {
-        message += digit[(c >> i) & 0x0f];
+        message += hex_digit[(c >> i) & 0x0f];
       }
     }
     return *this;
@@ -82,12 +98,10 @@ public:
 
   template <typename V>
   requires(std::is_integral_v<V>) JsonException &addHexDigits(const V &v) {
-    static constexpr const char digit[] = "0123456789abcdef";
-    static constexpr int startShifts = sizeof(V) * 8 - 4;
-
-    for (int shifts = startShifts; shifts >= 0; shifts -= 4) {
-      message += digit[(v >> shifts) & 0x00f];
-    }
+    toHexadecimalDigits(v, [this](const V &v) {
+      message += v;
+      return true;
+    });
     return *this;
   }
 
@@ -164,8 +178,8 @@ struct JsonEscapeState {
 
 template <typename CodePoint, class Function>
 requires(isCodePoint<CodePoint>) //
-    bool addJsonStringCharacter(const CodePoint &cp, JsonEscapeState &escaped,
-                                Function add);
+    static bool addJsonStringCharacter(const CodePoint &cp,
+                                       JsonEscapeState &escaped, Function add);
 
 class JsonStringBuilder {
   JsonEscapeState escaped = {};
@@ -493,12 +507,21 @@ public:
       }
     }
   }
+
+  template <typename C>
+  static void readJson(JsonContext &context, InputStream<C> &input,
+                       TextFilePositionData<C> &position) {
+    UnixNewLineStream<C> lineStream(input);
+    ProbedInputStream<TextFilePositionData<C>, C, UnixNewLineStream<C>>
+        probeStream(lineStream, position);
+    readJson(context, probeStream);
+  }
 };
 
 template <typename CodePoint, class Function>
 requires(isCodePoint<CodePoint>) //
-    bool addJsonStringCharacter(const CodePoint &cp, JsonEscapeState &escaped,
-                                Function add) {
+    static bool addJsonStringCharacter(const CodePoint &cp,
+                                       JsonEscapeState &escaped, Function add) {
   static constexpr char32_t MARK_LEADING = 0xD800;
   static constexpr char32_t MARK_TRAILING = 0xDC00;
   static constexpr char32_t MARK_MASK = 0xFC00;
@@ -608,6 +631,63 @@ requires(isCodePoint<CodePoint>) //
   }
 
   return true;
+}
+
+/**
+ * Writes an 8-byte character to a JSON string that can appear inside quotes.
+ * UTF-8 leading and trailing surrogates are passed verbatim.
+ * @tparam Function A function that actually adds a character, with the
+ * signature `bool add(char c)` that returns \c true when adding is successful
+ * and \c false otherwise.
+ * @param c The 8-byte character to add.
+ * @param add The function that adds.
+ * @return \c true if adding was successful.
+ */
+template <class Function>
+static bool addCharacterToJsonString(char chr, Function add) {
+  char8_t c = chr;
+  if (c == 0) {
+    return false;
+  }
+  if (c == '\"' || c == '\\' || c == '/') {
+    return add('\\') && add(c);
+  } else if (c == '\b') {
+    return add('\\') && add('b');
+  } else if (c == '\f') {
+    return add('\\') && add('f');
+  } else if (c == '\n') {
+    return add('\\') && add('n');
+  } else if (c == '\r') {
+    return add('\\') && add('r');
+  } else if (c == '\t') {
+    return add('\\') && add('t');
+  } else if (c < ' ') {
+    return add('\\') && add('u') && add('0') && add('0') &&
+           add(hex_digit[c / 16]) && add(hex_digit[c % 16]);
+  } else {
+    return add(c);
+  }
+}
+
+template <typename CodePoint, class Function, bool strict = false>
+requires(isCodePoint<CodePoint>) //
+    static bool addCodePointToJsonString(CodePoint chr, Function add) {
+  if constexpr (std::is_same_v<char, std::remove_const_t<CodePoint>>) {
+    return addCharacterToJsonString(chr, add);
+  } else if (chr <= 0x7f) {
+    return addCharacterToJsonString(chr, add);
+  } else if (strict && chr >= 0xd800 && chr <= 0xdfff) {
+    return false;
+  } else {
+    char encoded[4];
+    const char *end = Utf8Encoding ::unsafeEncode(chr, encoded);
+    for (const char *p = encoded; p < end; p++) {
+      if (!add(*p)) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 } // namespace org::simple::util::text
