@@ -24,6 +24,7 @@
 #include <array>
 #include <numeric>
 #include <functional>
+#include <stdexcept>
 
 namespace org::simple::util::dsp {
 
