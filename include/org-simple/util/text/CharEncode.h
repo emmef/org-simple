@@ -65,7 +65,7 @@ template <typename byte, typename char_type> struct CharacterConverter {
  * the "byte" type.
  * @tparam L An arbitrary limit on the maximum code-point, say for UTF-8.
  */
-template <int MARKER_BITS, typename B = char8_t, typename C = char32_t>
+template <int MARKER_BITS, typename B = unsigned char, typename C = uint32_t>
 struct AbstractMarker {
   static_assert(validByteAndUnsignedCodePoint<B, C>);
   static_assert(
@@ -121,10 +121,10 @@ struct AbstractMarker {
  * @tparam C The code-point type, that must be unsigned and at least as large as
  * the "byte" type.
  */
-template <typename B = char8_t, typename C = char32_t>
+template <typename B = unsigned char, typename C = uint32_t>
 using ContinuationMarker = AbstractMarker<2, B, C>;
 
-template <int ENCODED_BYTES, typename B = char8_t>
+template <int ENCODED_BYTES, typename B = unsigned char>
 static constexpr int getBitsForByteCount() {
   const int byteBits = sizeof(B) * 8;
   return ENCODED_BYTES == 1 ? byteBits - 1 : 1 + ENCODED_BYTES * (byteBits - 3);
@@ -138,7 +138,7 @@ static constexpr int getBitsForByteCount() {
  * the "byte" type.
  * @tparam L An arbitrary limit on the maximum code-point, say for UTF-8.
  */
-template <int ENCODED_BYTES, typename B = char8_t, typename C = char32_t,
+template <int ENCODED_BYTES, typename B = unsigned char, typename C = uint32_t,
           C L = std::numeric_limits<C>::max()>
 struct LeadingMarker
     : public AbstractMarker<ENCODED_BYTES == 1 ? 1 : ENCODED_BYTES + 1, B, C> {
@@ -418,13 +418,13 @@ private:
   }
 };
 
-template <int ENCODED_BYTES, typename B = char8_t, typename C = char32_t,
+template <int ENCODED_BYTES, typename B = unsigned char, typename C = uint32_t,
           C L = std::numeric_limits<C>::max()>
 using DecodingReader = typename LeadingMarker<ENCODED_BYTES, B, C, L>::Reader;
 
-typedef LeadingMarker<4, char8_t, char32_t, 0x0010ffff> Utf8Encoding;
+typedef LeadingMarker<4, unsigned char, uint32_t, 0x0010ffff> Utf8Encoding;
 typedef Utf8Encoding::Reader Utf8Reader;
-typedef LeadingMarker<1, char8_t, char8_t> AsciiEncoding;
+typedef LeadingMarker<1, unsigned char, unsigned char> AsciiEncoding;
 typedef AsciiEncoding::Reader AsciiReader;
 
 } // namespace org::simple::util::text

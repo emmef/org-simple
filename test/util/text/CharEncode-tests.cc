@@ -7,8 +7,8 @@
 #include "org-simple/core/Bits.h"
 #include "org-simple/util/text/CharEncode.h"
 
-typedef char8_t byte;
-typedef char32_t codePoint;
+typedef unsigned char byte;
+typedef uint32_t codePoint;
 template <int MARKER_BITS>
 using Marker =
     org::simple::util::text::AbstractMarker<MARKER_BITS, byte, codePoint>;
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(testLeadinMinimaAndMaxima) {
 }
 
 template <short Bytes, short DecodeBytes>
-void checkScatterForCharacterAndBack(const char32_t c) {
+void checkScatterForCharacterAndBack(const uint32_t c) {
   static constexpr bool sameBytes = Bytes == DecodeBytes;
   byte buffer[6] = {0, 0, 0, 0, 0, 0};
 
@@ -180,7 +180,7 @@ void checkScatterForCharacters() {
 }
 
 template <short Bytes, short EntryMarker>
-void checkNumberOfBytesDeducted(const char32_t c) {
+void checkNumberOfBytesDeducted(const uint32_t c) {
   BOOST_CHECK_EQUAL(Bytes, Leading<EntryMarker>::getBytesFromCodePoint(c));
 }
 
@@ -285,7 +285,7 @@ static bool readCodePoint(const char *bytes, codePoint &result) {
 }
 
 template <short Bytes, short DecodeBytes>
-void checkEncodeAndReadForCharacterAndBack(const char32_t c) {
+void checkEncodeAndReadForCharacterAndBack(const uint32_t c) {
   static constexpr bool sameBytes = Bytes == DecodeBytes;
   byte buffer[6] = {0, 0, 0, 0, 0, 0};
 

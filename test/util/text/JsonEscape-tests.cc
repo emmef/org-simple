@@ -153,7 +153,7 @@ void Scenario::execute() const {
   execute(string);
 }
 
-std::string toUtf8(char32_t codePoint) {
+std::string toUtf8(uint32_t codePoint) {
   char utf8[5];
   char *end =
       org::simple::util::text::Utf8Encoding ::unsafeEncode(codePoint, utf8);
@@ -263,13 +263,13 @@ std::vector<Scenario> simpleScenarios() {
   return results;
 }
 
-Scenario generateForCodePoint(char32_t cp) {
+Scenario generateForCodePoint(uint32_t cp) {
   static constexpr const char digit[] = "0123456789abcdef";
   const char *prefix = "pre";
   const char *suffix = "suf";
-  char32_t u = cp - 0x10000;
-  char32_t leading = 0xd800 | (u >> 10);
-  char32_t trailing = 0xdc00 | (u & 0x03ff);
+  uint32_t u = cp - 0x10000;
+  uint32_t leading = 0xd800 | (u >> 10);
+  uint32_t trailing = 0xdc00 | (u & 0x03ff);
 
   std::string expected;
   std::vector<Scenario::Step> steps;
@@ -279,12 +279,12 @@ Scenario generateForCodePoint(char32_t cp) {
     steps.push_back({*p, true, {}});
   }
 
-  char32_t value = 0;
+  uint32_t value = 0;
   steps.push_back({'\\', true, ESCAPE_CHAR});
   steps.push_back({'u', true, {2, 0, 0}});
   uint16_t c = 1;
   for (int j = 3; j >= 0; j--, c++) {
-    char32_t ld = (leading >> (j * 4)) & 0x000f;
+    uint32_t ld = (leading >> (j * 4)) & 0x000f;
     value <<= 4;
     value |= ld;
     if (j != 0) {
@@ -298,7 +298,7 @@ Scenario generateForCodePoint(char32_t cp) {
   steps.push_back({'\\', true, {2, c++, value}});
   steps.push_back({'u', true, {2, c++, value}});
   for (int j = 3; j >= 0; j--, c++) {
-    char32_t td = (trailing >> (j * 4)) & 0x000f;
+    uint32_t td = (trailing >> (j * 4)) & 0x000f;
     value <<= 4;
     value |= td;
     if (j != 0) {

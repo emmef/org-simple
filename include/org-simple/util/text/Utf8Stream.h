@@ -56,7 +56,7 @@ public:
 
 class ValidatedUtf8Stream : public InputStream<char> {
   InputStream<char> &input;
-  char8_t buffer[5];
+  unsigned char buffer[5];
   signed pos;
 
   bool readCodePoint(char c) {
@@ -92,7 +92,7 @@ public:
   bool get(char &result) override {
     while (true) {
       if (pos >= 0) {
-        char8_t replay = buffer[pos];
+        unsigned char replay = buffer[pos];
         if (replay != '\0') {
           result = replay;
           ++pos;

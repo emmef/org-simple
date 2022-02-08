@@ -35,8 +35,8 @@ namespace org::simple::util::text {
 
 template <typename CodePoint>
 concept isCodePoint =
-    std::is_same_v<CodePoint, char> || std::is_same_v<CodePoint, char8_t> ||
-    std::is_same_v<CodePoint, char16_t> || std::is_same_v<CodePoint, char32_t>;
+    std::is_same_v<CodePoint, char> || std::is_same_v<CodePoint, unsigned char> ||
+    std::is_same_v<CodePoint, char16_t> || std::is_same_v<CodePoint, uint32_t>;
 
 static constexpr const char hex_digit[] = "0123456789abcdef";
 
@@ -152,15 +152,15 @@ template <typename C> static constexpr bool isJsonWhitespace(const C &c) {
 
 template <typename CodePoint, class Function>
 bool codePointToUtf8(Function add, const CodePoint &c) {
-  char8_t utf8[4];
-  char8_t *end;
-  char32_t value = c;
+  unsigned char utf8[4];
+  unsigned char *end;
+  uint32_t value = c;
   if constexpr (sizeof(CodePoint) == 1) {
     value &= 0x00ff;
   }
-  end = LeadingMarker<4, char8_t, char32_t>::unsafeEncode(value, utf8);
+  end = LeadingMarker<4, unsigned char, uint32_t>::unsafeEncode(value, utf8);
   bool added = true;
-  for (const char8_t *begin = utf8; begin < end && added; begin++) {
+  for (const unsigned char *begin = utf8; begin < end && added; begin++) {
     added &= add(static_cast<char>(*begin));
   }
   return added;
@@ -169,7 +169,7 @@ bool codePointToUtf8(Function add, const CodePoint &c) {
 struct JsonEscapeState {
   uint16_t type = 0;
   uint16_t count = 0;
-  char32_t value = 0;
+  uint32_t value = 0;
 
   bool operator==(const JsonEscapeState &other) const {
     return type == other.type && count == other.count && value == other.value;
@@ -522,12 +522,12 @@ template <typename CodePoint, class Function>
 requires(isCodePoint<CodePoint>) //
     static bool addJsonStringCharacter(const CodePoint &cp,
                                        JsonEscapeState &escaped, Function add) {
-  static constexpr char32_t MARK_LEADING = 0xD800;
-  static constexpr char32_t MARK_TRAILING = 0xDC00;
-  static constexpr char32_t MARK_MASK = 0xFC00;
-  static constexpr char32_t MARK_NOMASK = 0x03ff;
+  static constexpr uint32_t MARK_LEADING = 0xD800;
+  static constexpr uint32_t MARK_TRAILING = 0xDC00;
+  static constexpr uint32_t MARK_MASK = 0xFC00;
+  static constexpr uint32_t MARK_NOMASK = 0x03ff;
 
-  char32_t c = cp;
+  uint32_t c = cp;
   if constexpr (std::is_same_v<CodePoint, char>) {
     c &= 0x00ff;
   }
@@ -615,9 +615,9 @@ requires(isCodePoint<CodePoint>) //
       }
       if (escaped.count == 9) {
         if ((escaped.value & MARK_MASK) == MARK_TRAILING) {
-          char32_t hi = (escaped.value & 0xffff0000) >> 6;
-          char32_t lo = escaped.value & MARK_NOMASK;
-          char32_t cp = (hi | lo) + 0x10000;
+          uint32_t hi = (escaped.value & 0xffff0000) >> 6;
+          uint32_t lo = escaped.value & MARK_NOMASK;
+          uint32_t cp = (hi | lo) + 0x10000;
           bool result = codePointToUtf8(add, cp);
           escaped = {};
           return result;
@@ -645,7 +645,7 @@ requires(isCodePoint<CodePoint>) //
  */
 template <class Function>
 static bool addCharacterToJsonString(char chr, Function add) {
-  char8_t c = chr;
+  unsigned char c = chr;
   if (c == 0) {
     return false;
   }
