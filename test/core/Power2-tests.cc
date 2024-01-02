@@ -22,30 +22,20 @@ struct PowerOfTwoImplementation {
 
   [[nodiscard]] virtual bool minusOne(size_t size) const = 0;
 
-  [[nodiscard]] virtual size_t alignedWith(size_t value,
-                                           size_t power) const = 0;
-  [[nodiscard]] virtual bool isAlignedWith(size_t value,
-                                           size_t power) const = 0;
-
   virtual ~PowerOfTwoImplementation() = default;
 };
 
 struct SubjectImpl : public PowerOfTwoImplementation {
   [[nodiscard]] const char *name() const override { return "Power2"; }
   [[nodiscard]] size_t nextOrSame(size_t size) const override {
-    return org::simple::core::Power2::same_or_bigger(size);
+    constexpr size_t max = std::bit_floor(std::numeric_limits<size_t>::max());
+    return size <= max ? std::bit_ceil(size) : 0;
   }
   [[nodiscard]] bool is(size_t size) const override {
-    return org::simple::core::Power2::is(size);
+    return std::has_single_bit(size);
   }
   [[nodiscard]] bool minusOne(size_t size) const override {
-    return org::simple::core::Power2::is_minus_one(size);
-  }
-  [[nodiscard]] size_t alignedWith(size_t value, size_t power) const override {
-    return org::simple::core::Power2::get_aligned_with(value, power);
-  };
-  [[nodiscard]] bool isAlignedWith(size_t value, size_t power) const override {
-    return org::simple::core::Power2::is_aligned_with(value, power);
+    return size && std::has_single_bit(size ^ (std::bit_floor(size) - 1));
   }
 };
 
@@ -54,11 +44,11 @@ struct ReferenceImpl : public PowerOfTwoImplementation {
   [[nodiscard]] const char *name() const override { return "Reference"; }
 
   [[nodiscard]] size_t nextOrSame(size_t size) const override {
-    if (size <= 2) {
-      return 2;
+    if (size <= 1) {
+      return 1;
     }
 
-    for (size_t test = 2; test > 0; test *= 2) {
+    for (size_t test = 1; test > 0; test *= 2) {
       if (test >= size) {
         return test;
       }
@@ -68,10 +58,10 @@ struct ReferenceImpl : public PowerOfTwoImplementation {
   }
 
   [[nodiscard]] bool is(size_t size) const override {
-    if (size < 2) {
+    if (size < 1) {
       return false;
     }
-    for (size_t test = 2; test > 0; test *= 2) {
+    for (size_t test = 1; test > 0; test *= 2) {
       if (test == size) {
         return true;
       }
@@ -95,20 +85,6 @@ struct ReferenceImpl : public PowerOfTwoImplementation {
       }
     }
     return false;
-  }
-
-  [[nodiscard]] size_t alignedWith(size_t value, size_t power) const override {
-    if (!is(power)) {
-      return 0;
-    }
-    if (value == 0) {
-      return 0;
-    }
-    return power * ((value + power - 1) / power);
-  }
-
-  [[nodiscard]] bool isAlignedWith(size_t value, size_t power) const override {
-    return value == alignedWith(value, power);
   }
 
 } referenceImplementation;
@@ -182,45 +158,6 @@ struct IsMinusOneTestCase : public Power2TestCase<bool, size_t> {
   }
 };
 
-struct AlignedWithTestCase : public Power2TestCase<size_t, size_t> {
-
-  AlignedWithTestCase(const size_t offset, size_t power,
-                      const PowerOfTwoImplementation &subject)
-      : Power2TestCase<size_t, size_t>(subject, offset, power) {}
-
-  [[nodiscard]] const char *methodName() const override {
-    return "is_aligned_with";
-  }
-
-  [[nodiscard]] size_t
-  generateValue(const PowerOfTwoImplementation &impl) const override {
-    return impl.alignedWith(getArgument(0), getArgument(1));
-  }
-
-  [[nodiscard]] const char *getArgumentName(size_t i) const override {
-    return i == 0 ? "offset" : i == 1 ? "powerOfTwoValue" : nullptr;
-  }
-};
-
-struct IsAlignedWithTestCase : public Power2TestCase<bool, size_t> {
-
-  IsAlignedWithTestCase(const size_t offset, size_t power,
-                        const PowerOfTwoImplementation &subject)
-      : Power2TestCase<bool, size_t>(subject, offset, power) {}
-
-  [[nodiscard]] const char *methodName() const override {
-    return "is_aligned_with";
-  }
-
-  [[nodiscard]] bool
-  generateValue(const PowerOfTwoImplementation &impl) const override {
-    return impl.isAlignedWith(getArgument(0), getArgument(1));
-  }
-
-  [[nodiscard]] const char *getArgumentName(size_t i) const override {
-    return i == 0 ? "offset" : i == 1 ? "powerOfTwoValue" : nullptr;
-  }
-};
 
 SubjectImpl constant;
 
@@ -251,18 +188,6 @@ struct TestSet {
       testCases.emplace_back(new IsPowerTestCase(value, constant));
       testCases.emplace_back(new IsMinusOneTestCase(value, constant));
       testCases.emplace_back(new NextPowerTestCase(value, constant));
-    }
-    // Alignment test cases
-    for (size_t offset : powerTestValues) {
-      for (size_t powerOfTwo : powerTestValues) {
-        if (offset < 10000000 && powerOfTwo < 128 &&
-            referenceImplementation.is(powerOfTwo)) {
-          testCases.emplace_back(
-              new AlignedWithTestCase(offset, powerOfTwo, constant));
-          testCases.emplace_back(
-              new IsAlignedWithTestCase(offset, powerOfTwo, constant));
-        }
-      }
     }
   }
 

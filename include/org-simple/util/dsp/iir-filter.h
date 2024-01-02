@@ -22,8 +22,8 @@
  */
 
 #include <cstddef>
+#include <org-simple/core/ZeroNonNormal.h>
 #include <type_traits>
-#include <org-simple/core/denormal.h>
 
 namespace org::simple::util::dsp {
 

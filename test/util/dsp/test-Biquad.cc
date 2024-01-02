@@ -35,7 +35,7 @@ static void runBackwardsOnBuffer(const Coefficients &coefficients,
                                  const Buffer &signal, Buffer &output) {
   output.resize(signal.size());
   History history; // zeroed
-  for (ssize_t i = signal.size(); i >= 0; i--) {
+  for (ssize_t i = signal.size()-1; i >= 0; i--) {
     output[i] = coefficients.runAndGet(history, signal[i]);
   }
 }

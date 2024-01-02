@@ -259,7 +259,6 @@ struct LockFreeRingBuffer {
    * @tparam S The buffer capacity
    */
   template <typename T, size_t S> class MonotonicFixed {
-    static_assert(S > 0 && org::simple::core::Power2::is(S));
     BaseMonotonicFixedMasked<T, S> base;
     T data[S];
 

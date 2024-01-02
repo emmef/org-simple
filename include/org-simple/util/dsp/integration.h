@@ -27,17 +27,17 @@
 /**
  * Basic integration, that is defined by the recursive expression:
  *
- * y[n] = history_multiplier * y[n - 1] + input_multiplier * x[n]
+ * y[n] = historyMultiplier * y[n - 1] + inputMultiplier * x[n]
  *
  * The relation between bot multipliers is
  *
- * history_multiplier = 1 - input_multiplier
+ * historyMultiplier = 1 - inputMultiplier
  *
  * and yields an integrator with a scaling factor of exactly one.
  *
  * The history multiplier is calculated using
  *
- * history_multipler = exp( -1 / integration_sample_count)
+ * history_multipler = exp( -1 / samples)
  */
 namespace org::simple::util::dsp {
 
@@ -53,212 +53,177 @@ static constexpr double integration_count_accuracy_minimum =
     ORG_SIMPLE_DSP_INTEGRATION_COUNT_ACCURACY_OVERRIDE;
 #endif
 
-struct Integration {
 /**
- * The minimum sample count (can be a fraction) that can be accurately
- * represented by a pair of history and input multipliers.
- *
- * @tparam T The type of the multipliers that must represent the count.
+ * Implements a classic RC-filter using an recursive filter with one input and
+ * one feedback coefficient.
+ * The impulse response of the filter is a decaying exponent that will reach
+ * \em 1/e of its original value after the number of "characteristic" samples.
+ * Characteristic samples larger than about 400M may yield inaccurate results
+ * due to repeated calculations and floating point precision.
  */
-template <typename T>
-requires(std::is_floating_point_v<T>) static T sample_count_min() {
-  static const T min = -1.0 / log(std::numeric_limits<T>::epsilon() *
-                                  integration_count_accuracy_minimum);
-  return min;
-}
-
-template <typename T>
-requires(std::is_floating_point_v<T>) static T sample_count_max() {
-  static const T max = -1.0 / log(1.0 - std::numeric_limits<T>::epsilon() *
-                                            integration_count_accuracy_minimum);
-  return max;
-}
-
-/**
- * Gets the history multiplier for integrating the provided number of samples.
- * @tparam T The type of the multiplier.
- * @param count The number of samples to integrate over.
- * @return The unchecked multiplier.
- */
-template <typename T>
-requires(std::is_floating_point_v<T>) static constexpr T
-    sample_count_to_history_multiplier_unchecked(T count) {
-  return exp((T)-1.0 / count);
-}
-
-/**
- * Gets the sample count that is represented by the provided history multiplier.
- * @tparam T The type of the multiplier.
- * @param history_multiplier The history multiplier/
- * @return The number of samples to integrate over.
- */
-template <typename T>
-requires(std::is_floating_point_v<T>) static constexpr T
-    history_multiplier_to_sample_count_unchecked(T history_multiplier) {
-  return -1.0 / log(history_multiplier);
-}
-
-/**
- * Gets the history multiplier for integrating the provided number of samples.
- * If the number of samples is too low it is considered zero and a zero
- * multiplier is returned. If the number of samples is higher that the
- * accurately representable sample_count_max<T>, the multiplier for that number
- * is returned.
- * @tparam T The type of the multiplier.
- * @param count The number of samples to integrate over.
- * @return The unchecked multiplier.
- */
-template <typename T>
-requires(std::is_floating_point_v<T>) static constexpr T
-    sample_count_to_history_multiplier_bound(T count) {
-  return count <= -sample_count_min<T>()
-             ? 0
-             : sample_count_to_history_multiplier_unchecked(
-                   std::min(count, sample_count_max<T>()));
-}
-
-/**
- * Gets the history multiplier for integrating the provided number of samples.
- * If the number of samples is too low it is considered zero and a zero
- * multiplier is returned. If the number of samples is higher that the
- * accurately representable sample_count_max<T>, a std::invalid_argument is
- * thrown.
- * @tparam T The type of the multiplier.
- * @param count The number of samples to integrate over.
- * @return The unchecked multiplier.
- */
-template <typename T>
-requires(std::is_floating_point_v<T>) static constexpr T
-    sample_count_to_history_multiplier(T count) {
-  if (count <= -sample_count_min<T>()) {
-    return 0;
-  }
-  if (count <= sample_count_max<T>()) {
-    return sample_count_to_history_multiplier_unchecked(count);
-  }
-  throw std::invalid_argument(
-      "org::simple::dsp::integration::sample_count_to_history_multiplier: "
-      "count too large to represent accurately.");
-}
-
-/**
- * Get the history multiplier from a input multiplier or vice versa.
- * @tparam T The type of the multiplier.
- * @param multiplier The multiplier to transform.
- * @return the other multiplier.
- */
-template <typename T>
-requires(std::is_floating_point_v<T>) static constexpr T
-    multiplier_to_multiplier(T multiplier) {
-  return (T)1.0 - multiplier;
-}
-
-template <typename T, typename S>
-requires(std::is_floating_point_v<T> &&std::is_arithmetic_v<S>) inline static S
-    get_integrated(T history_multiplier, T input_multiplier, S history,
-                   S input) {
-  return history_multiplier * history + input_multiplier * input;
-}
-
-template <typename T, typename S>
-requires(std::is_floating_point_v<T> &&std::is_arithmetic_v<
-         S>) inline static void integrate(T history_multiplier,
-                                          T input_multiplier, S &history,
-                                          S input) {
-  history = history_multiplier * history + input_multiplier * input;
-}
-
-template <typename T, typename S>
-requires(std::is_floating_point_v<T> &&std::is_arithmetic_v<S>) inline static S
-    integrate_and_get(T history_multiplier, T input_multiplier, S &history,
-                      S input) {
-  integrate(history_multiplier, input_multiplier, history, input);
-  return history;
-}
-};
-
-template <typename T> class BaseCoefficients {
+template <class T> class IntegratorCoefficients {
   static_assert(std::is_floating_point_v<T>);
-  T history_multiplier_;
-  T input_multiplier_;
-
-  BaseCoefficients(T hm, T scale)
-      : history_multiplier_(hm),
-        input_multiplier_(scale * (Integration::multiplier_to_multiplier(hm))) {}
+  /*
+   * The constructed defaults constitute an integrator that has zero
+   * characteristic samples, meaning it just echoes the input.
+   */
+  T historyMultiplier_ = 0;
+  T inputMultiplier_ = 1;
 
 public:
-  BaseCoefficients(const BaseCoefficients &c) = default;
-  BaseCoefficients(BaseCoefficients &&c) noexcept = default;
-
-  BaseCoefficients() : BaseCoefficients(0, 1) {}
-
-  BaseCoefficients &operator=(const BaseCoefficients &other) = default;
-
-  static BaseCoefficients from_count(T integration_sample_count, T scale = 1) {
-    return BaseCoefficients(
-        Integration::sample_count_to_history_multiplier(integration_sample_count), scale);
+  /**
+   * The minimum sample count (can be a fraction) that can be accurately
+   * represented by a pair of history and input multipliers.
+   *
+   * @tparam T The type of the multipliers that must represent the count.
+   */
+  static T minimumCharacteristicSamples() {
+    static const T min = -1.0 / log(std::numeric_limits<T>::epsilon() *
+                                    integration_count_accuracy_minimum);
+    return min;
   }
 
-  static BaseCoefficients from_count_bound(T integration_sample_count,
-                                           T scale = 1) {
-    return BaseCoefficients(
-        Integration::sample_count_to_history_multiplier_bound(integration_sample_count),
-        scale);
+  static T maximumCharacteristicSamples() {
+    static const T max =
+        -1.0 / log(1.0 - std::numeric_limits<T>::epsilon() *
+                             integration_count_accuracy_minimum);
+    return max;
   }
 
-  void set_count(T integration_sample_count, T scale = 1) {
-    T hm = sample_count_to_history_multiplier(integration_sample_count);
-    history_multiplier_ = scale * hm;
-    input_multiplier_ = scale - history_multiplier_;
+  void setSamplesAndScale(const double samples, const double scale = 1.0) {
+    const double count = fabs(samples);
+    historyMultiplier_ =
+        (count < minimumCharacteristicSamples())
+            ? static_cast<T>(0.0)
+            : exp(-1.0 / std::min(count, maximumCharacteristicSamples()));
+    setScale(scale);
   }
 
-  void set_count_bound(T integration_sample_count, T scale = 1) {
-    T hm = sample_count_to_history_multiplier_bound(integration_sample_count);
-    history_multiplier_ = scale * hm;
-    input_multiplier_ = scale - history_multiplier_;
+  void setSecondsForRateAndScale(const double seconds, const int rate,
+                                 const double scale = 1.0) {
+    setSamplesAndScale(seconds * static_cast<double>(rate), scale);
   }
 
-  template <typename S>
-  requires(std::is_arithmetic_v<S>) inline S
-      get_integrated(S history, S input) const {
-    return Integration::get_integrated(
-        history_multiplier_, input_multiplier_, history, input);
+  [[maybe_unused]] void setScale(const double scale) {
+    inputMultiplier_ = static_cast<T>(fabs(scale) * (1.0 - historyMultiplier_));
   }
 
-  template <typename S>
-  requires(std::is_arithmetic_v<S>) inline void integrate(S &history,
-                                                          S input) const {
-    Integration::integrate<T, S>(
-        history_multiplier_, input_multiplier_, history, input);
+  void integrate(T &history, const T input) const {
+    history = historyMultiplier_ * history + inputMultiplier_ * input;
   }
 
-  template <typename S>
-  requires(std::is_arithmetic_v<S>) inline S
-      integrate_and_get(S &history, S input) const {
-    return Integration::integrate_and_get<T, S>(
-        history_multiplier_, input_multiplier_, history, input);
+  T integrateAndGet(T &history, const T input) const {
+    history = historyMultiplier_ * history + inputMultiplier_ * input;
+    return history;
   }
 
-  T scale() const {
-    return input_multiplier_ /
-           Integration::multiplier_to_multiplier(
-               history_multiplier_);
+  T getIntegrated(const T history, const T input) const {
+    return historyMultiplier_ * history + inputMultiplier_ * input;
   }
 
-  T integration_sample_count() const {
-    return Integration::history_multiplier_to_sample_count_unchecked(history_multiplier_);
+  [[nodiscard]] [[maybe_unused]] T scale() const {
+    return inputMultiplier_ / (static_cast<T>(1.0) - historyMultiplier_);
   }
 
-  T history_multiplier() const { return history_multiplier_; }
-  T input_multiplier() const {
-    return Integration::multiplier_to_multiplier(
-        history_multiplier_);
+  T historyMultiplier() const { return historyMultiplier_; }
+  T inputMultiplier() const { return inputMultiplier_; }
+
+  [[nodiscard]] [[maybe_unused]] T samples() const {
+    return static_cast<T>(-1.0 / log(historyMultiplier_));
   }
-  T input_multiplier_scaled() const { return input_multiplier_; }
+
+  static IntegratorCoefficients fromCount(const double samples,
+                                          const double scale = 1.0) {
+    IntegratorCoefficients c;
+    c.setSamplesAndScale(samples, scale);
+    return c;
+  }
+
+  IntegratorCoefficients withScale(const double scale) const {
+    IntegratorCoefficients c = *this;
+    c.setScale(scale);
+    return c;
+  }
 };
 
+template <typename T> class Integrator : public IntegratorCoefficients<T> {
+  T integrated_ = 0;
 
-typedef BaseCoefficients<double> Coefficients;
+public:
+  T integrate(const T input) {
+    IntegratorCoefficients<T>::integrate(integrated_, input);
+    return integrated_;
+  }
+
+  template <typename V> T integrate(const V input) {
+    return static_cast<V>(integrate(static_cast<T>(input)));
+  }
+
+  void setOutput(const T new_value) { integrated_ = new_value; }
+};
+
+/**
+ * Implements an envelope function that follows rises in input - attack -
+ * immediately and on input that is lowe than the current output, optionally the
+ * value for a number of samples and then smoothly integrates towards the lower
+ * input value using a double integrator.
+ */
+template <typename T> class FastAttackSmoothRelease {
+  IntegratorCoefficients<T> coefficients_;
+  T integrated_1 = 0;
+  T integrated_2 = 0;
+  size_t hold_samples_ = 0;
+  size_t hold_count_ = 0;
+
+public:
+  /**
+   * Applying double integration, to be really smooth, effectively increases
+   * the number of characteristic samples in the impulse response of the
+   * output. This factor compensates for that.
+   */
+  static constexpr double CHARACTERISTIC_SAMPLE_CORRECTION = 0.465941272863;
+
+  void setSamplesAndHoldSamples(const double samples, int hold_samples) {
+    coefficients_.setSamples(samples * CHARACTERISTIC_SAMPLE_CORRECTION, 1.0);
+    hold_samples_ = std::max(0, hold_samples);
+  }
+
+  void setSecondsForRateAndHoldSamples(const double seconds, const int rate,
+                                       int hold_samples) {
+    coefficients_.setSecondsForRate(seconds * CHARACTERISTIC_SAMPLE_CORRECTION,
+                                    rate, 1.0);
+    hold_samples_ = std::max(0, hold_samples);
+  }
+
+  [[nodiscard]] [[maybe_unused]] const IntegratorCoefficients<T> &
+  coefficients() const {
+    return coefficients_;
+  }
+
+  void setOutput(const T output) {
+    integrated_2 = output;
+    integrated_1 = output;
+    hold_count_ = hold_samples_;
+  }
+
+  T getEnvelope(T signal) {
+    if (signal > integrated_2) {
+      setOutput(signal);
+    } else if (hold_count_) {
+      hold_count_--;
+    } else {
+      coefficients_.integrate(integrated_1, signal);
+      coefficients_.integrate(integrated_2, integrated_1);
+    }
+    return integrated_2;
+  }
+
+  template <typename V> V get_envelope(const V signal) {
+    return static_cast<V>(get_envelope(static_cast<T>(signal)));
+  }
+};
+
+typedef IntegratorCoefficients<double> Coefficients;
 
 } // namespace org::simple::util::dsp
 

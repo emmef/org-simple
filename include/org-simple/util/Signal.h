@@ -22,6 +22,7 @@
  */
 
 #include <algorithm>
+#include <stdexcept>
 #include <org-simple/core/Bits.h>
 
 namespace org::simple::util {

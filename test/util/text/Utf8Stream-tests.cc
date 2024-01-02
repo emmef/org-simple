@@ -136,8 +136,14 @@ BOOST_AUTO_TEST_CASE(tesUnicodeToUtf8ToUnicode) {
 
   for (expected = 0; expected <= end; expected++) {
     Utf8::codePoint actual;
-    BOOST_CHECK(uniStream.get(actual));
-    BOOST_CHECK_EQUAL(expected, actual);
+    const auto gotActual = uniStream.get(actual);
+    if (!gotActual) {
+      BOOST_CHECK(gotActual);
+    }
+    const bool toUtf8AndBackSame = expected == actual;
+    if (!toUtf8AndBackSame) {
+      BOOST_CHECK_EQUAL(expected, actual);
+    }
   }
 }
 

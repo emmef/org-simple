@@ -7,8 +7,6 @@
 
 namespace {
 
-using SizeMetric = org::simple::core::SizeMetric;
-
 using Metric =
     org::simple::core::Circular::Metric<org::simple::core::WrappingType::BIT_MASK>;
 

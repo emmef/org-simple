@@ -23,7 +23,7 @@
 
 #include <cstddef>
 #include <org-simple/core/Index.h>
-#include <org-simple/core/denormal.h>
+#include <org-simple/core/ZeroNonNormal.h>
 #include <org-simple/util/Array.h>
 
 namespace org::simple::util::dsp {
@@ -335,7 +335,7 @@ public:
     }
     yN0 += getFF_(0) * input;
 
-    out_history[0] = org::simple::core::flush_to_zero(yN0);
+    out_history[0] = yN0;
 
     return yN0;
   }
@@ -368,7 +368,7 @@ public:
       for (size_t j = 1; j <= order; j++) {
         yN += in[n - j] * getFF_(j) + out[n - j] * getFB_(j);
       }
-      out[n] = org::simple::core::flush_to_zero(yN);
+      out[n] = yN;
     }
   }
 
@@ -398,14 +398,14 @@ public:
           yN += in[n - j] * getFF_(j) + out[n - j] * getFB_(j);
         }
       }
-      out[n] = org::simple::core::flush_to_zero(yN);
+      out[n] = yN;
     }
     for (size_t n = order; n < count; n++) {
       S yN = getFF_(0) * in[n];
       for (size_t j = 1; j <= order; j++) {
         yN += in[n - j] * getFF_(j) + out[n - j] * getFB_(j);
       }
-      out[n] = org::simple::core::flush_to_zero(yN);
+      out[n] = yN;
     }
   }
 
@@ -437,7 +437,7 @@ public:
       for (size_t j = 1; j <= order; j++) {
         yN += in[n + j] * getFF_(j) + out[n + j] * getFB_(j);
       }
-      out[n] = org::simple::core::flush_to_zero(yN);
+      out[n] = yN;
     }
   }
 
@@ -471,14 +471,14 @@ public:
           yN += in[i] * getFF_(j) + out[i] * getFB_(j);
         }
       }
-      out[n] = org::simple::core::flush_to_zero(yN);
+      out[n] = yN;
     }
     for (; n >= 0; n--) {
       S yN = getFF_(0) * in[n];
       for (size_t j = 1; j <= order; j++) {
         yN += in[n + j] * getFF_(j) + out[n + j] * getFB_(j);
       }
-      out[n] = org::simple::core::flush_to_zero(yN);
+      out[n] = yN;
     }
   }
 

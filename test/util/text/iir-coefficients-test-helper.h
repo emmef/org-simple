@@ -24,6 +24,7 @@
 #include "org-simple/util/Array.h"
 #include "org-simple/util/dsp/iir-coefficients.h"
 #include <iostream>
+#include <vector>
 
 namespace {
 

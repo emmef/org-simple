@@ -225,7 +225,7 @@ public:
 
 
   /**
-   * Copies all the elements from \c source to this array if they both have the
+   * Copies all the elementsForMask from \c source to this array if they both have the
    * same capacity and returns \c true if that is the case. If a difference in
    * capacity can be established compile-time, compilation will fail.
    * @tparam Array The source array type
@@ -384,7 +384,7 @@ public:
   }
 
   /**
-   * Returns an Array whose elements reference the elements in the range that
+   * Returns an Array whose elementsForMask reference the elements in the range that
    * starts at element \c start and ends at element \c end. Throws
    * std::out_of_range when the range exceeds the array boundaries.
    * @param start The first element to reference.
@@ -406,7 +406,7 @@ public:
   }
 
   /**
-   * Returns an Array whose elements reference the elements in the range that
+   * Returns an Array whose elements reference the elementsForMask in the range that
    * starts at element \c START and ends at element \c END. Compile fails when
    * the range exceeds the array boundaries.
    * @tparam START The first element to reference.
@@ -430,7 +430,7 @@ public:
   }
 
   /**
-   * Returns an array whose elements are a copy of the elements in the range
+   * Returns an array whose elements are a copy of the elementsForMask in the range
    * that starts at element \c start and ends at element \c end. Throws
    * std::out_of_range if the range exceeds the array boundaries.
    * @param start The first element to copy.
@@ -445,7 +445,7 @@ public:
   }
 
   /**
-   * Returns an array whose elements are a copy of the elements in the range
+   * Returns an array whose elements are a copy of the elementsForMask in the range
    * that starts at element \c START and ends at element \c END. Compilation
    * fails if the range exceeds the array boundaries.
    * @tparam START The first element to copy.
@@ -461,7 +461,7 @@ public:
   }
 
   /**
-   * Returns an array whose elements are a copy of the elements in the range
+   * Returns an array whose elements are a copy of the elementsForMask in the range
    * that starts at element \c START and ends at element \c END. Compilation
    * fails if the range exceeds the array boundaries.
    * @tparam START The first element to copy.
