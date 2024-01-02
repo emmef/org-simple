@@ -64,7 +64,7 @@ class AbstractSignalManager : public SignalCallbackHandler<callbacks> {
 
   typedef AbstractSignal<V> Signal;
   typedef typename Signal::wrap_type wrap_type;
-  typedef typename Signal::external_type value_type;
+  typedef typename Signal::value_type value_type;
 
   static constexpr int DEFAULT_LOCK_FREE_RETRIES = 1000;
   static_assert(std::atomic<wrap_type>::is_always_lock_free);
@@ -154,7 +154,7 @@ public:
 private:
   bool get_and_set_result(Signal &result, wrap_type wrapped) const {
     if (wrapped) {
-      result = {wrapped};
+      result = Signal(wrapped);
       return true;
     }
     return false;

@@ -22,7 +22,7 @@
  */
 
 #include <cstddef>
-#include <org-simple/core/ZeroNonNormal.h>
+#include <org-simple/ZeroNonNormal.h>
 #include <type_traits>
 
 namespace org::simple::util::dsp {

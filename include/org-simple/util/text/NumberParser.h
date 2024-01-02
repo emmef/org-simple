@@ -23,7 +23,6 @@
 
 #include <cmath>
 #include <limits>
-#include <org-simple/core/Bits.h>
 #include <org-simple/util/Predicate.h>
 #include <org-simple/util/text/Characters.h>
 #include <type_traits>

@@ -11,7 +11,7 @@
 
 using SignalType = org::simple::util::SignalType;
 using Signal = org::simple::util::Signal;
-using ext_type = org::simple::util::Signal::external_type;
+using ext_type = org::simple::util::Signal::value_type;
 using SignalManager = org::simple::util::SignalManager;
 using SignalResult = org::simple::util::SignalResult;
 using FakeClock = org::simple::util::FakeClock;
@@ -257,11 +257,11 @@ std::vector<ext_type> &generateTestValues() {
   values.emplace_back(0);
   values.emplace_back(1u);
   values.emplace_back(2u);
-  values.emplace_back(Signal::MAX_VALUE / 4);
-  values.emplace_back(Signal::MAX_VALUE / 3);
-  values.emplace_back(Signal::MAX_VALUE / 2);
-  values.emplace_back(Signal::MAX_VALUE - 1);
-  values.emplace_back(Signal::MAX_VALUE);
+  values.emplace_back(Signal::maxValue / 4);
+  values.emplace_back(Signal::maxValue / 3);
+  values.emplace_back(Signal::maxValue / 2);
+  values.emplace_back(Signal::maxValue - 1);
+  values.emplace_back(Signal::maxValue);
 
   return values;
 }

@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <org-simple/core/number_traits.h>
+#include <stdexcept>
 #include <type_traits>
 
 namespace org::simple::util::dsp {
@@ -105,11 +105,7 @@ public:
   }
 
   template <typename F>
-  requires(org::simple::core::is_complex_v<F>) F relative(F frequency)
-  const { return frequency / rate_; }
-
-  template <typename F>
-  requires(!org::simple::core::is_complex_v<F>) double relative(
+  double relative(
       F frequency) const {
     return (double)frequency / rate_;
   }

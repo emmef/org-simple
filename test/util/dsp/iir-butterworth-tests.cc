@@ -2,13 +2,12 @@
 // Created by michel on 27-04-21.
 //
 
+#include "org-simple/dsp/iir-butterworth.h"
 #include "test-helper.h"
+#include "util/text/iir-coefficients-test-helper.h"
 #include <boost/math/special_functions/relative_difference.hpp>
 #include <cmath>
-#include "org-simple/util/dsp/iir-butterworth.h"
 #include <vector>
-
-#include "util/text/iir-coefficients-test-helper.h"
 
 using namespace org::simple::util::dsp;
 
@@ -48,8 +47,9 @@ const std::vector<FilterGainScenario> getFilterGainScenarios() {
 }
 
 template <size_t ORDER>
-bool verifyButterworthGain(size_t signal_period, size_t filter_period, FilterType type,
-                double &measured, double &calculated) {
+bool verifyButterworthGain(size_t signal_period, size_t filter_period,
+                           FilterType type, double &measured,
+                           double &calculated) {
   double filterRelativeFrequency =
       filter_period > 2 ? 1.0 / filter_period : 0.45;
   double signalRelativeFrequency = 1.0 / signal_period;
@@ -60,8 +60,8 @@ bool verifyButterworthGain(size_t signal_period, size_t filter_period, FilterTyp
   size_t filter_length;
   measured = measureFilterGain(filter, signal_period, filter_length);
   double gainSquared = measured * measured;
-  calculated = Butterworth::getGain(type, ORDER,
-                           signalRelativeFrequency / filterRelativeFrequency);
+  calculated = Butterworth::getGain(
+      type, ORDER, signalRelativeFrequency / filterRelativeFrequency);
   double minGain = std::min(measured, calculated) * error;
   if (gainSquared < minGain && calculated < minGain) {
     return true;
@@ -106,11 +106,14 @@ struct GainScenario : public FilterScenario {
     }
   }
 
-  GainScenario(FilterType t, unsigned o, double rel, double expGain, bool isRef = false)
+  GainScenario(FilterType t, unsigned o, double rel, double expGain,
+               bool isRef = false)
       : FilterScenario(t, o), relative(rel), expected_gain(expGain),
         ref(isRef) {}
 
-  const char *typeOfScenario() const override { return "GainCalculationScenario"; }
+  const char *typeOfScenario() const override {
+    return "GainCalculationScenario";
+  }
   void parameters(std::ostream &out) const override {
     out << "; relative-frequency=" << relative
         << "; expected gain=" << expected_gain
@@ -181,7 +184,8 @@ BOOST_AUTO_TEST_SUITE(org_simple_dsp_iir_butterworth_tests)
 BOOST_DATA_TEST_CASE(sample, createTestScenarios()) {
   if (!same(sample.expected_gain, sample.actual())) {
     BOOST_CHECK_EQUAL(sample.expected_gain, sample.actual());
-    double g1 = Butterworth::getLowPassGain(sample.order, sample.relative, false);
+    double g1 =
+        Butterworth::getLowPassGain(sample.order, sample.relative, false);
     double g2 = reference_low_pass_gain(sample.order, sample.relative);
     BOOST_CHECK_EQUAL(g1, g2);
   } else {
@@ -229,7 +233,7 @@ void printFilterLength(double hz, unsigned short bits, FilterType type) {
 }
 
 BOOST_AUTO_TEST_CASE(estimateFilterLength) {
-  FilterType types[2] = { FilterType::LOW_PASS, FilterType::HIGH_PASS };
+  FilterType types[2] = {FilterType::LOW_PASS, FilterType::HIGH_PASS};
 
   for (FilterType type : types) {
     printFilterLength<1>(0, 24, type);

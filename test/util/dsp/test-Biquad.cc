@@ -2,7 +2,7 @@
 // Created by michel on 30-07-21.
 //
 
-#include "org-simple/util/dsp/Biquad.h"
+#include "org-simple/dsp/Biquad.h"
 #include "boost-unit-tests.h"
 #include <vector>
 

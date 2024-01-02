@@ -1,7 +1,7 @@
 #ifndef ORG_SIMPLE_CORE_M_DEBUG_H
 #define ORG_SIMPLE_CORE_M_DEBUG_H
 /*
- * org-simple/core/debug.h
+ * org-simple/core/util/debug.h
  *
  * Added by michel on 2020-05-17
  * Copyright (C) 2015-2020 Michel Fleur.

@@ -4,8 +4,8 @@
 
 #include "boost-unit-tests.h"
 #include <iostream>
-#include "org-simple/core/Bits.h"
 #include "org-simple/util/text/CharEncode.h"
+#include "BitsHelper.h"
 
 typedef unsigned char byte;
 typedef uint32_t codePoint;
@@ -23,10 +23,6 @@ using Reader =
     org::simple::util::text::DecodingReader<MARKER_BITS, byte, codePoint>;
 using ReaderState = org::simple::util::text::DecodingReaderState;
 
-template <typename number, bool separators = true>
-static const char *binary(number num) {
-  return org::simple::core::bits::renderBits<number, '_', separators ? 4 : 0>(num);
-}
 
 static const std::vector<long long unsigned> &generatePatterns() {
   static const unsigned hexDigits[] = {0x0, 0x1, 0x02, 0x03, 0x05, 0x07, 0xb};

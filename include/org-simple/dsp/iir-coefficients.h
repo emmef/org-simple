@@ -22,8 +22,9 @@
  */
 
 #include <cstddef>
-#include <org-simple/core/Index.h>
-#include <org-simple/core/ZeroNonNormal.h>
+#include <cmath>
+#include <org-simple/Index.h>
+#include <org-simple/ZeroNonNormal.h>
 #include <org-simple/util/Array.h>
 
 namespace org::simple::util::dsp {
@@ -658,7 +659,7 @@ size_t effectiveIRLength(const CoefficientsFilter<S> &filter, size_t maxLength,
   size_t maxSamples =
       std::min(std::max(minSamples, maxLength),
                std::numeric_limits<size_t>::max() / 2 / sizeof(S));
-  size_t maxBlockEnd = org::simple::core::Bits<size_t>::fill(maxSamples) + 1;
+  size_t maxBlockEnd = std::bit_ceil(maxSamples);
 
   size_t blockStart = 0;
   size_t blockEnd = 1;

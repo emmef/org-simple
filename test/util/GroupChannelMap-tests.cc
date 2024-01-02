@@ -2,7 +2,7 @@
 // Created by michel on 30-12-21.
 //
 
-#include <org-simple/util/dsp/GroupChannelMap.h>
+#include <org-simple/dsp/GroupChannelMap.h>
 #include "test-helper.h"
 
 template <size_t MAX_GROUPS, size_t MAX_CHANNELS, size_t... GR>

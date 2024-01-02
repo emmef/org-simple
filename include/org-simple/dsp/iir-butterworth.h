@@ -22,8 +22,9 @@
  */
 
 #include <algorithm>
-#include <org-simple/util/dsp/iir-coefficients.h>
-#include <org-simple/util/dsp/rate.h>
+#include <cstring>
+#include <org-simple/dsp/iir-coefficients.h>
+#include <org-simple/dsp/rate.h>
 #include <stdexcept>
 
 namespace org::simple::util::dsp {

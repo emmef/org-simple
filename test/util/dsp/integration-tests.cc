@@ -3,7 +3,7 @@
 //
 
 #include "test-helper.h"
-#include "org-simple/util/dsp/integration.h"
+#include "org-simple/dsp/integration.h"
 #include <boost/math/special_functions/relative_difference.hpp>
 
 using namespace org::simple::util::dsp;

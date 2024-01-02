@@ -53,7 +53,8 @@ void testAlignmentValues() {
   }
   typedef typename Test::data_type data_type;
   static constexpr size_t DATA_SIZE = sizeof(data_type) * Test::FIXED_CAPACITY;
-  static constexpr size_t SIZE = Test::ALIGNAS * (1 + (DATA_SIZE - 1) / Test::ALIGNAS);
+  static constexpr size_t ALIGNMENT = std::max(static_cast<size_t>(1u), Test::ALIGNAS);
+  static constexpr size_t SIZE = ALIGNMENT * (1 + (DATA_SIZE - 1) / ALIGNMENT);
 
   BOOST_CHECK_GE(sizeof(Array), sizeof(data_type));
   BOOST_CHECK_GE(sizeof(Array), DATA_SIZE);
@@ -62,7 +63,7 @@ void testAlignmentValues() {
 
   BOOST_CHECK_GE(Test::ALIGNAS, alignof(data_type));
   BOOST_CHECK_LE(sizeof(data_type), Test::ALIGNAS);
-  BOOST_CHECK_EQUAL(sizeof(Array) % Test::ALIGNAS, 0);
+  BOOST_CHECK_EQUAL(Test::ALIGNAS ? sizeof(Array) % Test::ALIGNAS : Test::ALIGNAS, 0);
   BOOST_CHECK_EQUAL(sizeof(Array) % alignof(data_type), 0);
 }
 
@@ -74,7 +75,8 @@ void testAlignmentValuesDataStruct() {
   }
   typedef typename Test::data_type data_type;
   static constexpr size_t DATA_SIZE = sizeof(data_type) * Test::FIXED_CAPACITY;
-  static constexpr size_t SIZE = Test::ALIGNAS * (1 + (DATA_SIZE - 1) / Test::ALIGNAS);
+  static constexpr size_t ALIGNMENT = std::max(static_cast<size_t>(1u), Test::ALIGNAS);
+  static constexpr size_t SIZE = ALIGNMENT * (1 + (DATA_SIZE - 1) / ALIGNMENT);
 
   BOOST_CHECK_GE(sizeof(typename Array::DataStruct), sizeof(data_type));
   BOOST_CHECK_GE(sizeof(typename Array::DataStruct), DATA_SIZE);
@@ -83,7 +85,7 @@ void testAlignmentValuesDataStruct() {
 
   BOOST_CHECK_GE(Test::ALIGNAS, alignof(data_type));
   BOOST_CHECK_LE(sizeof(data_type), Test::ALIGNAS);
-  BOOST_CHECK_EQUAL(sizeof(typename Array::DataStruct) % Test::ALIGNAS, 0);
+  BOOST_CHECK_EQUAL(Test::ALIGNAS ? sizeof(typename Array::DataStruct) % Test::ALIGNAS : Test::ALIGNAS, 0);
   BOOST_CHECK_EQUAL(sizeof(typename Array::DataStruct) % alignof(data_type), 0);
 }
 
@@ -95,13 +97,12 @@ void testAlignmentValuesHeap() {
   typedef typename Test::data_type data_type;
 
   BOOST_CHECK_EQUAL(0, Test::FIXED_CAPACITY);
-  BOOST_CHECK_EQUAL(org::simple::core::alignment_get_correct<int32_t>(ALIGN), Test::ALIGNAS);
   BOOST_CHECK_GE(Test::ALIGNAS, alignof(data_type));
 
   auto ptr = heap.begin();
-  size_t offs = (const char *)ptr - (const char *)nullptr;
+  size_t offs = reinterpret_cast<std::uintptr_t>(ptr);
 
-  BOOST_CHECK_EQUAL(0, offs % Test::ALIGNAS);
+  BOOST_CHECK_EQUAL(0, Test::ALIGNAS ? offs % Test::ALIGNAS: Test::ALIGNAS);
 }
 
 } // namespace
@@ -368,11 +369,11 @@ BOOST_AUTO_TEST_CASE(testSliceIsBaseArray) {
 }
 
 template <typename T> static constexpr size_t effective_alignment(size_t A) {
-  return org::simple::core::alignment_is_valid<T>(A) ? A : 0;
+  return A == 0 || !std::has_single_bit(A) ? 0 : A;
 }
 
 BOOST_AUTO_TEST_CASE(testTestArrayBase) {
-  using Fix = Array<int, 4, 7>;
+  using Fix = Array<int, 4, 8>; // was 7 as alignment, which is invalid
   BOOST_CHECK_EQUAL(true, concept_base_array<Fix>::value);
   BOOST_CHECK_EQUAL(true, concept_base_array<Fix::Super>::value);
   BOOST_CHECK_EQUAL(false, concept_base_array<A>::value);

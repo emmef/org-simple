@@ -22,8 +22,7 @@
  */
 
 #include <complex>
-#include <org-simple/core/Index.h>
-#include <org-simple/core/number_traits.h>
+#include <org-simple/Index.h>
 #include <org-simple/util/Array.h>
 #include <type_traits>
 
@@ -35,9 +34,20 @@ template <typename T, size_t S, size_t A = 0>
 using NumArray = BaseNumArray<T, Array<T, S, A>>;
 
 namespace concepts {
+template <class T> struct is_complex {
+  static constexpr bool value = false;
+  using real_type = T;
+};
+
+template <class T> struct is_complex<std::complex<T>> {
+  static constexpr bool value = !is_complex<T>::value;
+  using real_type = T;
+};
+
+template <typename T> static constexpr bool is_complex_v = is_complex<T>::value;
 
 template <typename L, typename R>
-concept NumberIsR2LAssignable = (org::simple::core::is_complex_v<L> && org::simple::core::is_number<R>) ||
+concept NumberIsR2LAssignable = (is_complex_v<L> && (is_complex_v<R> || std::is_arithmetic_v<R>)) ||
                                 (std::is_arithmetic_v<L> &&
                                  std::is_arithmetic_v<R>);
 
@@ -46,11 +56,10 @@ concept NumberIsR2LAssignable = (org::simple::core::is_complex_v<L> && org::simp
 template <typename T, class S> struct BaseNumArray : public S {
   static_assert(is_base_array<S>);
   static_assert(concept_base_array<S>::FIXED_CAPACITY != 0);
-  static_assert(org::simple::core::is_number<T>);
+  static_assert(concepts::is_complex_v<T> || std::is_arithmetic_v<T>);
 
   typedef S Super;
   typedef typename Super::data_type data_type;
-  typedef typename Super::Size Size;
   using Super::FIXED_CAPACITY;
   using Super::assign;
 
@@ -146,7 +155,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   }
 
   BaseNumArray &operator<<(const T *source) {
-    const T *src = core::Dereference::safe(source);
+    const T *src = source;
     auto data = this->begin();
     for (size_t i = 0; i < this->capacity(); i++) {
       data[i] += src[i];
@@ -155,7 +164,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   }
 
   void operator>>(T *destination) {
-    const T *dst = core::Dereference::safe(destination);
+    const T *dst = destination;
     for (size_t i = 0; i < this->capacity(); i++) {
       dst[i] += this->data_(i);
     }
@@ -296,8 +305,8 @@ template <typename T, class S> struct BaseNumArray : public S {
     auto v1 = this->begin();
     auto v2 = other.begin();
 
-    static constexpr bool v1Complex = org::simple::core::is_complex<T>::value;
-    static constexpr bool v2Complex = org::simple::core::is_complex<
+    static constexpr bool v1Complex = concepts::is_complex<T>::value;
+    static constexpr bool v2Complex = concepts::is_complex<
         typename concept_base_array<Array>::data_type>::value;
 
     if constexpr (v1Complex) {
@@ -323,10 +332,10 @@ template <typename T, class S> struct BaseNumArray : public S {
 
   // Squared absolute value (norm)
 
-  typename org::simple::core::is_complex<T>::real_type
+  typename concepts::is_complex<T>::real_type
   squared_absolute() const {
-    if constexpr (org::simple::core::is_complex<T>::value) {
-      typename org::simple::core::is_complex<T>::value_type sum = 0;
+    if constexpr (concepts::is_complex<T>::value) {
+      typename concepts::is_complex<T>::value_type sum = 0;
       const T *p = this->begin();
       for (size_t i = 0; i < FIXED_CAPACITY; i++) {
         sum += std::norm(p[i]);

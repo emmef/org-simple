@@ -5,7 +5,6 @@
 #include "org-simple/util/text/StreamPredicate.h"
 #include <org-simple/util/text/StringStream.h>
 #include <org-simple/util/text/NumberParser.h>
-#include <org-simple/core/Bits.h>
 #include "test-helper.h"
 #include "boost-unit-tests.h"
 #include <boost/math/special_functions/relative_difference.hpp>
@@ -31,7 +30,9 @@ template <typename Value = double> struct Scenario {
   Scenario(long double number, Result result, Value value) : Scenario("", result, value) {
     static constexpr size_t FMT_LEN = 10;
     static constexpr int MANTISSA_DIGITS = std::numeric_limits<Value>::max_digits10;
-    static constexpr size_t EXP_DIGITS = org::simple::core::Bits<unsigned>::most_significant(std::numeric_limits<Value>::max_exponent10) / 2;
+    static constexpr unsigned EXP_10_MAX = static_cast<unsigned>(std::numeric_limits<double>::max_exponent10);
+    static constexpr int EXP_10_BITS = sizeof(int)*8 - std::countl_zero(EXP_10_MAX);
+    static constexpr size_t EXP_DIGITS = sizeof(int)*8 - std::countl_zero(EXP_10_MAX);
     static constexpr size_t SIGNS_EXP_DECIMAL = 4;
     static constexpr size_t LEN = MANTISSA_DIGITS + EXP_DIGITS + SIGNS_EXP_DECIMAL + 10;
     char format[FMT_LEN+1];

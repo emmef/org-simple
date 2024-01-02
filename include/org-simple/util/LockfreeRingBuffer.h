@@ -23,8 +23,7 @@
 
 #include <atomic>
 #include <cstddef>
-#include <org-simple/core/Circular.h>
-#include <org-simple/core/Power2.h>
+#include <org-simple/Circular.h>
 
 namespace org::simple::util {
 

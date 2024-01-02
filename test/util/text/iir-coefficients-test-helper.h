@@ -22,7 +22,7 @@
  */
 
 #include "org-simple/util/Array.h"
-#include "org-simple/util/dsp/iir-coefficients.h"
+#include "org-simple/dsp/iir-coefficients.h"
 #include <iostream>
 #include <vector>
 
@@ -41,7 +41,6 @@ template <unsigned ORDER> class FilterScenarioBuffer {
       "input",  "output", "misc_1", "misc_2", "misc_3", "misc_4",
       "misc_5", "misc_6", "misc_7", "misc_8", "invalid"};
 
-  using Elements = org::simple::core::SizeMetric::Elements<sizeof(double)>;
   const size_t buffers_;
   const size_t samples_;
   const size_t size_;
@@ -58,11 +57,11 @@ template <unsigned ORDER> class FilterScenarioBuffer {
   }
 
   static unsigned long valid_size(size_t samples) {
-    return Elements::Valid::sum(samples, 2lu * ORDER);
+    return (std::numeric_limits<size_t>::max() / sizeof(double)) - samples > 2lu * ORDER;
   }
 
   static size_t valid_samples(size_t samples, size_t buffers) {
-    if (Elements::IsValid::product(buffers, valid_size(samples))) {
+    if (samples && buffers && std::numeric_limits<size_t>::max() / samples / sizeof(double) >= buffers) {
       return samples;
     }
     throw std::invalid_argument(

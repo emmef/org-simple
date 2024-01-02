@@ -5,7 +5,7 @@
 #include "boost-unit-tests.h"
 #include "org-simple/util/text/StringStream.h"
 #include "org-simple/util/text/Utf8Stream.h"
-#include "org-simple/core/Bits.h"
+#include "BitsHelper.h"
 
 using Utf8 = org::simple::util::text::Utf8Encoding;
 
@@ -87,9 +87,9 @@ BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
     }
     if (failed) {
       std::stringstream out;
-      out << "Failure\n\tcp = " << org::simple::core::bits::renderBits(cp) << "\n\tbytes  =";
+      out << "Failure\n\tcp = " << renderBits(cp) << "\n\tbytes  =";
       for (int p = 0; p < length; p++) {
-        out << " " << org::simple::core::bits::renderBits(sstream.charArray[p]);
+        out << " " << renderBits(sstream.charArray[p]);
       }
       out << "\n\tstream =";
       sstream.rewind();
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(testValidUniCodeYieldsSameResult) {
         out << " ";
         char c;
         if (stream.get(c)) {
-          out << org::simple::core::bits::renderBits(c);
+          out << renderBits(c);
         }
         else {
           out << "????????";

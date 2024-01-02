@@ -3,7 +3,7 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/core/Circular.h>
+#include <org-simple/Circular.h>
 
 namespace {
 

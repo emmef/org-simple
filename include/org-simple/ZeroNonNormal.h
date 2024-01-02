@@ -24,19 +24,12 @@
 #include <limits>
 #include <type_traits>
 
-#undef DSP_CORE_SSE_NON_NORMAL_ZERO
 #ifdef __SSE__
 #include <pmmintrin.h>
 #ifdef _MM_FLUSH_ZERO_ON
 #ifdef _MM_DENORMALS_ZERO_ON
-#define DSP_CORE_SSE_NON_NORMAL_ZERO 1
-#endif
-#endif
-#endif
-
 namespace org::simple::core {
 
-#ifdef DSP_CORE_SSE_NON_NORMAL_ZERO
 class [[maybe_unused]] ZeroNonNormal {
   using FlushZeroFlag = decltype(_MM_GET_FLUSH_ZERO_MODE());
   using IsZeroFlag = decltype(_MM_GET_DENORMALS_ZERO_MODE());
@@ -47,16 +40,13 @@ class [[maybe_unused]] ZeroNonNormal {
 public:
   explicit ZeroNonNormal()
       : capturedFlushToZero_(_MM_GET_FLUSH_ZERO_MODE()),
-        capturedIsZero_(_MM_GET_DENORMALS_ZERO_MODE()),
-        restore_(true) {
+        capturedIsZero_(_MM_GET_DENORMALS_ZERO_MODE()), restore_(true) {
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
     _MM_SET_DENORMALS_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-
   }
   ZeroNonNormal(ZeroNonNormal &&origin) noexcept
       : capturedFlushToZero_(origin.capturedFlushToZero_),
-        capturedIsZero_(origin.capturedIsZero_),
-        restore_(true) {
+        capturedIsZero_(origin.capturedIsZero_), restore_(true) {
     origin.restore_ = false;
   }
   ~ZeroNonNormal() {
@@ -66,15 +56,17 @@ public:
     }
   }
 };
-#else
-class [[maybe_unused]] ZeroNonNormal {
-public:
-public
-  static ZeroNonNormal() = default;
-  ~ZeroNonNormal() = default;
-};
-#endif
 
 } // namespace org::simple::core
+#else
+namespace org::simple::core {
+
+struct [[maybe_unused]] ZeroNonNormal {
+};
+
+} // namespace org::simple::core
+#endif
+#endif
+#endif
 
 #endif // ORG_SIMPLE_CORE_M_DENORMAL_H
