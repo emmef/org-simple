@@ -94,7 +94,6 @@ void testAlignmentValuesHeap() {
   ArrayAllocated<int32_t, ALIGN> heap(SZ);
 
   typedef concept_base_array<ArrayAllocated<int32_t, ALIGN>> Test;
-  typedef typename Test::data_type data_type;
 
   BOOST_CHECK_EQUAL(0, Test::FIXED_CAPACITY);
 

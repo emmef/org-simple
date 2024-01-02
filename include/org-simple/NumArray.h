@@ -117,7 +117,7 @@ template <typename T, class S> struct BaseNumArray : public S {
   }
 
   template <typename R>
-  BaseNumArray(const std::initializer_list<T>
+  BaseNumArray(const std::initializer_list<R>
                    &values) requires concepts::NumberIsR2LAssignable<T, R> {
     size_t i = 0;
     auto data = this->begin();

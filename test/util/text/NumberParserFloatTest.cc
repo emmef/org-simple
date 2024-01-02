@@ -31,7 +31,6 @@ template <typename Value = double> struct Scenario {
     static constexpr size_t FMT_LEN = 10;
     static constexpr int MANTISSA_DIGITS = std::numeric_limits<Value>::max_digits10;
     static constexpr unsigned EXP_10_MAX = static_cast<unsigned>(std::numeric_limits<double>::max_exponent10);
-    static constexpr int EXP_10_BITS = sizeof(int)*8 - std::countl_zero(EXP_10_MAX);
     static constexpr size_t EXP_DIGITS = sizeof(int)*8 - std::countl_zero(EXP_10_MAX);
     static constexpr size_t SIGNS_EXP_DECIMAL = 4;
     static constexpr size_t LEN = MANTISSA_DIGITS + EXP_DIGITS + SIGNS_EXP_DECIMAL + 10;

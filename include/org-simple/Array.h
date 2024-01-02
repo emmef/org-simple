@@ -33,34 +33,12 @@ template <typename T, size_t A = 0> class ArrayDataRef;
 template <typename T, size_t A = 0> class ArrayAllocated;
 template <typename T, size_t S, size_t A = 0> class Array;
 
-template <typename T, size_t A>
-static constexpr bool alignmentInBytesIsValid =
-    A == 0 || (((A % alignof(T)) == 0) && std::has_single_bit(A));
-
-template <typename T, size_t A>
-static constexpr bool alignmentInElementsIsValid =
-    A == 0 || std::has_single_bit(A);
-
-template <typename T, size_t A>
-static constexpr size_t alignmentInBytesFromElements =
-    A == 0 || !alignmentInElementsIsValid<T, A> ? alignof(T) : A * alignof(T);
-
-template <typename T>
-static constexpr size_t validSize(size_t size) {
-  if (size && (size <= std::numeric_limits<size_t>::max() / alignof(T))) {
-    return size;
-  }
-  throw std::out_of_range("Size zero or too large");
-}
-
 template <typename T, size_t ALIGNAS> class AlignedAlloc {
-  static_assert(alignmentInElementsIsValid<T, ALIGNAS>);
-  static constexpr size_t ALIGN = alignmentInBytesFromElements<T, ALIGNAS>;
-  static constexpr bool ALIGNED_ALLOC =
-      ALIGN > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+  static_assert(true);
+  static constexpr Align<T> ALIGN = Align<T>::ofElements(ALIGNAS);
 
   T *data_;
-  size_t capacity_;
+  Size<T> capacity_;
 
   void disown() {
     data_ = nullptr;
@@ -69,12 +47,8 @@ template <typename T, size_t ALIGNAS> class AlignedAlloc {
 
 public:
   explicit AlignedAlloc(size_t count) {
-    capacity_ = validSize<T>(count);
-    if constexpr (ALIGNED_ALLOC) {
-      data_ = new (std::align_val_t{ALIGN}) T[capacity_];
-    } else {
-      data_ = new T[capacity_];
-    }
+    capacity_ = Size<T>(count);
+    data_ = new (ALIGN.align_val()) T[capacity_];
   }
 
   AlignedAlloc(AlignedAlloc &&source) noexcept
@@ -195,7 +169,7 @@ using org::simple::Index;
  */
 template <typename T, size_t S, size_t ALIGNAS, typename C>
 class AbstractArray {
-  static_assert(alignmentInElementsIsValid<T, ALIGNAS>);
+  static_assert(true);
   static_assert(S == 0 || std::numeric_limits<size_t>::max() / S >= alignof(T));
 
 public:
@@ -565,26 +539,22 @@ template <typename T, size_t S> static constexpr size_t eff_capacity() {
 } // namespace helper
 
 template <typename T, size_t S, size_t A>
-class Array : public AbstractArray<T, helper::eff_capacity<T, S>(), A,
-              Array < T,
-              S,
-              A >> {
+class Array
+    : public AbstractArray<T, helper::eff_capacity<T, S>(), A, Array<T, S, A>> {
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
 
 public:
   static constexpr size_t ALIGNAS = A;
-  alignas(alignmentInBytesFromElements<T, A>) T data_[S];
+  alignas(Align<T>::ofElements(A).get()) T data_[S];
 
   T *array_data() { return &data_[0]; }
   const T *array_data() const { return &data_[0]; }
 
 public:
-  typedef AbstractArray<T, helper::eff_capacity<T, S>(), A,
-      Array < T,
-      S,
-      A >> Super;
+  typedef AbstractArray<T, helper::eff_capacity<T, S>(), A, Array<T, S, A>>
+      Super;
   typedef typename Super::data_type data_type;
   using Super::FIXED_CAPACITY;
   friend Super;
@@ -604,8 +574,7 @@ public:
 
 template <typename T, size_t S, size_t A = 0>
 class ArrayAllocatedFixedSize
-    : public AbstractArray<T, helper::eff_capacity<T, S>(),
-                           A,
+    : public AbstractArray<T, helper::eff_capacity<T, S>(), A,
                            ArrayAllocatedFixedSize<T, S, A>> {
 public:
   static_assert(std::is_trivially_constructible_v<T>);
@@ -613,7 +582,7 @@ public:
   static_assert(std::is_trivially_move_assignable_v<T>);
 
   struct DataStruct {
-    alignas(alignmentInBytesFromElements<T,A>) T data_[S];
+    alignas(Align<T>::ofElements(A)) T data_[S];
   };
 
   T *array_data() { return data_->data_; }
@@ -621,8 +590,7 @@ public:
 
 public:
   static constexpr size_t ALIGNAS = A;
-  typedef AbstractArray<T, helper::eff_capacity<T, S>(),
-                        A,
+  typedef AbstractArray<T, helper::eff_capacity<T, S>(), A,
                         ArrayAllocatedFixedSize<T, S, A>>
       Super;
   typedef typename Super::data_type data_type;
@@ -699,8 +667,7 @@ public:
 };
 
 template <typename T, size_t A>
-class ArrayDataRef
-    : public AbstractArray<T, 0, A, ArrayDataRef<T>> {
+class ArrayDataRef : public AbstractArray<T, 0, A, ArrayDataRef<T>> {
 
   T *data_;
   size_t capacity_;
@@ -714,8 +681,7 @@ class ArrayDataRef
     if (A == 0 || (reinterpret_cast<uintptr_t>(data) % A) == 0) {
       return r;
     };
-    throw std::invalid_argument(
-        "org::simple::ArrayDataRef(data): not aligned");
+    throw std::invalid_argument("org::simple::ArrayDataRef(data): not aligned");
   }
 
 public:
@@ -733,8 +699,7 @@ public:
 };
 
 template <typename T, size_t A>
-class ArrayAllocated : public AbstractArray<T, 0, A,
-                                            ArrayAllocated<T, A>> {
+class ArrayAllocated : public AbstractArray<T, 0, A, ArrayAllocated<T, A>> {
   static_assert(std::is_trivially_constructible_v<T>);
   static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_trivially_move_assignable_v<T>);
@@ -753,8 +718,7 @@ class ArrayAllocated : public AbstractArray<T, 0, A,
 
 public:
   static constexpr size_t ALIGNAS = A;
-  typedef AbstractArray<T, 0, A, ArrayAllocated<T, A>>
-      Super;
+  typedef AbstractArray<T, 0, A, ArrayAllocated<T, A>> Super;
   typedef typename Super::data_type data_type;
   friend Super;
 

@@ -103,8 +103,6 @@ static const char *renderBits(number num) requires
   return buffer;
 }
 
-
-
 template <typename number, bool separators = true>
 static const char *binary(number num) {
   return renderBits<number, '_', separators ? 4 : 0>(num);
