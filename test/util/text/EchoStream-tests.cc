@@ -2,11 +2,11 @@
 // Created by michel on 01-01-22.
 //
 
-#include <org-simple/util/text/EchoStream.h>
-#include <org-simple/util/text/StringStream.h>
+#include <org-simple/text/EchoStream.h>
+#include <org-simple/text/StringStream.h>
 #include "boost-unit-tests.h"
 
-using namespace org::simple::util::text;
+using namespace org::simple::text;
 
 using StringStream = StringInputStream<char>;
 

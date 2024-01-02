@@ -3,14 +3,14 @@
 //
 
 #include "test-helper.h"
-#include <org-simple/util/FakeClock.h>
-#include <org-simple/util/Timeout.h>
+#include <org-simple/FakeClock.h>
+#include <org-simple/Timeout.h>
 
-typedef org::simple::util::FakeClock FakeClock;
+typedef org::simple::FakeClock FakeClock;
 typedef typename FakeClock::duration duration;
 typedef typename FakeClock::time_point time_point;
-typedef org::simple::util::TimeoutWithDeadline<FakeClock> TimeoutWithDeadline;
-typedef org::simple::util::TimeoutSlicedSleep<FakeClock> TimeoutSlicedSleep;
+typedef org::simple::TimeoutWithDeadline<FakeClock> TimeoutWithDeadline;
+typedef org::simple::TimeoutSlicedSleep<FakeClock> TimeoutSlicedSleep;
 
 static int64_t sleep_time_with_noise(int64_t sleep_time) {
   double factor = 0.1 * sleep_time / RAND_MAX;
@@ -129,15 +129,15 @@ BOOST_AUTO_TEST_CASE(testTimeOutSlicedSleep) {
 }
 
 BOOST_AUTO_TEST_CASE(testTimeOutNever) {
-  org::simple::util::Timeout &to =
-      org::simple::util::TimeoutNever::instance();
+  org::simple::Timeout &to =
+      org::simple::TimeoutNever::instance();
 
   BOOST_CHECK_EQUAL(false, to.timed_out());
 }
 
 BOOST_AUTO_TEST_CASE(testTimeOutImmediately) {
-  org::simple::util::Timeout &to =
-      org::simple::util::TimeoutImmediately::instance();
+  org::simple::Timeout &to =
+      org::simple::TimeoutImmediately::instance();
 
   BOOST_CHECK_EQUAL(true, to.timed_out());
 }

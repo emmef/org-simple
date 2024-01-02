@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_DSP_M_IIR_COEFFICIENTS_H
-#define ORG_SIMPLE_UTIL_DSP_M_IIR_COEFFICIENTS_H
+#ifndef ORG_SIMPLE_DSP_M_IIR_COEFFICIENTS_H
+#define ORG_SIMPLE_DSP_M_IIR_COEFFICIENTS_H
 /*
- * org-simple/util/dsp/iir-coefficients.h
+ * org-simple/dsp/iir-coefficients.h
  *
  * Added by michel on 2021-03-29
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -25,9 +25,9 @@
 #include <cmath>
 #include <org-simple/Index.h>
 #include <org-simple/ZeroNonNormal.h>
-#include <org-simple/util/Array.h>
+#include <org-simple/Array.h>
 
-namespace org::simple::util::dsp {
+namespace org::simple::dsp {
 
 
 /**
@@ -607,7 +607,7 @@ size_t effectiveIRLength(const CoefficientsFilter<S> &filter, size_t maxLength,
     const CoefficientsFilter<S> &filter_;
     size_t coeffs_;
     size_t era_;
-    org::simple::util::ArrayAllocated<S> data_;
+    org::simple::ArrayAllocated<S> data_;
     bool firstSample_;
 
     S getSample() {
@@ -710,6 +710,6 @@ size_t effectiveIRLength(const CoefficientsFilter<S> &filter, size_t maxLength,
   return sample;
 }
 
-} // namespace org::simple::util::dsp
+} // namespace org::simple::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP_M_IIR_COEFFICIENTS_H
+#endif // ORG_SIMPLE_DSP_M_IIR_COEFFICIENTS_H

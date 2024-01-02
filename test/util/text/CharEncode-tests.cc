@@ -4,24 +4,24 @@
 
 #include "boost-unit-tests.h"
 #include <iostream>
-#include "org-simple/util/text/CharEncode.h"
+#include "org-simple/text/CharEncode.h"
 #include "BitsHelper.h"
 
 typedef unsigned char byte;
 typedef uint32_t codePoint;
 template <int MARKER_BITS>
 using Marker =
-    org::simple::util::text::AbstractMarker<MARKER_BITS, byte, codePoint>;
+    org::simple::text::AbstractMarker<MARKER_BITS, byte, codePoint>;
 template <int MARKER_BITS>
 using Leading =
-    org::simple::util::text::LeadingMarker<MARKER_BITS, byte, codePoint>;
+    org::simple::text::LeadingMarker<MARKER_BITS, byte, codePoint>;
 using Continuation =
-    org::simple::util::text::ContinuationMarker<byte, codePoint>;
+    org::simple::text::ContinuationMarker<byte, codePoint>;
 typedef Leading<4> RawUtf8;
 template <int MARKER_BITS, codePoint L = std::numeric_limits<codePoint>::max()>
 using Reader =
-    org::simple::util::text::DecodingReader<MARKER_BITS, byte, codePoint>;
-using ReaderState = org::simple::util::text::DecodingReaderState;
+    org::simple::text::DecodingReader<MARKER_BITS, byte, codePoint>;
+using ReaderState = org::simple::text::DecodingReaderState;
 
 
 static const std::vector<long long unsigned> &generatePatterns() {
@@ -350,7 +350,7 @@ BOOST_AUTO_TEST_CASE(testEncodeAndRead) {
 }
 
 static void testUtf8CodePoint(byte *encoded, const codePoint cp) {
-  typedef org::simple::util::text::Utf8Encoding Encoding;
+  typedef org::simple::text::Utf8Encoding Encoding;
   byte *nextEncodePtr = Encoding::unsafeEncode(cp, encoded);
   BOOST_CHECK(nextEncodePtr != nullptr);
   ptrdiff_t bytesWritten = nextEncodePtr - encoded;
@@ -364,7 +364,7 @@ static void testUtf8CodePoint(byte *encoded, const codePoint cp) {
 }
 
 BOOST_AUTO_TEST_CASE(testUtf8AllCodepoints) {
-  typedef org::simple::util::text::Utf8Encoding Encoding;
+  typedef org::simple::text::Utf8Encoding Encoding;
   byte encoded[Encoding::encodedBytes];
 
   for (long long unsigned x : patterns()) {

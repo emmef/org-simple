@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_CORE_M_DENORMAL_H
-#define ORG_SIMPLE_CORE_M_DENORMAL_H
+#ifndef ORG_SIMPLE_M_ZERO_NON_NORMAL_H
+#define ORG_SIMPLE_M_ZERO_NON_NORMAL_H
 /*
- * org-simple/core/denormal.h
+ * org-simple/ZeroNonNormal.h
  *
  * Added by michel on 2021-04-11
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -28,7 +28,7 @@
 #include <pmmintrin.h>
 #ifdef _MM_FLUSH_ZERO_ON
 #ifdef _MM_DENORMALS_ZERO_ON
-namespace org::simple::core {
+namespace org::simple {
 
 class [[maybe_unused]] ZeroNonNormal {
   using FlushZeroFlag = decltype(_MM_GET_FLUSH_ZERO_MODE());
@@ -57,16 +57,16 @@ public:
   }
 };
 
-} // namespace org::simple::core
+} // namespace org::simple
 #else
-namespace org::simple::core {
+namespace org::simple {
 
 struct [[maybe_unused]] ZeroNonNormal {
 };
 
-} // namespace org::simple::core
+} // namespace org::simple
 #endif
 #endif
 #endif
 
-#endif // ORG_SIMPLE_CORE_M_DENORMAL_H
+#endif // ORG_SIMPLE_M_ZERO_NON_NORMAL_H

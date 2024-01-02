@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_DSP_M_INTEGRATION_H
-#define ORG_SIMPLE_UTIL_DSP_M_INTEGRATION_H
+#ifndef ORG_SIMPLE_DSP_M_INTEGRATION_H
+#define ORG_SIMPLE_DSP_M_INTEGRATION_H
 /*
- * org-simple/util/dsp/integration.h
+ * org-simple/dsp/integration.h
  *
  * Added by michel on 2021-04-12
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -39,7 +39,7 @@
  *
  * history_multipler = exp( -1 / samples)
  */
-namespace org::simple::util::dsp {
+namespace org::simple::dsp {
 
 /**
  * The minimum accuracy in "one out of N" that must be met by generated
@@ -225,6 +225,6 @@ public:
 
 typedef IntegratorCoefficients<double> Coefficients;
 
-} // namespace org::simple::util::dsp
+} // namespace org::simple::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP_M_INTEGRATION_H
+#endif // ORG_SIMPLE_DSP_M_INTEGRATION_H

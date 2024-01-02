@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_DSP_M_GROUP_CHANNEL_MAP_H
-#define ORG_SIMPLE_UTIL_DSP_M_GROUP_CHANNEL_MAP_H
+#ifndef ORG_SIMPLE_DSP_M_GROUP_CHANNEL_MAP_H
+#define ORG_SIMPLE_DSP_M_GROUP_CHANNEL_MAP_H
 /*
- * org-simple/util/dsp/GroupChannelMap.h
+ * org-simple/dsp/GroupChannelMap.h
  *
  * Added by michel on 2021-12-29
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -26,7 +26,7 @@
 #include <functional>
 #include <stdexcept>
 
-namespace org::simple::util::dsp {
+namespace org::simple::dsp {
 
 template <size_t GROUPS, size_t CHANNELS>
 static constexpr bool validGroupAndChannelCounts =
@@ -334,6 +334,6 @@ void applyGroupValueToChannels(const GroupChannelMap<G, C> &map,
   }
 }
 
-} // namespace org::simple::util::dsp
+} // namespace org::simple::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP_M_GROUP_CHANNEL_MAP_H
+#endif // ORG_SIMPLE_DSP_M_GROUP_CHANNEL_MAP_H

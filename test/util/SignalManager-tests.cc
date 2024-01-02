@@ -4,17 +4,17 @@
 
 #include "test-helper.h"
 #include <mutex>
-#include <org-simple/util/FakeClock.h>
-#include <org-simple/util/SignalManager.h>
+#include <org-simple/FakeClock.h>
+#include <org-simple/SignalManager.h>
 #include <thread>
 #include <vector>
 
-using SignalType = org::simple::util::SignalType;
-using Signal = org::simple::util::Signal;
-using ext_type = org::simple::util::Signal::value_type;
-using SignalManager = org::simple::util::SignalManager;
-using SignalResult = org::simple::util::SignalResult;
-using FakeClock = org::simple::util::FakeClock;
+using SignalType = org::simple::SignalType;
+using Signal = org::simple::Signal;
+using wrapped_type = org::simple::Signal::value_type;
+using SignalManager = org::simple::SignalManager;
+using SignalResult = org::simple::SignalResult;
+using FakeClock = org::simple::FakeClock;
 
 class AbstractScenario {
   Signal first_;
@@ -35,7 +35,7 @@ namespace std {
 template <typename C, typename V>
 std::basic_ostream<C> &
 operator<<(std::basic_ostream<C> &out,
-           const org::simple::util::AbstractSignal<V> &signal) {
+           const org::simple::AbstractSignal<V> &signal) {
   out << signal.type_name() << "{";
   if (signal.type() != SignalType::NONE) {
     out << signal.value();
@@ -108,7 +108,7 @@ class SetFirstWaitSecondThreadSetsSecond : public AbstractScenario {
     Signal result_;
     bool had_signal_;
 
-    org::simple::util::AbstractSignalManager<unsigned char, true> manager_;
+    org::simple::AbstractSignalManager<unsigned char, true> manager_;
 
     static constexpr long TIMEOUT = 2;
 
@@ -251,8 +251,8 @@ public:
   }
 };
 
-std::vector<ext_type> &generateTestValues() {
-  static std::vector<ext_type> values;
+std::vector<wrapped_type> &generateTestValues() {
+  static std::vector<wrapped_type> values;
 
   values.emplace_back(0);
   values.emplace_back(1u);
@@ -266,15 +266,15 @@ std::vector<ext_type> &generateTestValues() {
   return values;
 }
 
-std::vector<ext_type> &getTestValues() {
-  static std::vector<ext_type> values = generateTestValues();
+std::vector<wrapped_type> &getTestValues() {
+  static std::vector<wrapped_type> values = generateTestValues();
   return values;
 }
 
 std::vector<Signal> &generateTestSignals() {
   static std::vector<Signal> signals;
 
-  for (ext_type value : getTestValues()) {
+  for (wrapped_type value : getTestValues()) {
     if (value == 0) {
       signals.emplace_back(Signal());
     } else {
@@ -339,7 +339,7 @@ BOOST_AUTO_TEST_CASE(testInstanceNoSignalAtStart) {
   SignalManager manager;
   Signal sig = manager.get_signal();
 
-  BOOST_CHECK(sig.type() == org::simple::util::SignalType::NONE);
+  BOOST_CHECK(sig.type() == org::simple::SignalType::NONE);
   BOOST_CHECK(sig.value() == 0);
 }
 

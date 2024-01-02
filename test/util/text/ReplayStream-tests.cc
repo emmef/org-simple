@@ -2,10 +2,10 @@
 // Created by michel on 01-01-22.
 //
 
-#include <org-simple/util/text/ReplayStream.h>
+#include <org-simple/text/ReplayStream.h>
 #include "boost-unit-tests.h"
 
-using namespace org::simple::util;
+using namespace org::simple;
 
 
 

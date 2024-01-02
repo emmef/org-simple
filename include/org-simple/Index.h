@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_CORE_M_INDEX_H
-#define ORG_SIMPLE_CORE_M_INDEX_H
+#ifndef ORG_SIMPLE_M_INDEX_H
+#define ORG_SIMPLE_M_INDEX_H
 /*
- * org-simple/core/Index.h
+ * org-simple/Index.h
  *
  * Added by michel on 2020-09-21
  * Copyright (C) 2015-2020 Michel Fleur.
@@ -23,7 +23,7 @@
 
 #include <stdexcept>
 
-namespace org::simple::core {
+namespace org::simple {
 
 /**
  * Validates indexes within a buffer of a given size. A valid index is in the
@@ -91,6 +91,6 @@ struct EndIndex {
   }
 };
 
-} // namespace org::simple::core
+} // namespace org::simple
 
-#endif // ORG_SIMPLE_CORE_M_INDEX_H
+#endif // ORG_SIMPLE_M_INDEX_H

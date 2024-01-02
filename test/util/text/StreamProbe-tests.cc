@@ -4,9 +4,9 @@
 
 #include "boost-unit-tests.h"
 #include <functional>
-#include <org-simple/util/text/StreamProbe.h>
+#include <org-simple/text/StreamProbe.h>
 
-using namespace org::simple::util::text;
+using namespace org::simple::text;
 using CharStreamProbe = StreamProbe<char>;
 using LongStreamProbe = StreamProbe<long>;
 

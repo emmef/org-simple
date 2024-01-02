@@ -3,10 +3,9 @@
 //
 
 #include "test-helper.h"
-#include <org-simple/util/NumArray.h>
+#include <org-simple/NumArray.h>
 
-using namespace org::simple::util;
-using namespace org::simple::core;
+using namespace org::simple;
 
 namespace {
 

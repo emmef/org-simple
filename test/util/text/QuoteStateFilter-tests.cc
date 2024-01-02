@@ -3,18 +3,18 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/text/QuoteState.h>
+#include <org-simple/text/QuoteState.h>
 #include <vector>
 
 typedef char character;
-using QuoteState = org::simple::util::text::QuoteState<character>;
-using Filter = org::simple::util::text::QuoteStateFilter<character>;
-using Result = org::simple::util::text::InputFilterResult;
-using Stream = org::simple::util::text::InputStream<character>;
+using QuoteState = org::simple::text::QuoteState<character>;
+using Filter = org::simple::text::QuoteStateFilter<character>;
+using Result = org::simple::text::InputFilterResult;
+using Stream = org::simple::text::InputStream<character>;
 template <typename S>
-using FilteredStream = org::simple::util::text::QuoteFilteredStream<character , S>;
+using FilteredStream = org::simple::text::QuoteFilteredStream<character , S>;
 template <typename S>
-using QuoteTokenizedStream = org::simple::util::text::QuoteStateTokenizedStream<character, S>;
+using QuoteTokenizedStream = org::simple::text::QuoteStateTokenizedStream<character, S>;
 
 namespace {
 

@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_DSP_M_IIR_BUTTERWORTH_H
-#define ORG_SIMPLE_UTIL_DSP_M_IIR_BUTTERWORTH_H
+#ifndef ORG_SIMPLE_DSP_M_IIR_BUTTERWORTH_H
+#define ORG_SIMPLE_DSP_M_IIR_BUTTERWORTH_H
 /*
- * org-simple/util/dsp/iir-butterworth.h
+ * org-simple/dsp/iir-butterworth.h
  *
  * Added by michel on 2021-04-27
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -27,7 +27,7 @@
 #include <org-simple/dsp/rate.h>
 #include <stdexcept>
 
-namespace org::simple::util::dsp {
+namespace org::simple::dsp {
 
 struct Butterworth {
   static constexpr size_t MAX_ORDER = 20;
@@ -273,6 +273,6 @@ private:
   }
 };
 
-} // namespace org::simple::util::dsp
+} // namespace org::simple::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP_M_IIR_BUTTERWORTH_H
+#endif // ORG_SIMPLE_DSP_M_IIR_BUTTERWORTH_H

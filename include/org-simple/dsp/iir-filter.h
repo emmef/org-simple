@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_DSP_M_IIR_FILTER_H
-#define ORG_SIMPLE_UTIL_DSP_M_IIR_FILTER_H
+#ifndef ORG_SIMPLE_DSP_M_IIR_FILTER_H
+#define ORG_SIMPLE_DSP_M_IIR_FILTER_H
 /*
- * org-simple/util/dsp/iir-filter.h
+ * org-simple/dsp/iir-filter.h
  *
  * Added by michel on 2021-03-21
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -25,7 +25,7 @@
 #include <org-simple/ZeroNonNormal.h>
 #include <type_traits>
 
-namespace org::simple::util::dsp {
+namespace org::simple::dsp {
 
 /**
  * Filters a single sample using the feed forward coefficients \c ff_coeffs,
@@ -404,6 +404,6 @@ void filter_backward_zp(size_t order, size_t count,
   }
 }
 
-} // namespace org::simple::util::dsp
+} // namespace org::simple::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP_M_IIR_FILTER_H
+#endif // ORG_SIMPLE_DSP_M_IIR_FILTER_H

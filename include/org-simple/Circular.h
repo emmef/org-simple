@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_CORE_M_CIRCULAR_H
-#define ORG_SIMPLE_CORE_M_CIRCULAR_H
+#ifndef ORG_SIMPLE_M_CIRCULAR_H
+#define ORG_SIMPLE_M_CIRCULAR_H
 /*
- * org-simple/core/Circular.h
+ * org-simple/Circular.h
  *
  * Added by michel on 2020-09-21
  * Copyright (C) 2015-2020 Michel Fleur.
@@ -25,7 +25,7 @@
 #include <numeric>
 #include <type_traits>
 
-namespace org::simple::core {
+namespace org::simple {
 
 enum class WrappingType { BIT_MASK, MODULO };
 
@@ -252,6 +252,6 @@ typedef CircularAlgoBase<WrappingType::BIT_MASK, size_t> CircularMasked;
 typedef CircularAlgoBase<WrappingType::MODULO, size_t> CircularModulo;
 typedef CircularBase<size_t> Circular;
 
-} // namespace org::simple::core
+} // namespace org::simple
 
-#endif // ORG_SIMPLE_CORE_M_CIRCULAR_H
+#endif // ORG_SIMPLE_M_CIRCULAR_H

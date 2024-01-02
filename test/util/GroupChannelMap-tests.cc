@@ -7,10 +7,10 @@
 
 template <size_t MAX_GROUPS, size_t MAX_CHANNELS, size_t... GR>
 using Generator =
-    org::simple::util::dsp::GroupChannelMapCT<MAX_GROUPS, MAX_CHANNELS, GR...>;
+    org::simple::dsp::GroupChannelMapCT<MAX_GROUPS, MAX_CHANNELS, GR...>;
 template <size_t MAX_GROUPS, size_t MAX_CHANNELS>
 using Mapping =
-    org::simple::util::dsp::GroupChannelMap<MAX_GROUPS, MAX_CHANNELS>;
+    org::simple::dsp::GroupChannelMap<MAX_GROUPS, MAX_CHANNELS>;
 
 BOOST_AUTO_TEST_SUITE(test_org_simple_util_GroupChannelMapTests)
 

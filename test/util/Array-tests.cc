@@ -4,10 +4,10 @@
 
 #include "test-helper.h"
 #include <iostream>
-#include <org-simple/util/Array.h>
+#include <org-simple/Array.h>
 #include <typeinfo>
 
-using namespace org::simple::util;
+using namespace org::simple;
 
 namespace {
 
@@ -53,7 +53,7 @@ void testAlignmentValues() {
   }
   typedef typename Test::data_type data_type;
   static constexpr size_t DATA_SIZE = sizeof(data_type) * Test::FIXED_CAPACITY;
-  static constexpr size_t ALIGNMENT = std::max(static_cast<size_t>(1u), Test::ALIGNAS);
+  static constexpr size_t ALIGNMENT = std::bit_ceil(std::max(static_cast<size_t>(1u), Test::ALIGNAS));
   static constexpr size_t SIZE = ALIGNMENT * (1 + (DATA_SIZE - 1) / ALIGNMENT);
 
   BOOST_CHECK_GE(sizeof(Array), sizeof(data_type));
@@ -61,8 +61,8 @@ void testAlignmentValues() {
   BOOST_CHECK_GE(sizeof(Array), Test::ALIGNAS);
   BOOST_CHECK_EQUAL(sizeof(Array), SIZE);
 
-  BOOST_CHECK_GE(Test::ALIGNAS, alignof(data_type));
-  BOOST_CHECK_LE(sizeof(data_type), Test::ALIGNAS);
+  BOOST_CHECK_GE(alignof(data_type) * Test::ALIGNAS, alignof(data_type));
+  BOOST_CHECK_LE(sizeof(data_type), alignof(data_type) * Test::ALIGNAS);
   BOOST_CHECK_EQUAL(Test::ALIGNAS ? sizeof(Array) % Test::ALIGNAS : Test::ALIGNAS, 0);
   BOOST_CHECK_EQUAL(sizeof(Array) % alignof(data_type), 0);
 }
@@ -74,7 +74,7 @@ void testAlignmentValuesDataStruct() {
     return;
   }
   typedef typename Test::data_type data_type;
-  static constexpr size_t DATA_SIZE = sizeof(data_type) * Test::FIXED_CAPACITY;
+  static constexpr size_t DATA_SIZE = sizeof(data_type) * (Test::FIXED_CAPACITY ? std::bit_ceil(Test::FIXED_CAPACITY) : 1);
   static constexpr size_t ALIGNMENT = std::max(static_cast<size_t>(1u), Test::ALIGNAS);
   static constexpr size_t SIZE = ALIGNMENT * (1 + (DATA_SIZE - 1) / ALIGNMENT);
 
@@ -83,8 +83,8 @@ void testAlignmentValuesDataStruct() {
   BOOST_CHECK_GE(sizeof(typename Array::DataStruct), Test::ALIGNAS);
   BOOST_CHECK_EQUAL(sizeof(typename Array::DataStruct), SIZE);
 
-  BOOST_CHECK_GE(Test::ALIGNAS, alignof(data_type));
-  BOOST_CHECK_LE(sizeof(data_type), Test::ALIGNAS);
+  BOOST_CHECK_GE(alignof(data_type) * Test::ALIGNAS, alignof(data_type));
+  BOOST_CHECK_LE(sizeof(data_type), alignof(data_type) * Test::ALIGNAS);
   BOOST_CHECK_EQUAL(Test::ALIGNAS ? sizeof(typename Array::DataStruct) % Test::ALIGNAS : Test::ALIGNAS, 0);
   BOOST_CHECK_EQUAL(sizeof(typename Array::DataStruct) % alignof(data_type), 0);
 }
@@ -97,7 +97,6 @@ void testAlignmentValuesHeap() {
   typedef typename Test::data_type data_type;
 
   BOOST_CHECK_EQUAL(0, Test::FIXED_CAPACITY);
-  BOOST_CHECK_GE(Test::ALIGNAS, alignof(data_type));
 
   auto ptr = heap.begin();
   size_t offs = reinterpret_cast<std::uintptr_t>(ptr);
@@ -377,7 +376,7 @@ BOOST_AUTO_TEST_CASE(testTestArrayBase) {
   BOOST_CHECK_EQUAL(true, concept_base_array<Fix>::value);
   BOOST_CHECK_EQUAL(true, concept_base_array<Fix::Super>::value);
   BOOST_CHECK_EQUAL(false, concept_base_array<A>::value);
-  BOOST_CHECK_EQUAL(sizeof(int) * 4, sizeof(Fix));
+  BOOST_CHECK_EQUAL(sizeof(int) * 8, sizeof(Fix));
 }
 
 

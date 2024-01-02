@@ -5,10 +5,10 @@
 #include "test-helper.h"
 #include <boost/mpl/list.hpp>
 
-#include <org-simple/util/LockfreeRingBuffer.h>
+#include <org-simple/LockfreeRingBuffer.h>
 
 using namespace boost::unit_test;
-using namespace org::simple::util;
+using namespace org::simple;
 
 enum class WriteMethod { WRITE, RESET, RESET_COUNT };
 

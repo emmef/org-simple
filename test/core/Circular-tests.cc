@@ -8,7 +8,7 @@
 namespace {
 
 using Metric =
-    org::simple::core::Circular::Metric<org::simple::core::WrappingType::BIT_MASK>;
+    org::simple::Circular::Metric<org::simple::WrappingType::BIT_MASK>;
 
 constexpr size_t requestedSize = 13;
 constexpr size_t properSize = 16;

@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_DSP_M_IIR_BIQUAD_H
-#define ORG_SIMPLE_UTIL_DSP_M_IIR_BIQUAD_H
+#ifndef ORG_SIMPLE_DSP_M_BIQUAD_H
+#define ORG_SIMPLE_DSP_M_BIQUAD_H
 /*
- * org-simple/util/dsp/iir-biquad.h
+ * org-simple/dsp/Biquad.h
  *
  * Added by michel on 2021-07-30
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace org::simple::util::dsp {
+namespace org::simple::dsp {
 
 struct [[maybe_unused]] BiQuad {
   /**
@@ -313,6 +313,6 @@ struct [[maybe_unused]] BiQuad {
   };
 };
 
-} // namespace org::simple::util::dsp
+} // namespace org::simple::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP_M_IIR_BIQUAD_H
+#endif // ORG_SIMPLE_DSP_M_BIQUAD_H

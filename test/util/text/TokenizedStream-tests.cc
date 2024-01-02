@@ -2,13 +2,13 @@
 // Created by michel on 01-01-22.
 //
 
-#include <org-simple/util/text/TokenizedStream.h>
+#include <org-simple/text/TokenizedStream.h>
 #include "boost-unit-tests.h"
 #include <functional>
-#include <org-simple/util/text/ReplayStream.h>
-#include <org-simple/util/text/StringStream.h>
+#include <org-simple/text/ReplayStream.h>
+#include <org-simple/text/StringStream.h>
 
-using namespace org::simple::util::text;
+using namespace org::simple::text;
 
 static_assert(hasInputStreamSignature<TokenizedInputStream<char>, char>);
 

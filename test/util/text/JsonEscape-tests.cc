@@ -2,15 +2,15 @@
 // Created by michel on 27-01-22.
 //
 
-#include <org-simple/util/text/Json.h>
+#include <org-simple/text/Json.h>
 #include <string>
 #include "boost-unit-tests.h"
 
-using EscapeState = org::simple::util::text::JsonEscapeState;
+using EscapeState = org::simple::text::JsonEscapeState;
 
 static constexpr EscapeState ESCAPE_CHAR = {1, 0, 0};
 
-namespace org::simple::util::text {
+namespace org::simple::text {
 
 std::ostream &operator<<(std::ostream &out, const EscapeState &state) {
   static constexpr const char digits[] = "0123456789abcdef";
@@ -43,7 +43,7 @@ std::ostream &operator<<(std::ostream &out, const EscapeState &state) {
   return out;
 }
 
-} // namespace org::simple::util::text
+} // namespace org::simple::text
 
 namespace {
 
@@ -114,7 +114,7 @@ public:
   const char *getActual() const { return value.c_str(); }
   void start() { state = {}; }
   bool append(const char &c) {
-    return org::simple::util::text::addJsonStringCharacter(
+    return org::simple::text::addJsonStringCharacter(
         c, state, [this](const char &c) {
           if (value.length() < maxLen) {
             value += c;
@@ -156,7 +156,7 @@ void Scenario::execute() const {
 std::string toUtf8(uint32_t codePoint) {
   char utf8[5];
   char *end =
-      org::simple::util::text::Utf8Encoding ::unsafeEncode(codePoint, utf8);
+      org::simple::text::Utf8Encoding ::unsafeEncode(codePoint, utf8);
   *end = 0;
 
   return utf8;
@@ -509,7 +509,7 @@ BOOST_AUTO_TEST_CASE(testInvalidDigit1) {
                         {'N', true, {}}},
                        expected};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testInvalidDigit2) {
@@ -528,7 +528,7 @@ BOOST_AUTO_TEST_CASE(testInvalidDigit2) {
                         {'N', true, {}}},
                        expected};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testInvalidDigit3) {
@@ -547,7 +547,7 @@ BOOST_AUTO_TEST_CASE(testInvalidDigit3) {
                         {'N', true, {}}},
                        expected};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testInvalidDigit4) {
@@ -566,7 +566,7 @@ BOOST_AUTO_TEST_CASE(testInvalidDigit4) {
                         {'N', true, {}}},
                        expected};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testNoTrailingSurrogateFirst) {
@@ -585,7 +585,7 @@ BOOST_AUTO_TEST_CASE(testNoTrailingSurrogateFirst) {
                         {'N', true, {}}},
                        expected};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testNoTrailingSurrogateSecond) {
@@ -605,7 +605,7 @@ BOOST_AUTO_TEST_CASE(testNoTrailingSurrogateSecond) {
                         {'N', true, {}}},
                        expected};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testStartWithTrailingSurrogate) {
@@ -624,7 +624,7 @@ BOOST_AUTO_TEST_CASE(testStartWithTrailingSurrogate) {
                         {'N', true, {}}},
                        expected};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testInvalidTrailingSurrogateLow) {
@@ -648,7 +648,7 @@ BOOST_AUTO_TEST_CASE(testInvalidTrailingSurrogateLow) {
                         {'f', true, {}}},
                        "pre___suf"};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testInvalidTrailingSurrogateHigh) {
@@ -672,7 +672,7 @@ BOOST_AUTO_TEST_CASE(testInvalidTrailingSurrogateHigh) {
                         {'f', true, {}}},
                        "pre___suf"};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testInvalidDigit5) {
@@ -696,7 +696,7 @@ BOOST_AUTO_TEST_CASE(testInvalidDigit5) {
                         {'f', true, {}}},
                        "pre___suf"};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 BOOST_AUTO_TEST_CASE(testInvalidDigit6) {
@@ -720,7 +720,7 @@ BOOST_AUTO_TEST_CASE(testInvalidDigit6) {
                         {'f', true, {}}},
                        "pre___suf"};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 
@@ -745,7 +745,7 @@ BOOST_AUTO_TEST_CASE(testInvalidDigit7) {
                         {'f', true, {}}},
                        "pre___suf"};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 
@@ -770,7 +770,7 @@ BOOST_AUTO_TEST_CASE(testInvalidDigit8) {
                         {'f', true, {}}},
                        "pre___suf"};
   BOOST_CHECK_THROW(scenario.execute(),
-                    org::simple::util::text::JsonUnicodeEscapeException);
+                    org::simple::text::JsonUnicodeEscapeException);
 }
 
 

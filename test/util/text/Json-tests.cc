@@ -3,17 +3,17 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/text/Json.h>
-#include <org-simple/util/text/TextFilePosition.h>
-#include <org-simple/util/text/UnixNewLine.h>
+#include <org-simple/text/Json.h>
+#include <org-simple/text/TextFilePosition.h>
+#include <org-simple/text/UnixNewLine.h>
 #include <string>
 
 namespace {
 
-using JsonContext = org::simple::util::text::JsonContext;
-using JsonException = org::simple::util::text::JsonException;
-using JsonStringBuilder = org::simple::util::text::JsonStringBuilder;
-using Builder = org::simple::util::text::DefaultJsonStringBuilder;
+using JsonContext = org::simple::text::JsonContext;
+using JsonException = org::simple::text::JsonException;
+using JsonStringBuilder = org::simple::text::JsonStringBuilder;
+using Builder = org::simple::text::DefaultJsonStringBuilder;
 
 enum class Action {
   PushIndex,
@@ -171,8 +171,8 @@ class Context : public JsonContext {
   Builder name;
   Builder string;
 
-  class Stream : public org::simple::util::text::InputStream<char> {
-    class StringStream : org::simple::util::text::InputStream<char> {
+  class Stream : public org::simple::text::InputStream<char> {
+    class StringStream : org::simple::text::InputStream<char> {
       const std::string &input;
       size_t at = 0;
 
@@ -187,8 +187,8 @@ class Context : public JsonContext {
       }
     } stringStream;
 
-    org::simple::util::text::UnixNewLineStream<char, StringStream> nlStream;
-    org::simple::util::text::TextFilePositionData<char> position;
+    org::simple::text::UnixNewLineStream<char, StringStream> nlStream;
+    org::simple::text::TextFilePositionData<char> position;
 
   public:
     Stream(const std::string &string)

@@ -3,20 +3,20 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/Predicate.h>
-#include <org-simple/util/text/QuoteState.h>
-#include <org-simple/util/text/StringStream.h>
+#include <org-simple/Predicate.h>
+#include <org-simple/text/QuoteState.h>
+#include <org-simple/text/StringStream.h>
 #include <vector>
 
 typedef char character;
-using Filter = org::simple::util::text::QuoteStateFilter<character>;
-using Predicate = org::simple::util::Predicate<character>;
-using Result = org::simple::util::text::InputFilterResult;
-using Stream = org::simple::util::text::InputStream<character>;
-using StringStream = org::simple::util::text::StringInputStream<character>;
-using FilteredStream = org::simple::util::text::QuoteFilteredStream<character>;
+using Filter = org::simple::text::QuoteStateFilter<character>;
+using Predicate = org::simple::Predicate<character>;
+using Result = org::simple::text::InputFilterResult;
+using Stream = org::simple::text::InputStream<character>;
+using StringStream = org::simple::text::StringInputStream<character>;
+using FilteredStream = org::simple::text::QuoteFilteredStream<character>;
 using QuoteTokenizedStream =
-    org::simple::util::text::QuoteStateTokenizedStream<character>;
+    org::simple::text::QuoteStateTokenizedStream<character>;
 
 namespace {
 

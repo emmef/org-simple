@@ -11,13 +11,13 @@
 
 #include "OwnedReference.h"
 #include "test-helper.h"
-#include <org-simple/util/Reference.h>
+#include <org-simple/Reference.h>
 
 using Owned = org::simple::test::OwnedReference;
 using Owner = org::simple::test::ReferenceOwner;
-using Ref = org::simple::util::TypedRefCountPointer<Owned>;
+using Ref = org::simple::TypedRefCountPointer<Owned>;
 
-struct RefCntPtr : public org::simple::util::UntypedRefCountPointer {
+struct RefCntPtr : public org::simple::UntypedRefCountPointer {
   void destroy_ptr(void *ptr) noexcept override { free(ptr); }
 
   explicit RefCntPtr(void *ptr) : UntypedRefCountPointer(ptr) {}

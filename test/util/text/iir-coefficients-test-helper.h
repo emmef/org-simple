@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-#include "org-simple/util/Array.h"
+#include "org-simple/Array.h"
 #include "org-simple/dsp/iir-coefficients.h"
 #include <iostream>
 #include <vector>
@@ -46,7 +46,7 @@ template <unsigned ORDER> class FilterScenarioBuffer {
   const size_t size_;
   const size_t generateStart_ = ORDER;
   const size_t generateEnd_ = generateStart_ + samples_;
-  org::simple::util::ArrayAllocated<double> data_;
+  org::simple::ArrayAllocated<double> data_;
 
   static size_t valid_buffers(size_t buffers) {
     if (buffers > 0 && buffers < 10) {
@@ -241,21 +241,21 @@ public:
     }
   }
 
-  void filter_forward_offs(const org::simple::util::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_,
+  void filter_forward_offs(const org::simple::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_,
                            size_t input_selector, size_t output_selector) {
     zero_buffer(output_selector);
     coeffs_.filter_forward_offs(samples_, get_buffer(input_selector),
                                 get_buffer(output_selector));
   }
 
-  void filter_backward_offs(const org::simple::util::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_,
+  void filter_backward_offs(const org::simple::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_,
                             size_t input_selector, size_t output_selector) {
     zero_buffer(output_selector);
     coeffs_.filter_backward_offs(samples_, get_buffer(input_selector) + ORDER,
                                  get_buffer(output_selector) + ORDER);
   }
 
-  void filter_forward_zero(const org::simple::util::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_,
+  void filter_forward_zero(const org::simple::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_,
                            size_t input_selector, size_t output_selector) {
     zero_buffer(output_selector);
     coeffs_.filter_forward_history_zero(samples_,
@@ -263,7 +263,7 @@ public:
                                         get_buffer(output_selector) + ORDER);
   }
 
-  void filter_backward_zero(const org::simple::util::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_,
+  void filter_backward_zero(const org::simple::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_,
                             size_t input_selector, size_t output_selector) {
     zero_buffer(output_selector);
     coeffs_.filter_backward_history_zero(samples_,
@@ -271,7 +271,7 @@ public:
                                          get_buffer(output_selector) + ORDER);
   }
 
-  void filter_forward_single(const org::simple::util::dsp::FixedOrderCoefficients<double, ORDER> &coeffs,
+  void filter_forward_single(const org::simple::dsp::FixedOrderCoefficients<double, ORDER> &coeffs,
                              size_t input_selector, size_t output_selector) {
     double in_history[ORDER];
     double out_history[ORDER];
@@ -288,7 +288,7 @@ public:
     }
   }
 
-  void generate_random_filter(org::simple::util::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_) const {
+  void generate_random_filter(org::simple::dsp::FixedOrderCoefficients<double, ORDER> &coeffs_) const {
     double scale = 0.45 / ORDER;
     for (size_t i = 0; i <= ORDER; i++) {
       coeffs_.setFB(i, random_sample(scale));
@@ -317,14 +317,14 @@ const std::vector<size_t> test_create_periods() {
 }
 
 template <typename C>
-C measureFilterGain(const org::simple::util::dsp::CoefficientsFilter<C> &filter, size_t signal_period, size_t &effective_IR_length) {
+C measureFilterGain(const org::simple::dsp::CoefficientsFilter<C> &filter, size_t signal_period, size_t &effective_IR_length) {
   effective_IR_length = effectiveIRLength(filter, TEST_SAMPLERATE, 1e-6);
   size_t settleSamples =
       3 * signal_period +
       signal_period * ((effective_IR_length + signal_period / 2) / signal_period);
   size_t totalSamples = signal_period + 2 * settleSamples;
   std::unique_ptr<double> buffer(new double[totalSamples]);
-  org::simple::util::dsp::FilterHistory<double> history(filter);
+  org::simple::dsp::FilterHistory<double> history(filter);
   history.zero();
   for (size_t sample = 0; sample < totalSamples; sample++) {
     double input = cos(M_PI * 2 * (sample % signal_period) / signal_period);
@@ -345,11 +345,11 @@ C measureFilterGain(const org::simple::util::dsp::CoefficientsFilter<C> &filter,
 }
 
 struct FilterScenario {
-  org::simple::util::dsp::FilterType type;
+  org::simple::dsp::FilterType type;
   int order;
 
-  FilterScenario(org::simple::util::dsp::FilterType t, unsigned o)
-  : type(t), order(org::simple::util::dsp::validated_order(o)) {}
+  FilterScenario(org::simple::dsp::FilterType t, unsigned o)
+  : type(t), order(org::simple::dsp::validated_order(o)) {}
 
   const char *typeName() const {
     return get_filter_type_name(type);

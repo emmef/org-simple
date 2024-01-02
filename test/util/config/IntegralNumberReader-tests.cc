@@ -5,21 +5,21 @@
 #include "boost-unit-tests.h"
 #include "test-helper.h"
 #include <cstdint>
-#include <org-simple/util/config/IntegralNumberReader.h>
-#include <org-simple/util/text/StreamPredicate.h>
-#include <org-simple/util/text/StringStream.h>
+#include <org-simple/config/IntegralNumberReader.h>
+#include <org-simple/text/StreamPredicate.h>
+#include <org-simple/text/StringStream.h>
 
 namespace {
 
-using Stream = org::simple::util::text::StringInputStream<char>;
-using TokenizedStream = org::simple::util::text::TokenizedInputStream<char>;
-using ReaderResult = org::simple::util::config::ReaderResult;
-using Basics = org::simple::util::text::NumberParser;
-using Result = org::simple::util::text::NumberParser::Result;
+using Stream = org::simple::text::StringInputStream<char>;
+using TokenizedStream = org::simple::text::TokenizedInputStream<char>;
+using ReaderResult = org::simple::config::ReaderResult;
+using Basics = org::simple::text::NumberParser;
+using Result = org::simple::text::NumberParser::Result;
 using Value = std::uint16_t;
 
 struct Reader
-    : public org::simple::util::config::IntegralNumberReader<char, Value> {
+    : public org::simple::config::IntegralNumberReader<char, Value> {
 public:
   Value actualValue;
   void writeValue(const Value &value) { actualValue = value; }
@@ -45,7 +45,7 @@ struct Scenario {
   Scenario(const char *value, Result parseResult,
            Value expected)
       : input(value), expectedParserResult(parseResult),
-        expectedReaderResult(org::simple::util::config::toReaderResult(expectedParserResult)), expectedValue(expected) {}
+        expectedReaderResult(org::simple::config::toReaderResult(expectedParserResult)), expectedValue(expected) {}
   Scenario(inputValueType value, bool leadingZeroes = false)
       : Scenario(org::simple::test::printNumber(value, leadingZeroes ? std::numeric_limits<Value>::digits10 : 0), calculateExpectedResult(value), static_cast<Value>(value)) {}
   Scenario(inputValueType value, const char *before, const char *after)
@@ -84,7 +84,7 @@ struct Scenario {
     BOOST_CHECK_EQUAL(scenario.expectedReaderResult, actualReaderResult);
     BOOST_CHECK_EQUAL(
         actualReaderResult,
-        org::simple::util::config::toReaderResult(actualParseResult));
+        org::simple::config::toReaderResult(actualParseResult));
     if (actualReaderResult == ReaderResult::Ok) {
       BOOST_CHECK_EQUAL(scenario.expectedValue, reader.actualValue);
     }
@@ -99,11 +99,11 @@ struct Scenario {
 
 namespace std {
 static ostream &operator<<(ostream &out, ReaderResult result) {
-  out << org::simple::util::config::readerResultToString(result);
+  out << org::simple::config::readerResultToString(result);
   return out;
 }
 static ostream &operator<<(ostream &out, Result result) {
-  out << org::simple::util::text::NumberParser::resultToString(result);
+  out << org::simple::text::NumberParser::resultToString(result);
   return out;
 }
 static std::ostream &operator<<(std::ostream &out, const Scenario &scenario) {

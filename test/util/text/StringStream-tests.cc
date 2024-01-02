@@ -2,11 +2,11 @@
 // Created by michel on 20-12-21.
 //
 
-#include "org-simple/util/text/StringStream.h"
+#include "org-simple/text/StringStream.h"
 #include "boost-unit-tests.h"
 
-using StringInputStream = org::simple::util::text::StringInputStream<char>;
-using StringCollector = org::simple::util::text::InputCollector<char>;
+using StringInputStream = org::simple::text::StringInputStream<char>;
+using StringCollector = org::simple::text::InputCollector<char>;
 
 namespace {
 

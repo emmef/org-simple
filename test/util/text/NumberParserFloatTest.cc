@@ -2,9 +2,9 @@
 // Created by michel on 28-12-21.
 //
 
-#include "org-simple/util/text/StreamPredicate.h"
-#include <org-simple/util/text/StringStream.h>
-#include <org-simple/util/text/NumberParser.h>
+#include "org-simple/text/StreamPredicate.h"
+#include <org-simple/text/StringStream.h>
+#include <org-simple/text/NumberParser.h>
 #include "test-helper.h"
 #include "boost-unit-tests.h"
 #include <boost/math/special_functions/relative_difference.hpp>
@@ -12,9 +12,9 @@
 
 namespace {
 template <typename Value>
-using Stream = org::simple::util::text::StringInputStream<char>;
-using Result = org::simple::util::text::NumberParser::Result;
-using NumberParser = org::simple::util::text::NumberParser;
+using Stream = org::simple::text::StringInputStream<char>;
+using Result = org::simple::text::NumberParser::Result;
+using NumberParser = org::simple::text::NumberParser;
 
 template <typename Value = double> struct Scenario {
   static_assert(std::is_floating_point<Value>());

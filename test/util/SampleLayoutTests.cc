@@ -3,11 +3,11 @@
 //
 
 #include "test-helper.h"
-#include <org-simple/util/SampleLayout.h>
+#include <org-simple/SampleLayout.h>
 #include <sstream>
 #include <string>
 
-using Layout = org::simple::util::SampleLayout;
+using Layout = org::simple::SampleLayout;
 
 namespace {
 
@@ -25,7 +25,7 @@ std::string print_interleaved(const int *const samples) {
 }
 
 std::string
-print_interleaved(const org::simple::util::NumArray<int, CHANNELS> *frames) {
+print_interleaved(const org::simple::NumArray<int, CHANNELS> *frames) {
   std::stringstream out;
 
   for (size_t i = 0; i < FRAMES; i++) {
@@ -54,7 +54,7 @@ static const int channel_buffer_samples[CHANNELS][FRAMES] = {
 const int interleaved_samples[SAMPLES] = {11, 21, 31, 12, 22, 32, 13, 23,
                                           33, 14, 24, 34, 15, 25, 35};
 
-const org::simple::util::NumArray<int, CHANNELS> sample_frames[FRAMES] =
+const org::simple::NumArray<int, CHANNELS> sample_frames[FRAMES] =
     {{11, 21, 31}, {12, 22, 32}, {13, 23, 33}, {14, 24, 34}, {15, 25, 35}};
 
 } // namespace
@@ -88,13 +88,13 @@ BOOST_AUTO_TEST_CASE(testChannelBuffersToInterleavedArray) {
 }
 
 BOOST_AUTO_TEST_CASE(testChannelBuffersToFrames) {
-  org::simple::util::NumArray<int, CHANNELS> output[FRAMES];
+  org::simple::NumArray<int, CHANNELS> output[FRAMES];
 
   for (size_t i = 0; i < FRAMES; i++) {
     output[i].zero();
   }
 
-  org::simple::util::NumArray<int, CHANNELS> *output_ptr = &output[0];
+  org::simple::NumArray<int, CHANNELS> *output_ptr = &output[0];
 
   const int *channel_start[CHANNELS];
   const int *channel_walk[CHANNELS];
@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE(testFramesToChannelBuffers) {
   channel_start[2] = channel_walk[2] = &channel_buffer_output[2][0];
   int **channel_ptr = &channel_walk[0];
 
-  const org::simple::util::NumArray<int, CHANNELS> *input_ptr = &sample_frames[0];
+  const org::simple::NumArray<int, CHANNELS> *input_ptr = &sample_frames[0];
 
   Layout::interleaved_to_channel_buffers<int, CHANNELS, FRAMES>(input_ptr,
                                                                 channel_ptr);

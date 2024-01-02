@@ -2,17 +2,17 @@
 // Created by michel on 28-12-21.
 //
 
-#include "org-simple/util/text/StreamPredicate.h"
-#include <org-simple/util/text/StringStream.h>
-#include <org-simple/util/text/NumberParser.h>
+#include "org-simple/text/StreamPredicate.h"
+#include <org-simple/text/StringStream.h>
+#include <org-simple/text/NumberParser.h>
 #include "test-helper.h"
 #include "boost-unit-tests.h"
 
 namespace {
 template <typename Value>
-using Stream = org::simple::util::text::StringInputStream<char>;
-using Result = org::simple::util::text::NumberParser::Result;
-using NumberParser = org::simple::util::text::NumberParser;
+using Stream = org::simple::text::StringInputStream<char>;
+using Result = org::simple::text::NumberParser::Result;
+using NumberParser = org::simple::text::NumberParser;
 
 template <typename Value, bool isSigned = std::is_signed<Value>() ||
                                           sizeof(Value) < sizeof(long long)>
@@ -52,10 +52,10 @@ requires(sizeof(Value) < sizeof(long long)) //
 template <typename Value>
 static Result
 calculateExpectedResult(typename ScenarioNumberType<Value>::type) {
-  return org::simple::util::text::NumberParser::Result::Ok;
+  return org::simple::text::NumberParser::Result::Ok;
 }
 
-class SeparatorPredicate : public org::simple::util::Predicate<char> {
+class SeparatorPredicate : public org::simple::Predicate<char> {
 public:
   bool test(const char &c) const override { return c == ','; }
 };
@@ -191,11 +191,11 @@ static std::vector<Scenario<Value>> &generateUnsignedSamples() {
 
 void testThreeKnownNumbers(const char *string) {
   Stream<char> stringStream(string);
-  org::simple::util::text::EchoStream<char, Stream<char>> echo(&stringStream);
-  struct NoCommaPredicate : org::simple::util::Predicate<char> {
+  org::simple::text::EchoStream<char, Stream<char>> echo(&stringStream);
+  struct NoCommaPredicate : org::simple::Predicate<char> {
     bool test(const char &c) const { return c != ','; }
   } predicate;
-  org::simple::util::text::PredicateStream<char, NoCommaPredicate, false>
+  org::simple::text::PredicateStream<char, NoCommaPredicate, false>
       stream(&echo, predicate);
   Result actualResult;
   static constexpr Result Ok = Result::Ok;

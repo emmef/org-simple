@@ -7,9 +7,9 @@
 #include <vector>
 
 using Sample = float;
-using Coefficients = org::simple::util::dsp::BiQuad::Coefficients<Sample>;
-using History = org::simple::util::dsp::BiQuad::History<Sample>;
-using Butterworth = org::simple::util::dsp::BiQuad::Butterworth;
+using Coefficients = org::simple::dsp::BiQuad::Coefficients<Sample>;
+using History = org::simple::dsp::BiQuad::History<Sample>;
+using Butterworth = org::simple::dsp::BiQuad::Butterworth;
 using Buffer = std::vector<Sample>;
 
 static constexpr size_t samples = 20;

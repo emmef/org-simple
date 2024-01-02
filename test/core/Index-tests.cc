@@ -5,8 +5,8 @@
 #include "boost-unit-tests.h"
 #include <org-simple/Index.h>
 
-using Index = org::simple::core::Index;
-using EndIndex = org::simple::core::EndIndex;
+using Index = org::simple::Index;
+using EndIndex = org::simple::EndIndex;
 
 static constexpr size_t SIZE = 10;
 static constexpr size_t ZERO = 0;

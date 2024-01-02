@@ -3,23 +3,23 @@
 //
 
 #include <iostream>
-#include <org-simple/util/config/Config.h>
-#include <org-simple/util/text/StringStream.h>
+#include <org-simple/config/Config.h>
+#include <org-simple/text/StringStream.h>
 #include <vector>
 
 #include "boost-unit-tests.h"
 
 namespace {
-typedef org::simple::util::config::KeyValueConfig<char> KeyValueConfig;
-typedef org::simple::util::config::ReaderResult ReaderResult;
-typedef org::simple::util::config::KeyReader<char> KeyReader;
-typedef org::simple::util::config::ValueReader<char> ValueReader;
-typedef org::simple::util::text::InputStream<char> InputStream;
-typedef org::simple::util::text::TokenizedInputStream<char>
+typedef org::simple::config::KeyValueConfig<char> KeyValueConfig;
+typedef org::simple::config::ReaderResult ReaderResult;
+typedef org::simple::config::KeyReader<char> KeyReader;
+typedef org::simple::config::ValueReader<char> ValueReader;
+typedef org::simple::text::InputStream<char> InputStream;
+typedef org::simple::text::TokenizedInputStream<char>
     TokenizedInputStream;
-typedef org::simple::util::text::CommentStreamConfig<char> CommentStreamConfig;
-typedef org::simple::util::text::CommentStream<char> CommentStream;
-typedef org::simple::util::text::StringInputStream<char> StringStream;
+typedef org::simple::text::CommentStreamConfig<char> CommentStreamConfig;
+typedef org::simple::text::CommentStream<char> CommentStream;
+typedef org::simple::text::StringInputStream<char> StringStream;
 
 static CommentStreamConfig config("//", "/*", "'");
 
@@ -60,7 +60,7 @@ class PrintingReader {
       while (input.get(c)) {
         key += c;
       }
-      return org::simple::util::config::ReaderResult::Ok;
+      return org::simple::config::ReaderResult::Ok;
     }
 
     const char *getKey() const final { return key.c_str(); }
@@ -88,7 +88,7 @@ class PrintingReader {
       }
       results.push_back({keyName, value});
       key.reset();
-      return org::simple::util::config::ReaderResult::Ok;
+      return org::simple::config::ReaderResult::Ok;
     }
 
     Value(Key &keyReader, std::vector<KeyValuePair> &r)
@@ -260,23 +260,23 @@ BOOST_AUTO_TEST_CASE(testInitialize) { PrintingReader reader(""); }
 
 BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValueWithQuoteLater) {
   PrintingReader reader("'key'=val'lala");
-  BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
+  BOOST_CHECK_THROW(reader.parse(), org::simple::config::ParseError);
 }
 
 BOOST_AUTO_TEST_CASE(testParseOneLineUnquotedKeyWithQuoteLater) {
   PrintingReader reader("'ke'y'=value");
-  BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
+  BOOST_CHECK_THROW(reader.parse(), org::simple::config::ParseError);
 }
 
 BOOST_AUTO_TEST_CASE(testParseOneLineNothUnquotedWithQuoteLater) {
   // TODO This corner care fails.
 //  PrintingReader reader("'ke'y'=val'ue");
-//  BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
+//  BOOST_CHECK_THROW(reader.parse(), org::simple::config::ParseError);
 }
 
 BOOST_AUTO_TEST_CASE(testParseOneLineQuotedKeyAndValueUnclosed) {
   PrintingReader reader("'key'='value");
-  BOOST_CHECK_THROW(reader.parse(), org::simple::util::config::ParseError);
+  BOOST_CHECK_THROW(reader.parse(), org::simple::config::ParseError);
 }
 
 BOOST_AUTO_TEST_CASE(testParseTwoLines) {

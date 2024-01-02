@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_DSP_M_RATE_H
-#define ORG_SIMPLE_UTIL_DSP_M_RATE_H
+#ifndef ORG_SIMPLE_DSP_M_RATE_H
+#define ORG_SIMPLE_DSP_M_RATE_H
 /*
- * org-simple/util/dsp/rate.h
+ * org-simple/dsp/rate.h
  *
  * Added by michel on 2021-04-10
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -27,7 +27,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-namespace org::simple::util::dsp {
+namespace org::simple::dsp {
 
 class Rate {
 public:
@@ -126,6 +126,6 @@ private:
   double rate_;
 };
 
-} // namespace org::simple::util::dsp
+} // namespace org::simple::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP_M_RATE_H
+#endif // ORG_SIMPLE_DSP_M_RATE_H

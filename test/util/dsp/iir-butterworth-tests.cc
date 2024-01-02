@@ -9,7 +9,7 @@
 #include <cmath>
 #include <vector>
 
-using namespace org::simple::util::dsp;
+using namespace org::simple::dsp;
 
 struct FilterGainScenario : public FilterScenario {
   size_t signal_period;

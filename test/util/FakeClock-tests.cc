@@ -3,9 +3,9 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/FakeClock.h>
+#include <org-simple/FakeClock.h>
 
-typedef org::simple::util::FakeClock Clock;
+typedef org::simple::FakeClock Clock;
 
 typedef std::chrono::system_clock system_clock;
 typedef std::chrono::system_clock::duration system_duration;

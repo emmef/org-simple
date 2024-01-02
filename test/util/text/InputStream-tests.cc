@@ -2,14 +2,14 @@
 // Created by michel on 01-01-22.
 //
 
-#include <org-simple/util/text/InputStream.h>
+#include <org-simple/text/InputStream.h>
 #include "boost-unit-tests.h"
 
 /**
  * These are not tests, as the input stream is just an interface (pure virtual
  * class). However, some important traits need to be verified here.
  */
-using namespace org::simple::util::text;
+using namespace org::simple::text;
 
 static constexpr char dummyValue = 13;
 

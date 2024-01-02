@@ -3,17 +3,17 @@
 //
 
 #include "boost-unit-tests.h"
-#include <org-simple/util/Predicate.h>
-#include <org-simple/util/text/StringStream.h>
-#include <org-simple/util/text/UnixNewLine.h>
+#include <org-simple/Predicate.h>
+#include <org-simple/text/StringStream.h>
+#include <org-simple/text/UnixNewLine.h>
 #include <vector>
 #include <algorithm>
 
 typedef char character;
-using Stream = org::simple::util::text::InputStream<character>;
-using StringStream = org::simple::util::text::StringInputStream<character>;
+using Stream = org::simple::text::InputStream<character>;
+using StringStream = org::simple::text::StringInputStream<character>;
 using TokenizedStream =
-    org::simple::util::text::NewlineTokenizedStream<character, StringStream>;
+    org::simple::text::NewlineTokenizedStream<character, StringStream>;
 
 namespace {
 

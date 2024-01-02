@@ -1,7 +1,7 @@
-#ifndef ORG_SIMPLE_UTIL_DSP_M_BUCKET_INTEGRATION_H
-#define ORG_SIMPLE_UTIL_DSP_M_BUCKET_INTEGRATION_H
+#ifndef ORG_SIMPLE_DSP_M_BUCKET_INTEGRATION_H
+#define ORG_SIMPLE_DSP_M_BUCKET_INTEGRATION_H
 /*
- * org-simple/util/dsp/bucket-integration.h
+ * org-simple/dsp/bucket-integration.h
  *
  * Added by michel on 2021-12-19
  * Copyright (C) 2015-2021 Michel Fleur.
@@ -20,7 +20,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace org::simple::util::dsp {
+namespace org::simple::dsp {
 
 // Idea:
 // A set of N buckets
@@ -104,6 +104,6 @@ std::cout << N << " samples approached by " <<
 
 
 
-} // namespace org::simple::util::dsp
+} // namespace org::simple::dsp
 
-#endif // ORG_SIMPLE_UTIL_DSP_M_BUCKET_INTEGRATION_H
+#endif // ORG_SIMPLE_DSP_M_BUCKET_INTEGRATION_H
