@@ -23,6 +23,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <org-simple/AlignedData.h>
 #include <org-simple/Index.h>
 #include <stdexcept>
 
