@@ -37,6 +37,7 @@ template <class T, size_t ELEMENTS, size_t ALIGNMENT, class Storage>
 struct AlignedAccess {
   static constexpr size_t elements = ELEMENTS;
   typedef T Type;
+  static constexpr size_t alignment = ALIGNMENT;
 
   T *data() noexcept {
     return std::assume_aligned<ALIGNMENT>(
@@ -57,8 +58,9 @@ struct AlignedAccess {
   T &at(size_t i) { return data()[Index::checked(i, ELEMENTS)]; }
   const T &at(size_t i) const { return data()[Index::checked(i, ELEMENTS)]; }
 
+  constexpr size_t capacity() const { return ELEMENTS; }
   constexpr size_t size() const { return ELEMENTS; }
-  constexpr size_t alignment() const { return ALIGNMENT; }
+  constexpr size_t getAlignment() const { return ALIGNMENT; }
 
   template <class FROM, class TO>
     requires(std::is_base_of_v<AlignedAccess, FROM> &&
@@ -66,6 +68,16 @@ struct AlignedAccess {
   static constexpr inline void alignedStorageTypeCopy(const FROM &from,
                                                       TO &to) noexcept {
     std::copy(std::assume_aligned<ALIGNMENT>(from.getInternalStorage().begin()),
+              std::assume_aligned<ALIGNMENT>(from.getInternalStorage().end()),
+              std::assume_aligned<ALIGNMENT>(to.getInternalStorage().begin()));
+  }
+
+  template <class FROM, class TO>
+    requires(std::is_base_of_v<AlignedAccess, FROM> &&
+             std::is_base_of_v<AlignedAccess, TO>)
+  static constexpr inline void alignedStorageTypeMove(const FROM &from,
+                                                      TO &to) noexcept {
+    std::move(std::assume_aligned<ALIGNMENT>(from.getInternalStorage().begin()),
               std::assume_aligned<ALIGNMENT>(from.getInternalStorage().end()),
               std::assume_aligned<ALIGNMENT>(to.getInternalStorage().begin()));
   }
@@ -152,7 +164,6 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY,
           T, ELEMENTS, ALIGNMENT,
           AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY,
                       false>> {
-
   static constexpr size_t elements = ELEMENTS;
   typedef T Type;
   typedef AlignedAccess<T, ELEMENTS, ALIGNMENT,
@@ -173,9 +184,7 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY,
     Access::alignedStorageTypeCopy(source, *this);
   }
 
-  AlignedData(AlignedData &&original) {
-    Access::alignedStorageTypeCopy(original, *this);
-  }
+  AlignedData(AlignedData &&original) : data_(original.data_) {}
 
   template <class Source> AlignedData(const Source &source) {
     if (source.size() != ELEMENTS) {
@@ -342,6 +351,18 @@ private:
         "AlignedStorage: elementIndex not on aligned boundary");
   }
 };
+
+template<typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
+using AlignedLocalStorage = AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>;
+
+template<typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
+using AlignedAllocatedStorage = AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY, false>;
+
+template<typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
+using AlignedReferencedStorage = AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::REFERENCE, false>;
+
+template<typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
+using AlignedConstReferencedStorage = AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::REFERENCE, true>;
 
 } // namespace org::simple
 
