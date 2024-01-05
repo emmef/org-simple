@@ -31,6 +31,19 @@ struct Align {
   static constexpr size_t max =
       std::bit_floor(std::numeric_limits<unsigned short>::max()) >> 1;
 
+  static constexpr size_t maxNatural = alignof(std::max_align_t);
+
+  template <typename T> static constexpr size_t maxElements() {
+    return max / sizeof(T);
+  }
+
+  template <typename T> static constexpr size_t fixWithMaxNatural(const size_t alignment) {
+    const size_t inherent = std::max(maxNatural, alignof(T));
+    return alignment <= inherent ? inherent
+           : alignment < max      ? std::bit_ceil(alignment)
+                                  : std::bit_floor(alignment);
+  }
+
   /**
    * Returns whether the alignment equal to the natural alignment or a greater
    * power of two.
@@ -46,7 +59,7 @@ struct Align {
     return alignment && isValid<type>(alignment) ? alignment : alignof(type);
   }
 
-  template <class type> static constexpr bool fixed(const size_t alignment) {
+  template <class type> static constexpr size_t fixed(const size_t alignment) {
     return alignment <= alignof(type) ? alignof(type)
            : alignment <= max         ? std::bit_ceil(alignment)
                                       : std::bit_floor(alignment);
@@ -70,6 +83,8 @@ template <class T, size_t ALIGNMENT = alignof(T)> struct AlignedType {
 
   typedef T type;
   static constexpr size_t alignment = ALIGNMENT;
+  [[maybe_unused]] static constexpr size_t maxElements =
+      static_cast<size_t>(std::numeric_limits<ptrdiff_t>::max()) / sizeof(T);
 
   static constexpr size_t alignedElements() noexcept {
     return std::max(static_cast<size_t>(1), alignment / sizeof(type));
@@ -100,7 +115,6 @@ template <class T, size_t ALIGNMENT = alignof(T)> struct AlignedType {
     return Align::isAlignedPointer(p);
   }
 };
-
 
 } // namespace org::simple
 

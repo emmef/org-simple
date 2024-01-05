@@ -55,7 +55,15 @@ struct AlignedAccess {
   T &at(size_t i) { return data()[Index::checked(i, ELEMENTS)]; }
   const T &at(size_t i) const { return data()[Index::checked(i, ELEMENTS)]; }
 
-  [[nodiscard]] constexpr size_t capacity() const { return elements; }
+  [[nodiscard]] constexpr size_t capacity() const {
+    if constexpr (elements > 0) {
+      return elements;
+    } else {
+      static_cast<const Storage *>(this)->getInternalCapacity();
+    }
+  }
+  [[nodiscard]] constexpr size_t size() const { return capacity(); }
+
   [[nodiscard]] constexpr size_t getAlignment() const { return alignment; }
 
   template <class FROM, class TO>
@@ -116,15 +124,15 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>
     : public AlignedAccess<
           T, ELEMENTS, ALIGNMENT,
           AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>> {
-  static_assert(ELEMENTS > 0);
-
-  static constexpr size_t elements = ELEMENTS;
+  static constexpr size_t elements =
+      std::max(ELEMENTS, static_cast<size_t>(1u));
   typedef T Type;
   typedef AlignedAccess<
-      T, ELEMENTS, ALIGNMENT,
-      AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>>
+      T, elements, ALIGNMENT,
+      AlignedData<T, elements, ALIGNMENT, AlignedDataType::ARRAY, false>>
       Access;
   typedef std::array<Type, elements> DataType;
+  using Access::alignment;
 
   DataType &getInternalStorage() noexcept { return data_; }
   const DataType &getInternalStorage() const noexcept { return data_; }
@@ -132,7 +140,7 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>
   AlignedData() = default;
 
   template <AlignedDataType type, bool isConst>
-  explicit AlignedData(const AlignedData<T, ELEMENTS, ALIGNMENT, type, isConst>
+  explicit AlignedData(const AlignedData<T, elements, alignment, type, isConst>
                            &source) noexcept {
     Access::alignedStorageTypeCopy(source, *this);
   }
@@ -142,7 +150,7 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>
   }
 
   template <class Source> explicit AlignedData(const Source &source) {
-    if (source.size() != ELEMENTS) {
+    if (source.size() != elements) {
       throw std::invalid_argument(
           "AlignedStorage: Source size does not match my size");
     }
@@ -150,7 +158,7 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>
   }
 
 private:
-  alignas(AlignedType<T, ALIGNMENT>::alignment) DataType data_;
+  alignas(AlignedType<T, alignment>::alignment) DataType data_;
 };
 
 template <class T, size_t ELEMENTS, size_t ALIGNMENT>
@@ -162,10 +170,11 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY,
                       false>> {
   static constexpr size_t elements = ELEMENTS;
   typedef T Type;
-  typedef AlignedAccess<T, ELEMENTS, ALIGNMENT,
-                        AlignedData<T, ELEMENTS, ALIGNMENT,
+  typedef AlignedAccess<T, elements, ALIGNMENT,
+                        AlignedData<T, elements, ALIGNMENT,
                                     AlignedDataType::ALLOCATED_ARRAY, false>>
       Access;
+  using Access::alignment;
   typedef typename AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY,
                                false>::DataType DataType;
 
@@ -176,14 +185,14 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY,
 
   template <AlignedDataType type, bool isConst>
   explicit AlignedData(
-      const AlignedData<T, ELEMENTS, ALIGNMENT, type, isConst> &source) {
+      const AlignedData<T, elements, alignment, type, isConst> &source) {
     Access::alignedStorageTypeCopy(source, *this);
   }
 
   AlignedData(AlignedData &&original) noexcept : data_(original.data_) {}
 
   template <class Source> explicit AlignedData(const Source &source) {
-    if (source.size() != ELEMENTS) {
+    if (source.size() != elements) {
       throw std::invalid_argument(
           "AlignedStorage: Source size does not match my size");
     }
@@ -191,7 +200,7 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY,
   }
 
 private:
-  typedef AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>
+  typedef AlignedData<T, elements, alignment, AlignedDataType::ARRAY, false>
       InternalDataType;
   std::unique_ptr<InternalDataType> data_ =
       std::unique_ptr<InternalDataType>(new InternalDataType);
@@ -351,13 +360,13 @@ private:
 };
 
 template <typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
-using AlignedLocalStorage =
-    AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>;
-
-template <typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
 using AlignedAllocatedStorage =
     AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY,
                 false>;
+
+template <typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
+using AlignedLocalStorage =
+    AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>;
 
 template <typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
 using AlignedReferencedStorage =
