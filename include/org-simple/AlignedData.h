@@ -24,10 +24,7 @@
 #include "Alignment.h"
 #include "Index.h"
 #include <algorithm>
-#include <bit>
-#include <cstdint>
 #include <iterator>
-#include <limits>
 #include <memory>
 #include <span>
 
@@ -58,9 +55,8 @@ struct AlignedAccess {
   T &at(size_t i) { return data()[Index::checked(i, ELEMENTS)]; }
   const T &at(size_t i) const { return data()[Index::checked(i, ELEMENTS)]; }
 
-  constexpr size_t capacity() const { return ELEMENTS; }
-  constexpr size_t size() const { return ELEMENTS; }
-  constexpr size_t getAlignment() const { return ALIGNMENT; }
+  [[nodiscard]] constexpr size_t capacity() const { return elements; }
+  [[nodiscard]] constexpr size_t getAlignment() const { return alignment; }
 
   template <class FROM, class TO>
     requires(std::is_base_of_v<AlignedAccess, FROM> &&
@@ -136,8 +132,8 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>
   AlignedData() = default;
 
   template <AlignedDataType type, bool isConst>
-  AlignedData(const AlignedData<T, ELEMENTS, ALIGNMENT, type, isConst>
-                  &source) noexcept {
+  explicit AlignedData(const AlignedData<T, ELEMENTS, ALIGNMENT, type, isConst>
+                           &source) noexcept {
     Access::alignedStorageTypeCopy(source, *this);
   }
 
@@ -145,7 +141,7 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>
     Access::alignedStorageTypeCopy(original, *this);
   }
 
-  template <class Source> AlignedData(const Source &source) {
+  template <class Source> explicit AlignedData(const Source &source) {
     if (source.size() != ELEMENTS) {
       throw std::invalid_argument(
           "AlignedStorage: Source size does not match my size");
@@ -179,14 +175,14 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY,
   AlignedData() = default;
 
   template <AlignedDataType type, bool isConst>
-  AlignedData(
+  explicit AlignedData(
       const AlignedData<T, ELEMENTS, ALIGNMENT, type, isConst> &source) {
     Access::alignedStorageTypeCopy(source, *this);
   }
 
-  AlignedData(AlignedData &&original) : data_(original.data_) {}
+  AlignedData(AlignedData &&original) noexcept : data_(original.data_) {}
 
-  template <class Source> AlignedData(const Source &source) {
+  template <class Source> explicit AlignedData(const Source &source) {
     if (source.size() != ELEMENTS) {
       throw std::invalid_argument(
           "AlignedStorage: Source size does not match my size");
@@ -208,7 +204,8 @@ struct AlignedReferenceData<T, ELEMENTS, false> {
 
   DataType data_;
 
-  AlignedReferenceData(T *externalData) : data_(create(externalData)) {}
+  explicit AlignedReferenceData(T *externalData)
+      : data_(create(externalData)) {}
 
   void assign(T *externalData) { data_ = create(externalData); }
 
@@ -230,7 +227,8 @@ struct AlignedReferenceData<T, ELEMENTS, true> {
 
   DataType data_;
 
-  AlignedReferenceData(const T *externalData) : data_(create(externalData)) {}
+  explicit AlignedReferenceData(const T *externalData)
+      : data_(create(externalData)) {}
 
   void assign(const T *externalData) { data_ = create(externalData); }
 
@@ -305,7 +303,7 @@ struct AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::REFERENCE, isConst>
 
   template <typename P>
     requires(isPointerAssignable<P>())
-  AlignedData(P pointer)
+  explicit AlignedData(P pointer)
       : AlignedReferenceData<T, ELEMENTS, isConstPointer<P>()>(
             {checkAligned(pointer)}) {}
 
@@ -352,17 +350,22 @@ private:
   }
 };
 
-template<typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
-using AlignedLocalStorage = AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>;
+template <typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
+using AlignedLocalStorage =
+    AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ARRAY, false>;
 
-template<typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
-using AlignedAllocatedStorage = AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY, false>;
+template <typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
+using AlignedAllocatedStorage =
+    AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::ALLOCATED_ARRAY,
+                false>;
 
-template<typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
-using AlignedReferencedStorage = AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::REFERENCE, false>;
+template <typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
+using AlignedReferencedStorage =
+    AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::REFERENCE, false>;
 
-template<typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
-using AlignedConstReferencedStorage = AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::REFERENCE, true>;
+template <typename T, size_t ELEMENTS, size_t ALIGNMENT = alignof(T)>
+using AlignedConstReferencedStorage =
+    AlignedData<T, ELEMENTS, ALIGNMENT, AlignedDataType::REFERENCE, true>;
 
 } // namespace org::simple
 
