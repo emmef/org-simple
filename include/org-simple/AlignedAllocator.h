@@ -92,7 +92,27 @@ public:
       ::operator delete(pointer);
     }
   }
+
+  template<class Allocator>
+  static constexpr size_t alignmentOf() {
+    return subst(static_cast<const Allocator *>(nullptr));
+  }
+private:
+  static constexpr size_t subst(...) {
+    return 0;
+  }
+  template <typename T>
+  static constexpr size_t subst(const std::allocator<T> * const) {
+    return Align::maxNatural;
+  }
+  template <typename T, size_t A>
+  static constexpr size_t subst(const AlignedAllocator<T,A> * const) {
+    return A;
+  }
+
+
 };
+
 
 } // namespace org::simple
 

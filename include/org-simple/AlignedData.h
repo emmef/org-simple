@@ -21,14 +21,109 @@
  * limitations under the License.
  */
 
-#include "Align.h"
+#include "AlignedAllocator.h"
 #include "Index.h"
 #include <algorithm>
 #include <iterator>
 #include <memory>
 #include <span>
+#include <vector>
 
 namespace org::simple {
+
+template <typename Type, size_t __alignment>
+class AlignedVector
+    : public std::vector<Type, AlignedAllocator<Type, __alignment>> {
+
+  typedef std::vector<Type, AlignedAllocator<Type, __alignment>> Base;
+  typedef AlignedAllocator<Type, __alignment> Allocator;
+
+public:
+  typedef typename Base::value_type value_type;
+  typedef typename Base::pointer pointer;
+  typedef typename Base::const_pointer const_pointer;
+  typedef typename Base::reference reference;
+  typedef typename Base::const_reference const_reference;
+  typedef typename Base::iterator iterator;
+  typedef typename Base::const_iterator const_iterator;
+  typedef typename Base::const_reverse_iterator const_reverse_iterator;
+  typedef typename Base::reverse_iterator reverse_iterator;
+  typedef typename Base::size_type size_type;
+  typedef typename Base::difference_type difference_type;
+  typedef typename Base::allocator_type allocator_type;
+  static constexpr size_t alignment = alignment;
+
+  AlignedVector() = default;
+
+  AlignedVector(size_type length, const value_type &value)
+      : Base(length, value) {}
+
+  template <class Alloc>
+  AlignedVector(const std::vector<value_type, Alloc> &source) : Base(source) {}
+
+  AlignedVector(AlignedVector &&original) noexcept = default;
+
+  AlignedVector &operator=(const AlignedVector &source) {
+    Base::operator=(source);
+    return *this;
+  }
+
+  AlignedVector &operator=(AlignedVector &&original) {
+    Base::operator=(static_cast<Base>(original));
+    return *this;
+  }
+
+  AlignedVector &operator=(std::initializer_list<value_type> list) {
+    Base::operator=(list);
+    return *this;
+  }
+
+  void assign(size_type count, const value_type &value) {
+    Base::assign(count, value);
+  }
+
+  template <typename _InputIterator,
+            typename = std::_RequireInputIter<_InputIterator>>
+  void assign(_InputIterator first, _InputIterator last) {
+    Base::assign(first, last);
+  }
+
+  void assign(std::initializer_list<value_type> list) { Base::assign(list); }
+
+  pointer data() noexcept {
+    return std::assume_aligned<alignment>(Base::data());
+  }
+
+  const_pointer data() const noexcept {
+    return std::assume_aligned<alignment>(Base::data());
+  }
+
+  reference front() noexcept { return data()[0]; }
+
+  const_reference front() const noexcept { return data()[0]; }
+
+  iterator begin() noexcept {
+    return iterator(std::assume_aligned<alignment>(Base::data()));
+  }
+
+  const_iterator begin() const noexcept {
+    return const_iterator(std::assume_aligned<alignment>(Base::data()));
+  }
+
+  const_iterator cbegin() const noexcept { return begin(); }
+
+  reference operator[](size_type i) noexcept { return data()[i]; }
+
+  const_reference operator[](size_type i) const noexcept { return data()[i]; }
+
+  reference at(size_type i) noexcept {
+    return data()[Index::checked(i, Base::size())];
+  }
+
+  const_reference at(size_type i) const noexcept {
+    return data()[Index::checked(i, Base::size())];
+  }
+};
 
 template <class T, size_t ELEMENTS, size_t ALIGNMENT, class Storage>
 struct AlignedAccess {
