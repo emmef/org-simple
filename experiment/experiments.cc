@@ -4,7 +4,8 @@
 
 #include <iostream>
 #include <org-simple/AlignedData.h>
-#include <org-simple/Size.h>
+#include <org-simple/AlignedAllocator.h>
+#include <vector>
 
 struct Empty {};
 
@@ -79,7 +80,40 @@ AlignedPointer<double, 13, 32> double_pointer_13_32;
 AlignedPointer<double, 16, 32> double_pointer_16_32;
 AlignedPointer<double, 17, 32> double_pointer_17_32;
 
+struct Small;
+
+struct Small {
+  static short counter;
+  short x = ++counter;
+
+private:
+};
+short Small::counter = 0;
+
+AlignedAllocator<Small, 32> allocator;
+
+
 int main(int, char **) {
+
+  std::unique_ptr<Small> normal;
+
+  std::vector<Small, AlignedAllocator<Small, 32>> vector(5);
+
+  std::unique_ptr<Small> aligned;
+  for (size_t i = 0; i < 5; i++) {
+    normal = std::unique_ptr<Small>(new Small);
+    std::cout << "Normal  Small = " << normal.get() << " = " << normal->x << std::endl;
+  }
+  for (size_t i = 0; i < 5; i++) {
+    aligned = std::unique_ptr<Small>(allocator.allocate(1));
+    std::cout << "Aligned Small = " << aligned.get() << " = " << aligned->x << std::endl;
+  }
+  Small * smalls = new Small[5];
+  for (const auto & lala : vector) {
+    std::cout << "Array   Small = " << &lala << " = " << lala.x << std::endl;
+  }
+
+  std::cout << "Normal Small = " << normal.get() << ", Aligned = " << aligned.get() << std::endl;
 
   int value = 3;
 

@@ -21,13 +21,11 @@
  * limitations under the License.
  */
 
-#include <org-simple/Alignment.h>
+#include <org-simple/Align.h>
 
 namespace org::simple {
 
-template <typename Type,
-          size_t Align /* = std::max(alignof(Type), Align::maxNatural)*/>
-class AlignedAllocator {
+template <typename Type, size_t Align> class AlignedAllocator {
   static_assert(Align::isValid<Type>(Align));
 
 public:

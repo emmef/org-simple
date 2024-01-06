@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-#include "Alignment.h"
+#include "Align.h"
 #include "Index.h"
 #include <algorithm>
 #include <iterator>

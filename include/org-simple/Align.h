@@ -1,5 +1,5 @@
-#ifndef ORG_SIMPLE_ALIGNMENT_H
-#define ORG_SIMPLE_ALIGNMENT_H
+#ifndef ORG_SIMPLE_ALIGN_H
+#define ORG_SIMPLE_ALIGN_H
 /*
  * org-simple/Alignment.h
  *
@@ -118,4 +118,4 @@ template <class T, size_t ALIGNMENT = alignof(T)> struct AlignedType {
 
 } // namespace org::simple
 
-#endif // ORG_SIMPLE_ALIGNMENT_H
+#endif // ORG_SIMPLE_ALIGN_H
