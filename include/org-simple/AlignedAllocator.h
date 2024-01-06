@@ -26,140 +26,73 @@
 namespace org::simple {
 
 template <typename Type,
-          size_t Align = std::max(alignof(Type), Align::maxNatural)>
-class BaseAlignedAllocator {
+          size_t Align /* = std::max(alignof(Type), Align::maxNatural)*/>
+class AlignedAllocator {
+  static_assert(Align::isValid<Type>(Align));
+
 public:
   typedef Type value_type;
   typedef std::size_t size_type;
   typedef std::ptrdiff_t difference_type;
-  static constexpr size_type alignment = Align::fixWithMaxNatural<Type>(Align);
+  static constexpr size_type alignment = Align::fixed<Type>(Align);
 
-  template <typename OtherType> struct rebind {
-    typedef BaseAlignedAllocator<OtherType, Align> other;
+  [[maybe_unused]] typedef std::true_type
+      propagate_on_container_move_assignment;
+  using is_always_equal [[maybe_unused]] = std::true_type;
+
+  constexpr AlignedAllocator() noexcept = default;
+  constexpr AlignedAllocator(const AlignedAllocator &) noexcept = default;
+  template <typename OtherType>
+  constexpr AlignedAllocator(
+      const AlignedAllocator<OtherType, alignment> &) noexcept {};
+  constexpr ~AlignedAllocator() noexcept = default;
+
+  AlignedAllocator &operator=(const AlignedAllocator &) = default;
+
+  template <typename OtherType> struct [[maybe_unused]] rebind {
+    typedef AlignedAllocator<OtherType, Align> other;
   };
 
-  typedef std::true_type propagate_on_container_move_assignment;
+  // Comparison
 
-  constexpr BaseAlignedAllocator() noexcept {}
-
-  constexpr BaseAlignedAllocator(const BaseAlignedAllocator &) noexcept {}
-
+  template <typename OtherType, size_t A>
+  friend constexpr bool
+  operator==(const AlignedAllocator &,
+             const AlignedAllocator<OtherType, A> &) noexcept {
+    return alignment == A;
+  }
   template <typename OtherType>
-  constexpr BaseAlignedAllocator(
-      const BaseAlignedAllocator<OtherType, alignment> &) noexcept {}
+  friend constexpr bool operator==(const AlignedAllocator &,
+                                   const std::allocator<OtherType> &) noexcept {
+    return alignment == Align::maxNatural;
+  }
 
-  [[nodiscard]] Type *allocate(size_type elements,
-                               const void * = static_cast<const void *>(0)) {
+  // The actual allocator implementation ;-)
+
+  [[nodiscard]] inline constexpr Type *allocate(size_t elements) {
     static_assert(sizeof(Type) != 0, "cannot allocate incomplete types");
+
     if (elements > Align::maxElements<Type>()) {
-      if (elements > (std::numeric_limits<size_t>::max() / sizeof(Type))) {
-        std::__throw_bad_array_new_length();
+      if (elements > std::numeric_limits<size_t>::max() / sizeof(Type)) {
+        throw std::bad_array_new_length();
       }
-      std::__throw_bad_alloc();
+      throw std::bad_alloc();
     }
-    if constexpr (alignment > Align::maxNatural) {
+    const size_t bytes = elements * sizeof(Type);
+    if (alignment > Align::maxNatural) {
       return static_cast<Type *>(
-          ::operator new(elements * sizeof(Type), std::align_val_t(alignment)));
+          ::operator new(bytes, std::align_val_t(alignment)));
     }
-    return static_cast<Type *>(::operator new(elements * sizeof(Type)));
+    return static_cast<Type *>(::operator new(bytes));
   }
 
   void deallocate(Type *pointer,
                   size_type elements __attribute__((__unused__))) {
     if constexpr (alignment > Align::maxNatural) {
-      ::operator delete(pointer,
-                        std::align_val_t(alignment) /*, __n * sizeof(Type)*/);
-      return;
-    }
-    ::operator delete(pointer /*, __n * sizeof(Type)*/);
-  }
-
-  template <typename OtherType, size_t A>
-  friend constexpr bool
-  operator==(const BaseAlignedAllocator &,
-             const BaseAlignedAllocator<OtherType, A> &) noexcept {
-    return alignment == A;
-  }
-  template <typename OtherType>
-  friend constexpr bool
-  operator==(const BaseAlignedAllocator &,
-             const BaseAlignedAllocator<OtherType> &) noexcept {
-    return alignment == BaseAlignedAllocator<OtherType>::alignment;
-  }
-  template <typename OtherType>
-  friend constexpr bool operator==(const BaseAlignedAllocator &,
-                                   const std::allocator<OtherType> &) noexcept {
-    return alignment == Align::maxNatural;
-  }
-};
-
-template <typename Type,
-          size_t _Align = std::max(alignof(Type), Align::maxNatural)>
-class AlignedAllocator
-    : public BaseAlignedAllocator<Type,
-                                  Align::fixWithMaxNatural<Type>(_Align)> {
-public:
-  typedef Type value_type;
-  typedef size_t size_type;
-  typedef ptrdiff_t difference_type;
-  using Base =
-      BaseAlignedAllocator<Type, Align::fixWithMaxNatural<Type>(_Align)>;
-  using Base::alignment;
-
-  template <typename OtherType> struct rebind {
-    typedef AlignedAllocator<OtherType, alignment> other;
-  };
-
-  using propagate_on_container_move_assignment [[maybe_unused]] =
-      std::true_type;
-
-  using is_always_equal [[maybe_unused]] = std::true_type;
-
-  constexpr AlignedAllocator() noexcept {}
-
-  constexpr AlignedAllocator(const AlignedAllocator &allocator) noexcept
-      : Base(allocator) {}
-
-  AlignedAllocator &operator=(const AlignedAllocator &) = default;
-
-  template <typename OtherType>
-  constexpr AlignedAllocator(
-      const AlignedAllocator<OtherType, alignment> &) noexcept {}
-
-  constexpr ~AlignedAllocator() noexcept {}
-
-  [[nodiscard]] inline constexpr Type *allocate(size_t elements) {
-    if (std::__is_constant_evaluated()) {
-      if (__builtin_mul_overflow(elements, sizeof(Type), &elements))
-        std::__throw_bad_array_new_length();
-      if constexpr (alignment > Align::maxNatural) {
-        return static_cast<Type *>(
-            ::operator new(elements, std::align_val_t(alignment)));
-      }
-      return static_cast<Type *>(::operator new(elements));
-    }
-
-    return Base::allocate(elements, 0);
-  }
-
-  inline constexpr void deallocate(Type *pointer, size_t elements) {
-    if (std::__is_constant_evaluated()) {
+      ::operator delete(pointer, std::align_val_t(alignment));
+    } else {
       ::operator delete(pointer);
-      return;
     }
-    Base::deallocate(pointer, elements);
-  }
-
-  friend constexpr bool operator==(const AlignedAllocator &,
-                                   const AlignedAllocator &) noexcept {
-    return true;
-  }
-
-  template <typename OtherType>
-  friend constexpr bool
-  operator==(const AlignedAllocator &,
-             const AlignedAllocator<OtherType> &) noexcept {
-    return alignment == AlignedAllocator<OtherType>::alignment;
   }
 };
 
