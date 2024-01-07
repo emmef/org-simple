@@ -759,4 +759,4 @@
 //
 //} // namespace org::simple
 //
-//#endif // ORG_SIMPLE_M_ARRAY_H
+#endif // ORG_SIMPLE_M_ARRAY_H

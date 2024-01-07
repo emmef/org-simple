@@ -55,7 +55,7 @@ struct Align {
   }
 
   template <class type>
-  static constexpr bool validOrDefault(const size_t alignment) noexcept {
+  static constexpr size_t validOrDefault(const size_t alignment) noexcept {
     return alignment && isValid<type>(alignment) ? alignment : alignof(type);
   }
 
@@ -79,7 +79,7 @@ struct Align {
 };
 
 template <class T, size_t ALIGNMENT = alignof(T)> struct AlignedType {
-  static_assert(ALIGNMENT > 0 && Align::isValid<T>(ALIGNMENT));
+  static_assert(Align::isValid<T>(ALIGNMENT));
 
   typedef T type;
   static constexpr size_t alignment = ALIGNMENT;

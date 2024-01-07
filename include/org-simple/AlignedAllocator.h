@@ -42,7 +42,7 @@ public:
   constexpr AlignedAllocator(const AlignedAllocator &) noexcept = default;
   template <typename OtherType>
   constexpr AlignedAllocator(
-      const AlignedAllocator<OtherType, alignment> &) noexcept {};
+      const AlignedAllocator<OtherType, alignment> &) noexcept {}
   constexpr ~AlignedAllocator() noexcept = default;
 
   AlignedAllocator &operator=(const AlignedAllocator &) = default;
